@@ -1,6 +1,6 @@
 # Elements of Mathematics – Android App
 
-Students ke liye study app: **Books (PDF), Solutions, Handwritten Notes, Revision Notes, Sample Papers aur Video Lectures**.
+Students ke liye study app: **Books (PDF), Solutions, Handwritten Notes, Revision Notes, Sample Papers, Educational Games aur Video Lectures**.
 App ke andar sab kuch English mein hai. Saara content aap **app ke andar hi (hidden Admin Mode se)** upload karte ho, aur sabhi students ko turant dikh jaata hai.
 
 ## Features
@@ -11,14 +11,16 @@ App ke andar sab kuch English mein hai. Saara content aap **app ke andar hi (hid
 - Download hone ke baad green ✔ dikhta hai, dobara offline khulta hai. Long-press → download hatao
 - **PDF Reader**: highlighter (4 colors, undo, clear page), night mode, bookmark (Bookmark added/removed), bookmarks list, go to page, page number, pinch-zoom, double-tap zoom, tap se toolbar hide. Last padha hua page yaad rehta hai
 - Side menu: Default PDF Mode (Normal / Highlighter), Feedback, Share, Rate Us, More Apps
+- **Educational Games / Links**: aisa section jisme games, quizzes ya kisi bhi website ka link ho (tap → khul jaata hai)
 - **Video Lectures**: YouTube thumbnail grid. Tap → video **app ke andar hi chalta hai** (fullscreen bhi). "Watch on YouTube" button se YouTube app mein bhi dekh sakte hain. Neeche "More videos" list
 
 **Admin ke liye (hidden)**
 - Top bar mein app ke naam par **5 baar jaldi-jaldi tap** karo → password dialog → Admin Mode
 - Admin Mode mein app bilkul waisa hi dikhta hai, bas extra buttons aate hain:
-  - **Sections**: add / edit (naam, icon, PDF ya Video type) / delete / aage-peeche move (⋮ button)
+  - **Sections**: add / edit (naam, icon, aur type: PDF / Video / Web link) / delete / aage-peeche move (⋮ button)
   - **Chapters/PDFs**: "+ Add PDF" → phone se PDF chuno (upload hota hai) *ya* Google Drive / direct PDF link paste karo
   - **Videos**: "+ Add Video" → bas YouTube link paste karo
+  - **Links** (Educational Games jaise sections): "+ Add Link" → website/game ka link paste karo
   - **Banners**: jitne chahe add karo (phone se image ya image link), tap par khulne wala link (optional), order change, delete, aur **auto-slide time (0–15 sec)** set karo
   - **App Settings**: app title, feedback email, More Apps list
   - **Change Admin Password**, **Exit Admin Mode** (side menu mein)
@@ -53,7 +55,7 @@ base64 -w0 app/google-services.json
 ```
 
 ### 5. Pehli baar content daalo
-App kholo → title par 5 tap → password → Admin Mode → **"Add default sections"** button (NCERT Book, Solutions, Handwritten Notes, Revision Notes, Sample Papers, Video Lectures ban jaayenge) → har section mein PDFs/videos add karo → side menu → Manage Banners.
+App kholo → title par 5 tap → password → Admin Mode → **"Add default sections"** button (NCERT Book, Solutions, Handwritten Notes, Revision Notes, Sample Papers, Educational Games, Video Lectures ban jaayenge) → har section mein PDFs/videos add karo → side menu → Manage Banners.
 
 ## Tips
 - Banner images 2:1 ratio (jaise 1200×600) best dikhti hain

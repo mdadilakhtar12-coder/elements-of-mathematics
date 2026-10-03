@@ -22,7 +22,8 @@ data class Banner(
 
 enum class SectionType(val key: String, val label: String) {
     PDF("pdf", "PDF documents"),
-    VIDEO("video", "YouTube videos");
+    VIDEO("video", "YouTube videos"),
+    LINK("link", "Web links (games, quizzes, websites)");
 
     companion object {
         fun from(key: String?) = entries.firstOrNull { it.key == key } ?: PDF
@@ -41,7 +42,7 @@ data class Section(
 data class ContentItem(
     val id: String = "",
     val title: String = "",
-    /** PDF download link, or YouTube link for video sections. */
+    /** PDF download link, YouTube link (video sections) or web link (link sections). */
     val url: String = "",
     /** Firebase Storage path when the PDF was uploaded from the app. */
     val storagePath: String = "",
@@ -63,5 +64,6 @@ val DEFAULT_SECTIONS = listOf(
     Section(title = "Handwritten Notes", icon = "✍️", type = SectionType.PDF),
     Section(title = "Revision Notes", icon = "📒", type = SectionType.PDF),
     Section(title = "Sample Papers", icon = "📝", type = SectionType.PDF),
+    Section(title = "Educational Games", icon = "🎮", type = SectionType.LINK),
     Section(title = "Video Lectures", icon = ICON_YOUTUBE, type = SectionType.VIDEO),
 )

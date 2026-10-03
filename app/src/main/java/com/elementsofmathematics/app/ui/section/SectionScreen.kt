@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
@@ -71,6 +72,7 @@ import com.elementsofmathematics.app.data.SectionType
 import com.elementsofmathematics.app.ui.MainViewModel
 import com.elementsofmathematics.app.ui.admin.ConfirmDialog
 import com.elementsofmathematics.app.ui.admin.ItemEditorDialog
+import com.elementsofmathematics.app.ui.admin.addLabel
 import com.elementsofmathematics.app.ui.common.InnerTopBar
 import com.elementsofmathematics.app.ui.common.NumberBubble
 import com.elementsofmathematics.app.ui.common.StatusBarIcons
@@ -79,6 +81,7 @@ import com.elementsofmathematics.app.ui.home.AdminItemMenu
 import com.elementsofmathematics.app.ui.theme.DoneGreen
 import com.elementsofmathematics.app.ui.theme.DownloadOrange
 import com.elementsofmathematics.app.ui.theme.Purple
+import com.elementsofmathematics.app.util.Links
 import com.elementsofmathematics.app.util.YouTube
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -145,7 +148,7 @@ fun SectionScreen(
                 ExtendedFloatingActionButton(
                     onClick = { editing = ContentItem() },
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text(if (type == SectionType.VIDEO) "Add Video" else "Add PDF") },
+                    text = { Text(addLabel(type)) },
                     containerColor = Purple,
                     contentColor = Color.White,
                 )
@@ -194,13 +197,15 @@ fun SectionScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     itemsIndexed(list, key = { _, it -> it.id }) { index, item ->
-                        val downloaded = remember(item.id, item.url, cacheVersion) { PdfCache.isDownloaded(context, item) }
+                        val isLink = type == SectionType.LINK
+                        val downloaded = remember(item.id, item.url, cacheVersion) { !isLink && PdfCache.isDownloaded(context, item) }
                         ChapterRow(
                             number = index + 1,
                             item = item,
                             downloaded = downloaded,
+                            isLink = isLink,
                             isAdmin = isAdmin,
-                            onClick = { openPdf(item) },
+                            onClick = { if (isLink) Links.open(context, item.url) else openPdf(item) },
                             onLongClick = { if (downloaded) removingDownload = item },
                             onEdit = { editing = item },
                             onDelete = { deleting = item },
@@ -288,6 +293,7 @@ private fun ChapterRow(
     number: Int,
     item: ContentItem,
     downloaded: Boolean,
+    isLink: Boolean,
     isAdmin: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -317,7 +323,9 @@ private fun ChapterRow(
                 color = Color(0xFF1E1E1E),
                 modifier = Modifier.weight(1f),
             )
-            if (downloaded) {
+            if (isLink) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open", tint = Purple, modifier = Modifier.size(28.dp))
+            } else if (downloaded) {
                 Box(
                     Modifier
                         .size(32.dp)

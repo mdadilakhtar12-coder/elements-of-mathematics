@@ -236,17 +236,19 @@ fun ItemEditorDialog(
     }
 
     val isVideo = type == SectionType.VIDEO
+    val isLink = type == SectionType.LINK
     val videoId = if (isVideo) YouTube.videoId(link) else null
     val uploading = progress != null
     val hasExistingUpload = item.storagePath.isNotEmpty() && pickedUri == null && link.isBlank()
     val canSave = title.isNotBlank() && !uploading && when {
         isVideo -> videoId != null
+        isLink -> link.isNotBlank()
         else -> pickedUri != null || link.isNotBlank() || hasExistingUpload
     }
 
     AlertDialog(
         onDismissRequest = { if (!uploading) onDismiss() },
-        title = { Text(if (item.id.isEmpty()) (if (isVideo) "Add Video" else "Add PDF") else "Edit") },
+        title = { Text(if (item.id.isEmpty()) addLabel(type) else "Edit") },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
@@ -258,7 +260,16 @@ fun ItemEditorDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                if (isVideo) {
+                if (isLink) {
+                    OutlinedTextField(
+                        value = link,
+                        onValueChange = { link = it },
+                        label = { Text("Web link") },
+                        placeholder = { Text("https://…") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else if (isVideo) {
                     OutlinedTextField(
                         value = link,
                         onValueChange = { link = it },
@@ -317,7 +328,7 @@ fun ItemEditorDialog(
                 error = null
                 val uri = pickedUri
                 when {
-                    isVideo -> onSave(item.copy(title = title.trim(), url = link.trim(), storagePath = ""), null)
+                    isVideo || isLink -> onSave(item.copy(title = title.trim(), url = link.trim(), storagePath = ""), null)
                     uri != null -> scope.launch {
                         progress = 0f
                         try {
@@ -336,6 +347,12 @@ fun ItemEditorDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !uploading) { Text("Cancel") } },
     )
+}
+
+fun addLabel(type: SectionType) = when (type) {
+    SectionType.PDF -> "Add PDF"
+    SectionType.VIDEO -> "Add Video"
+    SectionType.LINK -> "Add Link"
 }
 
 @Composable
