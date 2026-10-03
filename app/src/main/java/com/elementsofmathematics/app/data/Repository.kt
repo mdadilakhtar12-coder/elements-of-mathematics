@@ -21,7 +21,7 @@ import java.util.UUID
  *  banners/{id}                   → Banner
  *  sections/{id}                  → Section
  *  sections/{id}/items/{itemId}   → ContentItem
- * Students only read; writes are allowed only for the admin account (see firebase/*.rules).
+ * Students only read; writes are allowed only for the admin account (see the rules files in the firebase folder).
  */
 object Repository {
     private val db get() = FirebaseFirestore.getInstance()

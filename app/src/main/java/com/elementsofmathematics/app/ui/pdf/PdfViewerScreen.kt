@@ -276,6 +276,7 @@ private fun PdfReader(doc: PdfDocument, title: String, docKey: String) {
                     },
             ) {
                 val viewportWidthPx = constraints.maxWidth
+                val contentWidth = maxWidth * zoom
                 val renderWidth = (viewportWidthPx * renderZoom).roundToInt().coerceIn(1, MAX_RENDER_WIDTH)
                 Box(
                     Modifier
@@ -287,7 +288,7 @@ private fun PdfReader(doc: PdfDocument, title: String, docKey: String) {
                         contentPadding = PaddingValues(vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
-                            .width(maxWidth * zoom)
+                            .width(contentWidth)
                             .fillMaxHeight(),
                     ) {
                         items(doc.pageCount) { index ->
