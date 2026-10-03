@@ -134,7 +134,7 @@ fun VideoPlayerScreen(vm: MainViewModel, sectionId: String, initialItemId: Strin
     DisposableEffect(isFullscreen) {
         val window = activity?.window
         if (isFullscreen && window != null) {
-            activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 hide(WindowInsetsCompat.Type.systemBars())
@@ -142,7 +142,7 @@ fun VideoPlayerScreen(vm: MainViewModel, sectionId: String, initialItemId: Strin
         }
         onDispose {
             if (isFullscreen && window != null) {
-                activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 WindowCompat.getInsetsController(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
             }
         }

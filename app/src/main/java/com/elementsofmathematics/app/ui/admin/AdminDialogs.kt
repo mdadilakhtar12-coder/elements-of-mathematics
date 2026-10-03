@@ -93,7 +93,7 @@ fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
                     label = { Text("Password") },
                     singleLine = true,
                     isError = error != null,
-                    supportingText = error?.let { { Text(it) } },
+                    supportingText = error?.let { message -> @Composable { Text(message) } },
                     visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     trailingIcon = {
