@@ -1,0 +1,21 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Open book -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,38 L52,42 L52,74 L30,70 Z" />
+    <path
+        android:fillColor="#F3E5F5"
+        android:pathData="M78,38 L56,42 L56,74 L78,70 Z" />
+    <!-- Pi symbol on the right page -->
+    <path
+        android:fillColor="#9C27B0"
+        android:pathData="M60,48 L74,46 L74,49 L71,49.4 L71,64 L68,64.4 L68,49.8 L65,50.2 L65,65 L62,65.4 L62,50.6 L60,50.9 Z" />
+    <!-- Plus sign on the left page -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M39.5,49 L42.5,49.5 L42.5,54 L47,54.8 L47,57.8 L42.5,57 L42.5,61.5 L39.5,61 L39.5,56.5 L35,55.7 L35,52.7 L39.5,53.5 Z" />
+</vector>
