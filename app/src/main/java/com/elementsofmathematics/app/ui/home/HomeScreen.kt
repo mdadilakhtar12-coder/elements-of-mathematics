@@ -114,6 +114,7 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
     val banners by vm.banners.collectAsStateWithLifecycle()
     val sections by vm.sections.collectAsStateWithLifecycle()
     val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
+    val loadErrors by vm.loadErrors.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -227,6 +228,9 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
                     BannerCarousel(banners, settings.bannerIntervalSec, isAdmin) { showBanners = true }
                 }
                 when {
+                    loadErrors.isNotEmpty() -> item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(loadErrors.values.first(), color = Color(0xFFD32F2F), modifier = Modifier.padding(16.dp))
+                    }
                     list == null -> item(span = { GridItemSpan(maxLineSpan) }) {
                         Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
@@ -516,4 +520,3 @@ private fun PdfModeDialog(onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
 }
-

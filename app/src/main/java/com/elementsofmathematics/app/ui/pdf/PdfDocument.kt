@@ -70,10 +70,17 @@ class PdfDocument private constructor(
                 fd.close()
                 throw e
             }
-            val ratios = List(renderer.pageCount) { i ->
-                renderer.openPage(i).use { it.width.toFloat() / it.height }
+            try {
+                require(renderer.pageCount > 0) { "This PDF has no pages" }
+                val ratios = List(renderer.pageCount) { i ->
+                    renderer.openPage(i).use { it.width.toFloat() / it.height }
+                }
+                PdfDocument(fd, renderer, ratios)
+            } catch (e: Exception) {
+                renderer.close()
+                fd.close()
+                throw e
             }
-            PdfDocument(fd, renderer, ratios)
         }
     }
 }

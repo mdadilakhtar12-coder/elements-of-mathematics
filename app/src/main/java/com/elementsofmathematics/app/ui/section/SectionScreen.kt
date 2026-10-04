@@ -99,6 +99,7 @@ fun SectionScreen(
     val section = sections?.firstOrNull { it.id == sectionId }
     val items by remember(sectionId) { vm.items(sectionId) }.collectAsStateWithLifecycle()
     val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
+    val loadErrors by vm.loadErrors.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -118,8 +119,9 @@ fun SectionScreen(
     val type = section?.type ?: SectionType.PDF
 
     fun openPdf(item: ContentItem) {
+        if (downloading) return
         val file = PdfCache.fileFor(context, item)
-        if (file.exists()) {
+        if (PdfCache.isDownloaded(context, item)) {
             onOpenPdf(file.path, item.title, item.id)
             return
         }
@@ -162,6 +164,11 @@ fun SectionScreen(
                 .padding(padding),
         ) {
             when {
+                loadErrors["content"] != null -> Text(
+                    loadErrors.getValue("content"),
+                    color = Color(0xFFD32F2F),
+                    modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                )
                 list == null -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 list.isEmpty() -> Text(
                     if (isAdmin) "Nothing here yet. Tap the + button to add." else "Content is coming soon!",

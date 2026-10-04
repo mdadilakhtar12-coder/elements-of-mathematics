@@ -33,28 +33,32 @@ object Repository {
     // ---------- Reading ----------
 
     fun settingsFlow(): Flow<AppSettings> = callbackFlow {
-        val reg = db.collection("config").document("app").addSnapshotListener { snap, _ ->
+        val reg = db.collection("config").document("app").addSnapshotListener { snap, error ->
+            if (error != null) { close(error); return@addSnapshotListener }
             trySend(snap?.toSettings() ?: AppSettings())
         }
         awaitClose { reg.remove() }
     }
 
     fun bannersFlow(): Flow<List<Banner>> = callbackFlow {
-        val reg = db.collection("banners").orderBy("order").addSnapshotListener { snap, _ ->
+        val reg = db.collection("banners").orderBy("order").addSnapshotListener { snap, error ->
+            if (error != null) { close(error); return@addSnapshotListener }
             trySend(snap?.documents?.map { it.toBanner() } ?: emptyList())
         }
         awaitClose { reg.remove() }
     }
 
     fun sectionsFlow(): Flow<List<Section>> = callbackFlow {
-        val reg = db.collection("sections").orderBy("order").addSnapshotListener { snap, _ ->
+        val reg = db.collection("sections").orderBy("order").addSnapshotListener { snap, error ->
+            if (error != null) { close(error); return@addSnapshotListener }
             trySend(snap?.documents?.map { it.toSection() } ?: emptyList())
         }
         awaitClose { reg.remove() }
     }
 
     fun itemsFlow(sectionId: String): Flow<List<ContentItem>> = callbackFlow {
-        val reg = items(sectionId).orderBy("order").addSnapshotListener { snap, _ ->
+        val reg = items(sectionId).orderBy("order").addSnapshotListener { snap, error ->
+            if (error != null) { close(error); return@addSnapshotListener }
             trySend(snap?.documents?.map { it.toItem() } ?: emptyList())
         }
         awaitClose { reg.remove() }
@@ -105,10 +109,11 @@ object Repository {
     }
 
     suspend fun addDefaultSections() {
+        if (!db.collection("sections").limit(1).get().await().isEmpty) return
         val batch = db.batch()
         DEFAULT_SECTIONS.forEachIndexed { i, s ->
             batch.set(
-                db.collection("sections").document(),
+                db.collection("sections").document("default-$i"),
                 mapOf("title" to s.title, "icon" to s.icon, "type" to s.type.key, "order" to i.toLong()),
             )
         }
@@ -117,11 +122,14 @@ object Repository {
 
     suspend fun deleteSection(section: Section) {
         val docs = items(section.id).get().await().documents
-        docs.forEach { deleteStorageFile(it.getString("storagePath")) }
-        val batch = db.batch()
-        docs.forEach { batch.delete(it.reference) }
-        batch.delete(db.collection("sections").document(section.id))
-        batch.commit().await()
+        // Firestore accepts at most 500 writes per batch.
+        docs.chunked(400).forEach { chunk ->
+            val batch = db.batch()
+            chunk.forEach { batch.delete(it.reference) }
+            batch.commit().await()
+            chunk.forEach { deleteStorageFile(it.getString("storagePath")) }
+        }
+        db.collection("sections").document(section.id).delete().await()
     }
 
     suspend fun saveItem(sectionId: String, item: ContentItem, nextOrder: Long) {
@@ -207,7 +215,7 @@ object Repository {
         }
         return AppSettings(
             appTitle = getString("appTitle")?.takeIf { it.isNotBlank() } ?: defaults.appTitle,
-            bannerIntervalSec = getLong("bannerIntervalSec")?.toInt() ?: defaults.bannerIntervalSec,
+            bannerIntervalSec = getLong("bannerIntervalSec")?.coerceIn(0L, 15L)?.toInt() ?: defaults.bannerIntervalSec,
             feedbackEmail = getString("feedbackEmail") ?: defaults.feedbackEmail,
             moreApps = apps,
         )

@@ -102,6 +102,7 @@ import com.elementsofmathematics.app.data.PdfMode
 import com.elementsofmathematics.app.ui.common.StatusBarIcons
 import com.elementsofmathematics.app.ui.theme.Purple
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -133,6 +134,8 @@ fun PdfViewerScreen(path: String, title: String, docKey: String, onBack: () -> U
     val state by produceState<LoadState>(LoadState.Loading, path) {
         value = try {
             LoadState.Ready(PdfDocument.open(File(path)))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             File(path).delete() // corrupt download: fetch it again next time
             LoadState.Failed("Could not open this PDF. Please go back and download it again.")
@@ -597,4 +600,3 @@ private fun GoToPageDialog(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) ->
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-
