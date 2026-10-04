@@ -82,7 +82,14 @@ fun BannerCarousel(
     LaunchedEffect(pagerState.settledPage, intervalSec, count) {
         if (count > 1 && intervalSec > 0) {
             delay(intervalSec * 1000L)
-            if (!pagerState.isScrollInProgress) pagerState.animateScrollToPage(pagerState.currentPage + 1)
+            if (!pagerState.isScrollInProgress) {
+                if (pagerState.currentPage == VIRTUAL_PAGES - 1) {
+                    // Keep the same banner while returning to the middle of the virtual range.
+                    val middle = VIRTUAL_PAGES / 2
+                    pagerState.scrollToPage(middle - middle % count + pagerState.currentPage % count)
+                }
+                pagerState.animateScrollToPage(pagerState.currentPage + 1)
+            }
         }
     }
 

@@ -13,16 +13,36 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.retryWhen
 
 class MainViewModel : ViewModel() {
+    private val _loadErrors = MutableStateFlow<Map<String, String>>(emptyMap())
+    val loadErrors: StateFlow<Map<String, String>> = _loadErrors
+
+    private fun <T> Flow<T>.reportErrors(source: String): Flow<T> = retryWhen { cause, _ ->
+        if (cause is CancellationException) throw cause
+        val label = if (source.startsWith("content:")) "content" else source
+        _loadErrors.value = _loadErrors.value + (source to "Could not load $label. Check your connection or app setup. Retrying…")
+        delay(5_000)
+        true
+    }.onEach { _loadErrors.value = _loadErrors.value - source }
+
     val settings: StateFlow<AppSettings> = Repository.settingsFlow()
+        .reportErrors("settings")
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
 
     val banners: StateFlow<List<Banner>> = Repository.bannersFlow()
+        .reportErrors("banners")
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** null while the first load is still running. */
     val sections: StateFlow<List<Section>?> = Repository.sectionsFlow()
+        .reportErrors("sections")
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val isAdmin: StateFlow<Boolean> = Repository.isAdminFlow()
@@ -31,7 +51,7 @@ class MainViewModel : ViewModel() {
     private val itemFlows = mutableMapOf<String, StateFlow<List<ContentItem>?>>()
 
     fun items(sectionId: String): StateFlow<List<ContentItem>?> = itemFlows.getOrPut(sectionId) {
-        Repository.itemsFlow(sectionId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
+        Repository.itemsFlow(sectionId).reportErrors("content:$sectionId").stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
     }
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
@@ -47,6 +67,8 @@ class MainViewModel : ViewModel() {
             try {
                 block()
                 successMessage?.let { _messages.emit(it) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 _messages.emit(e.localizedMessage ?: "Something went wrong")
             }

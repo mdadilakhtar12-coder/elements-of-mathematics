@@ -114,6 +114,7 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
     val banners by vm.banners.collectAsStateWithLifecycle()
     val sections by vm.sections.collectAsStateWithLifecycle()
     val isAdmin by vm.isAdmin.collectAsStateWithLifecycle()
+    val loadErrors by vm.loadErrors.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -225,6 +226,12 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     BannerCarousel(banners, settings.bannerIntervalSec, isAdmin) { showBanners = true }
+                }
+                val homeError = loadErrors.entries.firstOrNull { !it.key.startsWith("content:") }?.value
+                if (homeError != null) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Text(homeError, color = Color(0xFFD32F2F), modifier = Modifier.padding(16.dp))
+                    }
                 }
                 when {
                     list == null -> item(span = { GridItemSpan(maxLineSpan) }) {
@@ -516,4 +523,3 @@ private fun PdfModeDialog(onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
 }
-
