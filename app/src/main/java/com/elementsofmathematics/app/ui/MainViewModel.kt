@@ -26,7 +26,8 @@ class MainViewModel : ViewModel() {
 
     private fun <T> Flow<T>.reportErrors(source: String): Flow<T> = retryWhen { cause, _ ->
         if (cause is CancellationException) throw cause
-        _loadErrors.value = _loadErrors.value + (source to "Could not load $source. Check your connection or app setup. Retrying…")
+        val label = if (source.startsWith("content:")) "content" else source
+        _loadErrors.value = _loadErrors.value + (source to "Could not load $label. Check your connection or app setup. Retrying…")
         delay(5_000)
         true
     }.onEach { _loadErrors.value = _loadErrors.value - source }
@@ -50,7 +51,7 @@ class MainViewModel : ViewModel() {
     private val itemFlows = mutableMapOf<String, StateFlow<List<ContentItem>?>>()
 
     fun items(sectionId: String): StateFlow<List<ContentItem>?> = itemFlows.getOrPut(sectionId) {
-        Repository.itemsFlow(sectionId).reportErrors("content").stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
+        Repository.itemsFlow(sectionId).reportErrors("content:$sectionId").stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
     }
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)

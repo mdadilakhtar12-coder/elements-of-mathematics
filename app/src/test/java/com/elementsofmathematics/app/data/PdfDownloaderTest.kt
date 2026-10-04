@@ -1,6 +1,10 @@
 package com.elementsofmathematics.app.data
 
-import com.sun.net.httpserver.HttpServer
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import okhttp3.mockwebserver.SocketPolicy
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -9,47 +13,36 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.io.IOException
-import java.net.InetSocketAddress
 import java.nio.file.Files
 
 class PdfDownloaderTest {
-    private lateinit var server: HttpServer
+    private lateinit var server: MockWebServer
     private lateinit var directory: File
     private lateinit var target: File
     private val pdf = "%PDF-1.4\nexample".toByteArray()
-    private val base get() = "http://127.0.0.1:${server.address.port}"
+    private val base get() = server.url("/").toString().trimEnd('/')
 
     @Before fun setup() {
         directory = Files.createTempDirectory("pdf-test").toFile()
         target = File(directory, "download.pdf")
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/pdf") { exchange ->
-            exchange.sendResponseHeaders(200, pdf.size.toLong())
-            exchange.responseBody.use { it.write(pdf) }
-        }
-        server.createContext("/redirect") { exchange ->
-            exchange.responseHeaders.add("Location", "/pdf")
-            exchange.sendResponseHeaders(302, -1)
-            exchange.close()
-        }
-        server.createContext("/loop") { exchange ->
-            exchange.responseHeaders.add("Location", "/loop")
-            exchange.sendResponseHeaders(302, -1)
-            exchange.close()
-        }
-        server.createContext("/missing-location") { exchange ->
-            exchange.sendResponseHeaders(302, -1)
-            exchange.close()
-        }
-        server.createContext("/html") { exchange ->
-            val bytes = "<html>Permission required</html>".toByteArray()
-            exchange.sendResponseHeaders(200, bytes.size.toLong())
-            exchange.responseBody.use { it.write(bytes) }
+        server = MockWebServer()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+                "/pdf" -> MockResponse().setBody(String(pdf, Charsets.UTF_8))
+                "/redirect" -> MockResponse().setResponseCode(302).addHeader("Location", "/pdf")
+                "/loop" -> MockResponse().setResponseCode(302).addHeader("Location", "/loop")
+                "/missing-location" -> MockResponse().setResponseCode(302)
+                "/html" -> MockResponse().setBody("<html>Permission required</html>")
+                "/truncated" -> MockResponse().setBody(String(pdf, Charsets.UTF_8))
+                    .setHeader("Content-Length", pdf.size + 100)
+                    .setSocketPolicy(SocketPolicy.DISCONNECT_AT_END)
+                else -> MockResponse().setResponseCode(404)
+            }
         }
         server.start()
     }
 
-    @After fun cleanup() { server.stop(0); directory.deleteRecursively() }
+    @After fun cleanup() { server.shutdown(); directory.deleteRecursively() }
 
     @Test fun savesCompletePdfAndReportsProgress() = runBlocking {
         val progress = mutableListOf<Float?>()
@@ -74,6 +67,7 @@ class PdfDownloaderTest {
     @Test fun rejectsRedirectLoop() { expectFailure("$base/loop") }
     @Test fun rejectsMissingRedirectDestination() { expectFailure("$base/missing-location") }
     @Test fun rejectsHttpError() { expectFailure("$base/not-found") }
+    @Test fun rejectsTruncatedDownload() { expectFailure("$base/truncated"); assertFalse(target.exists()) }
     @Test fun rejectsUnsupportedScheme() { expectFailure("file:///tmp/document.pdf") }
 
     @Test fun cancellationRemovesTemporaryFile() {

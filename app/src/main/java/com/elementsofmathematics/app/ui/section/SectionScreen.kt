@@ -164,8 +164,8 @@ fun SectionScreen(
                 .padding(padding),
         ) {
             when {
-                loadErrors["content"] != null -> Text(
-                    loadErrors.getValue("content"),
+                loadErrors["content:$sectionId"] != null -> Text(
+                    loadErrors.getValue("content:$sectionId"),
                     color = Color(0xFFD32F2F),
                     modifier = Modifier.align(Alignment.Center).padding(32.dp),
                 )
