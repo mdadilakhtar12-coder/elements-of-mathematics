@@ -10,6 +10,7 @@
 <div class="topbar">
   <a class="back" href="index.html" title="Back to templates">← Templates</a>
   <div class="tname"><b id="tplName">Template</b><span id="saveState">Saved</span></div>
+  <label class="pagesel" title="Switch page"><span>Page</span><select id="pageSel"></select></label>
   <div class="seg" id="modeSeg"><button class="on" data-mode="edit">✎ Edit</button><button data-mode="preview">▶ Preview</button></div>
   <div class="seg" id="devSeg"><button class="on" data-dev="desktop" title="Desktop">🖥</button><button data-dev="mobile" title="Mobile">📱</button></div>
   <span class="grow"></span>
@@ -24,16 +25,29 @@
       <button class="on" data-tab="content">Content</button>
       <button data-tab="design">Design</button>
       <button data-tab="contact">Buttons &amp; Form</button>
+      <button data-tab="pages">Pages</button>
       <button data-tab="publish">Publish</button>
     </div>
 
     <!-- CONTENT -->
     <div class="tabbody on" id="tab-content">
-      <div class="tip">💡 Click any <b>text</b> on the page to edit it. Click an <b>image</b> to replace it. Hover a card to duplicate or delete it.</div>
-      <h4>Sections <small>show / hide / reorder</small></h4>
-      <div id="secList" class="rows"></div>
-      <h4>Images <small>click an image on the page, or here</small></h4>
+      <div class="tip">💡 Click any <b>text</b> to edit. Click an <b>image</b> to replace it. Hover a <b>link or button</b> and press <b>🔗</b> to set what it does.</div>
+      <h4>Sections <small>add · move · copy · hide · delete</small></h4>
+      <button class="primary wide sm" id="addSecBtn">＋ Add section</button>
+      <div id="secList" class="rows" style="margin-top:10px"></div>
+
+      <h4>Add elements <small>drag onto the page</small></h4>
+      <div id="elPalette" class="palette"></div>
+      <p class="hint">Drop on a section to place below it. Drop on an <b>Image canvas</b> to place anywhere. On touch screens just tap an element to add it.</p>
+
+      <h4>Images <small>click an image or use the buttons</small></h4>
+      <div class="imgguide"><b>Image rules</b>
+        <ul><li>Formats: <b>JPG, PNG, WebP, GIF, SVG</b></li><li>Max upload: <b>15 MB</b> per image</li><li>We shrink every image automatically (usually under <b>300 KB</b>) so the page opens fast</li><li>The best size is shown on each image below</li></ul></div>
       <div id="imgList" class="rows"></div>
+
+      <h4>Image canvas <small>your own design + movable text</small></h4>
+      <div id="cvList" class="rows"></div>
+
       <h4>Videos <small>paste a YouTube link</small></h4>
       <div id="vidList" class="rows"></div>
       <h4>Maps <small>type address or paste Google Maps embed</small></h4>
@@ -42,18 +56,21 @@
 
     <!-- DESIGN -->
     <div class="tabbody" id="tab-design">
-      <h4>Brand colours</h4>
+      <div id="themeBox" style="display:none"><h4>Theme <small>colours + fonts for blank pages</small></h4>
+        <select id="themeSel"></select></div>
+      <h4>Colours</h4>
       <div id="colorList" class="rows"></div>
       <button class="linkbtn" id="colorReset">↺ Back to original colours</button>
-      <h4>Page info <small>shown on Google &amp; browser tab</small></h4>
+      <h4>Page info <small>this page only · shown on Google &amp; browser tab</small></h4>
       <label class="f">Page title<input id="pgTitle" placeholder="e.g. Free Masterclass — Your Academy"></label>
       <label class="f">Short description<textarea id="pgDesc" rows="3" placeholder="One or two lines about this page"></textarea></label>
     </div>
 
     <!-- CONTACT & FORM -->
     <div class="tabbody" id="tab-contact">
+      <p class="hint">These settings are shared by <b>all pages</b> of your site.</p>
       <h4>Enroll / Register button</h4>
-      <p class="hint">What happens when a student clicks <b>Enroll Now</b> / <b>Register</b>:</p>
+      <p class="hint">What happens when a visitor clicks an <b>Enroll</b> button:</p>
       <label class="radio"><input type="radio" name="mode" value="form"><span><b>Popup form</b> → saves to Google Form → opens your session link</span></label>
       <label class="radio"><input type="radio" name="mode" value="link"><span><b>Direct link</b> — go straight to your link</span></label>
       <label class="radio"><input type="radio" name="mode" value="whatsapp"><span><b>WhatsApp</b> — open a WhatsApp chat</span></label>
@@ -105,11 +122,26 @@
       <p class="hint">If you leave the date empty (or it has passed), the timer hides itself automatically.</p>
     </div>
 
+    <!-- PAGES -->
+    <div class="tabbody" id="tab-pages">
+      <h4>Pages in this site <small>one ZIP, many pages</small></h4>
+      <div id="pageList" class="rows"></div>
+      <button class="primary wide sm" id="addPageBtn" style="margin-top:10px">＋ New page</button>
+      <p class="hint">Each page can be a blank page or start from any template. Link pages together with the menu below or with button settings (🔗).</p>
+      <h4>Menu of this page <small>top navigation links</small></h4>
+      <div id="menuList" class="rows"></div>
+      <div class="rowbtns"><button class="mini" id="menuAdd">＋ Add menu link</button><button class="mini" id="menuCopy" title="Copy this menu to every other page">Copy menu to all pages</button></div>
+    </div>
+
     <!-- PUBLISH -->
     <div class="tabbody" id="tab-publish">
       <h4>Download &amp; host</h4>
-      <p class="hint">Press <b>Download ZIP</b>. You get one folder with <code>index.html</code>, <code>lb.js</code> and your images. Upload it anywhere — drag &amp; drop the folder on <b>Netlify Drop</b>, <b>Cloudflare Pages</b>, GitHub Pages, or your hosting's file manager.</p>
+      <p class="hint">Press <b>Download ZIP</b>. You get a folder with your page(s), <code>lb.js</code> and an <code>assets</code> folder with images. Upload it anywhere — drag &amp; drop the folder on <b>Netlify Drop</b>, <b>Cloudflare Pages</b>, GitHub Pages, or your hosting's file manager.</p>
       <button class="primary wide" id="dlBtn2">⬇ Download ZIP</button>
+      <h4>Page speed <small>keep it under 1.5 MB</small></h4>
+      <div id="weightBox" class="weight"></div>
+      <button class="linkbtn" id="weightRefresh">↻ Check again</button>
+      <p class="hint">On export we also lazy-load images, remove editor code and shrink the HTML so your page opens quickly even on slow mobile data.</p>
       <h4>Tracking code <small>optional</small></h4>
       <label class="f">Paste Meta Pixel / Google Analytics / any script <small>(goes inside &lt;head&gt;)</small>
         <textarea id="headCode" rows="6" placeholder="&lt;!-- Meta Pixel Code --&gt;&#10;&lt;script&gt;…&lt;/script&gt;"></textarea></label>
@@ -123,9 +155,76 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<!-- ===== dialogs ===== -->
+<div class="dlg-back" id="dlgImg" hidden><div class="dlg">
+  <button class="dlg-x" data-close>×</button>
+  <h3 id="imgTitle">Replace image</h3>
+  <div class="spec" id="imgSpec"></div>
+  <ul class="rules" id="imgRules"></ul>
+  <div class="drop" id="imgDrop"><b>Drag your image here</b><span>or</span><button class="primary" id="imgChoose">Choose file from computer</button></div>
+  <div class="or">or use an image link</div>
+  <div class="urlrow"><input id="imgUrl" placeholder="https://…/photo.jpg"><button class="mini" id="imgUseUrl">Use link</button></div>
+  <div class="res" id="imgRes"></div>
+  <div class="dlg-foot"><button class="mini" id="imgReset">↺ Back to original</button><span class="grow"></span><button class="ghostbtn" data-close>Close</button></div>
+</div></div>
+
+<div class="dlg-back" id="dlgBtn" hidden><div class="dlg">
+  <button class="dlg-x" data-close>×</button>
+  <h3>Button / link settings</h3>
+  <label class="f">Text<input id="bText"></label>
+  <label class="f">When clicked<select id="bAct">
+    <option value="enroll">Open the enroll popup (form → Google Form)</option>
+    <option value="whatsapp">Open WhatsApp chat</option>
+    <option value="call">Call my phone number</option>
+    <option value="link">Open a link / Google Form / any website</option>
+    <option value="page">Go to another page of this site</option>
+    <option value="section">Scroll to a section on this page</option>
+  </select></label>
+  <div id="bLinkBox"><label class="f">Link (URL)<input id="bUrl" placeholder="https://forms.gle/…"></label><label class="chk"><input type="checkbox" id="bNew"> Open in a new tab</label></div>
+  <div id="bPageBox"><label class="f">Page<select id="bPage"></select></label></div>
+  <div id="bSecBox"><label class="f">Section<select id="bSec"></select></label></div>
+  <div id="bStyleBox"><h4>Look</h4>
+    <div class="crow"><input type="color" id="bBg" value="#4f46e5"><span>Button colour</span></div>
+    <div class="crow" style="margin-top:8px"><input type="color" id="bFg" value="#ffffff"><span>Text colour</span></div>
+    <label class="f" id="bVarBox">Style<select id="bVar"><option value="">Solid</option><option value="o">Outline</option><option value="d">Dark</option></select></label>
+    <button class="linkbtn" id="bResetCol">↺ Use the template's colours</button></div>
+  <div class="dlg-foot"><button class="mini danger" id="bRemove">🗑 Delete button</button><span class="grow"></span><button class="ghostbtn" data-close>Cancel</button><button class="primary" id="bSave">Save</button></div>
+</div></div>
+
+<div class="dlg-back" id="dlgHtml" hidden><div class="dlg wide">
+  <button class="dlg-x" data-close>×</button>
+  <h3>Custom HTML</h3>
+  <p class="hint">Paste HTML for a form, widget or embed. Scripts run on the published page.</p>
+  <textarea id="htmlCode" rows="14" spellcheck="false" style="font-family:ui-monospace,Menlo,monospace;font-size:13px"></textarea>
+  <div class="dlg-foot"><span class="grow"></span><button class="ghostbtn" data-close>Cancel</button><button class="primary" id="htmlSave">Save code</button></div>
+</div></div>
+
+<div class="dlg-back" id="dlgBlocks" hidden><div class="dlg xwide">
+  <button class="dlg-x" data-close>×</button>
+  <h3>Add a section</h3>
+  <p class="hint">Click a section to add it <b id="blkWhere">at the end of the page</b>. You can move it later.</p>
+  <div class="blkgrid" id="blkGrid"></div>
+</div></div>
+
+<div class="dlg-back" id="dlgPage" hidden><div class="dlg">
+  <button class="dlg-x" data-close>×</button>
+  <h3>New page</h3>
+  <label class="f">Page name<input id="npName" placeholder="e.g. About us"></label>
+  <label class="f">Start from<select id="npFrom"></select></label>
+  <div class="dlg-foot"><span class="grow"></span><button class="ghostbtn" data-close>Cancel</button><button class="primary" id="npCreate">Create page</button></div>
+</div></div>
+
+<div class="dlg-back" id="dlgAsk" hidden><div class="dlg small">
+  <h3 id="askTitle"></h3>
+  <p class="hint" id="askMsg"></p>
+  <input id="askInput">
+  <div class="dlg-foot"><span class="grow"></span><button class="ghostbtn" data-close>Cancel</button><button class="primary" id="askOk">OK</button></div>
+</div></div>
+
 <script src="lib/jszip.min.js"></script>
 <script src="runtime.js"></script>
 <script src="core.js"></script>
+<script src="blocks.js"></script>
 <script src="templates/edu-aurora.js"></script>
 <script src="templates/edu-brightpath.js"></script>
 <script src="templates/edu-scholar.js"></script>
