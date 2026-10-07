@@ -5,7 +5,7 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
-  var id = new URLSearchParams(location.search).get('t') || 'edu-aurora';
+  var id = new URLSearchParams(location.search).get('t') || location.hash.replace('#', '') || 'edu-aurora';
   var tpl = LB.get(id);
   if (!tpl) { location.href = 'index.html'; return; }
   var KEY = 'lb:project:' + id;
