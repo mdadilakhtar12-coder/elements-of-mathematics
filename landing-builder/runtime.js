@@ -42,6 +42,17 @@ window.LB_RUNTIME = function () {
     '.lb-ok{display:none;text-align:center;padding:10px 0 4px}.lb-card.done form,.lb-card.done>h3,.lb-card.done>p{display:none}.lb-card.done .lb-ok{display:block}' +
     '.lb-tick{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:#dcfce7;color:#16a34a;font-size:32px;display:grid;place-items:center}' +
     '.lb-js .rv{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}.lb-js .rv.in{opacity:1;transform:none}' +
+    '.lb-map{position:relative;min-height:280px;overflow:hidden;border-radius:inherit;background:#e5e7eb}.lb-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0}' +
+    '.lb-ba{position:relative;overflow:hidden;user-select:none;-webkit-user-select:none}.lb-ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}' +
+    '.lb-bah{position:absolute;top:0;bottom:0;width:3px;margin-left:-1.5px;background:#fff;z-index:3;pointer-events:none;box-shadow:0 0 14px rgba(0,0,0,.45)}' +
+    '.lb-bah i{position:absolute;top:50%;left:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.4);display:grid;place-items:center;font:700 18px system-ui,sans-serif;color:#111;font-style:normal}' +
+    '.lb-bah i::before{content:"\\2194"}' +
+    '.lb-bar-r{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;z-index:4}' +
+    '.lb-bar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:2147483000;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.97);border-top:1px solid rgba(0,0,0,.08);box-shadow:0 -12px 30px rgba(0,0,0,.12);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}' +
+    '.lb-bar a{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:13px 8px;border-radius:12px;font-weight:700;font-size:14.5px;text-decoration:none;color:#fff;white-space:nowrap}' +
+    '.lb-bar .b-c{background:#2563eb}.lb-bar .b-w{background:#25d366}.lb-bar .b-b{flex:1.5;background:var(--accent,#4f46e5);color:var(--accent-ink,#fff)}' +
+    '@media(max-width:640px){.lb-bar.on{display:flex}html.lb-hasbar body{padding-bottom:78px}html.lb-hasbar .lb-float{display:none!important}}' +
+    '.lb-card select{display:block;width:100%;margin-top:6px;padding:13px 14px;border:1.5px solid #e2e8f0;border-radius:12px;font:500 16px system-ui,sans-serif;color:#0f172a;background:#f8fafc;outline:0;box-sizing:border-box}' +
     '[data-cta][data-lb-off]{display:none!important}';
 
   var WA_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>';
@@ -167,6 +178,55 @@ window.LB_RUNTIME = function () {
     el.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + id + '?autoplay=1&rel=0&modestbranding=1&playsinline=1" title="Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
   }
 
+  /* ---------- maps ---------- */
+  function mapSrc(q) {
+    q = String(q || '').trim();
+    if (!q) return '';
+    var m = /src=["']([^"']+)["']/.exec(q); if (m) q = m[1];
+    if (/^https?:\/\/(www\.)?google\.[^\/]+\/maps\/embed/.test(q)) return q;
+    if (/^https?:\/\//.test(q)) return '';
+    return 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&output=embed';
+  }
+  function renderMap(el) {
+    var q = el.getAttribute('data-q') || '';
+    if (el._lbQ === q && el.firstChild) return;
+    el._lbQ = q; el.classList.add('lb-map');
+    var src = mapSrc(q);
+    el.innerHTML = src ? '<iframe src="' + src.replace(/"/g, '&quot;') + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Map"></iframe>' : '<div class="lb-vph"><span>📍 Type your address to show the map</span></div>';
+  }
+  function maps() { $$('[data-map]').forEach(renderMap); }
+
+  /* ---------- before / after slider ---------- */
+  function befores() {
+    $$('[data-ba]').forEach(function (box) {
+      if (box._lbba) return;
+      var imgs = $$('img', box), after = imgs[1];
+      if (!after) return;
+      box._lbba = 1; box.classList.add('lb-ba');
+      var h = doc.createElement('div'); h.className = 'lb-bah'; h.setAttribute('data-lb-rt', ''); h.innerHTML = '<i></i>';
+      var r = doc.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.value = 50; r.className = 'lb-bar-r';
+      r.setAttribute('data-lb-rt', ''); r.setAttribute('aria-label', 'Before and after slider');
+      if (EDIT) r.style.pointerEvents = 'none';
+      box.appendChild(h); box.appendChild(r);
+      function set(v) { after.style.clipPath = 'inset(0 0 0 ' + v + '%)'; h.style.left = v + '%'; }
+      r.addEventListener('input', function () { set(r.value); }); set(50);
+    });
+  }
+
+  /* ---------- mobile bottom bar ---------- */
+  var barEl;
+  function bar() {
+    var on = C('bar.on', false);
+    root.classList.toggle('lb-hasbar', !!on);
+    if (!barEl) { barEl = doc.createElement('div'); barEl.className = 'lb-bar'; barEl.setAttribute('data-lb-rt', ''); doc.body.appendChild(barEl); }
+    barEl.classList.toggle('on', !!on);
+    var h = '';
+    if (C('call.on', false) && (C('call.number', '') || EDIT)) h += '<a class="b-c" href="' + telLink(C('call.number', '')) + '">📞 Call</a>';
+    if (C('whatsapp.on', false) && (C('whatsapp.number', '') || EDIT)) h += '<a class="b-w" href="' + waLink(C('whatsapp.number', ''), C('whatsapp.message', '')) + '" target="_blank" rel="noopener">💬 WhatsApp</a>';
+    h += '<a class="b-b" data-cta="enroll" href="#enroll">' + String(C('bar.text', 'Book Now')).replace(/</g, '&lt;') + '</a>';
+    barEl.innerHTML = h;
+  }
+
   /* ---------- enroll modal ---------- */
   var modal;
   function buildModal() {
@@ -180,6 +240,7 @@ window.LB_RUNTIME = function () {
       '<label>Full name<input name="name" autocomplete="name" placeholder="Your name"></label>' +
       '<label>WhatsApp / mobile number<input name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="10 digit number"></label>' +
       '<label class="lb-em">Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>' +
+      '<label class="lb-ex">Service<select name="extra"></select></label>' +
       '<button class="lb-go" type="submit"></button><p class="lb-err"></p></form>' +
       '<div class="lb-ok"><div class="lb-tick">&#10003;</div><h3 class="lb-okt"></h3><p class="lb-oks"></p></div></div>';
     doc.body.appendChild(modal);
@@ -196,6 +257,12 @@ window.LB_RUNTIME = function () {
     $('.lb-okt', modal).textContent = C('enroll.thanks', 'You are registered!');
     $('.lb-oks', modal).textContent = C('enroll.url', '') || C('enroll.webinarUrl', '') ? 'Taking you to the session…' : 'We will contact you shortly.';
     $('.lb-em', modal).style.display = C('enroll.askEmail', true) ? '' : 'none';
+    var ex = $('.lb-ex', modal), opts = String(C('enroll.extraOptions', '')).split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    ex.style.display = C('enroll.extraOn', false) && opts.length ? '' : 'none';
+    ex.firstChild.nodeValue = C('enroll.extraLabel', 'Service');
+    var sel = $('select', ex), old = sel.value;
+    sel.innerHTML = '<option value="">Select…</option>' + opts.map(function (o) { return '<option>' + o.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</option>'; }).join('');
+    if (old) sel.value = old;
   }
   function openModal() {
     if (!modal) buildModal();
@@ -224,6 +291,7 @@ window.LB_RUNTIME = function () {
     if (C('enroll.entryName', '')) body.append(C('enroll.entryName', ''), name);
     if (C('enroll.entryPhone', '')) body.append(C('enroll.entryPhone', ''), phone);
     if (C('enroll.entryEmail', '') && askEmail) body.append(C('enroll.entryEmail', ''), email);
+    if (C('enroll.entryExtra', '') && f.extra.value) body.append(C('enroll.entryExtra', ''), f.extra.value);
 
     var sent = Promise.resolve();
     if (action && !EDIT) {
@@ -274,7 +342,7 @@ window.LB_RUNTIME = function () {
 
   function apply(newCfg) {
     if (newCfg) cfg = newCfg;
-    floats(); ctas(); countdown(); dates(); videos(); modalTexts();
+    floats(); ctas(); countdown(); dates(); videos(); maps(); befores(); bar(); modalTexts();
   }
 
   if (!doc.getElementById('lb-rt-css')) {
@@ -285,5 +353,5 @@ window.LB_RUNTIME = function () {
   readCfg();
   wire();
   apply();
-  window.LBRT = { apply: apply, openModal: openModal, closeModal: closeModal, renderVideo: renderVideo, playVideo: playVideo, ytId: ytId, EDIT: EDIT };
+  window.LBRT = { apply: apply, openModal: openModal, closeModal: closeModal, renderVideo: renderVideo, renderMap: renderMap, playVideo: playVideo, ytId: ytId, EDIT: EDIT };
 };

@@ -10,7 +10,7 @@
   if (!tpl) { location.href = 'index.html'; return; }
   var KEY = 'lb:project:' + id;
   var frame = $('#frame');
-  var cfg = LB.defaultCfg();
+  var cfg = merge(LB.defaultCfg(), tpl.defaults || {});
   var mode = 'edit';
   var history = [];
   var dirtyTimer, quotaWarned = false, currentHtml = tpl.html;
@@ -39,7 +39,7 @@
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
-      if (raw) { var p = JSON.parse(raw); if (p.html) currentHtml = p.html; if (p.cfg) cfg = merge(LB.defaultCfg(), p.cfg); }
+      if (raw) { var p = JSON.parse(raw); if (p.html) currentHtml = p.html; if (p.cfg) cfg = merge(merge(LB.defaultCfg(), tpl.defaults || {}), p.cfg); }
     } catch (e) {}
   }
   function save() {
@@ -65,6 +65,8 @@
     $$('[contenteditable]', clone).forEach(function (n) { n.removeAttribute('contenteditable'); n.removeAttribute('spellcheck'); });
     $$('[data-lb-off]', clone).forEach(function (n) { n.removeAttribute('data-lb-off'); });
     $$('[data-countdown]', clone).forEach(function (n) { n.removeAttribute('style'); });
+    $$('[data-map]', clone).forEach(function (n) { n.innerHTML = ''; n.classList.remove('lb-map'); if (!n.className) n.removeAttribute('class'); });
+    $$('[data-ba]', clone).forEach(function (n) { n.classList.remove('lb-ba'); if (!n.className) n.removeAttribute('class'); });
     $$('[data-video]', clone).forEach(function (n) { n.innerHTML = ''; n.classList.remove('lb-vid'); n.removeAttribute('data-id'); if (!n.className) n.removeAttribute('class'); });
     clone.classList.remove('lb-js'); if (!clone.getAttribute('class')) clone.removeAttribute('class');
     if (publish) $$('[data-hidden]', clone).forEach(function (n) { n.remove(); });
@@ -130,6 +132,7 @@
       if (el.hasAttribute('data-e')) return { type: 'text', el: el };
       if (el.hasAttribute('data-img')) return { type: 'img', el: el };
       if (el.hasAttribute('data-video')) return { type: 'video', el: el };
+      if (el.hasAttribute('data-map')) return { type: 'map', el: el };
     }
     return null;
   }
@@ -149,7 +152,7 @@
         if (h && h.type !== 'text') {
           var r = h.el.getBoundingClientRect();
           hl.style.cssText = 'display:block;left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.width + 'px;height:' + r.height + 'px';
-          hl.firstChild.textContent = h.type === 'img' ? '🖼 Click to change image' : '🎬 Click to set video';
+          hl.firstChild.textContent = h.type === 'img' ? '🖼 Click to change image' : h.type === 'map' ? '📍 Click to set address' : '🎬 Click to set video';
           doc.documentElement.style.cursor = 'pointer';
         } else { hl.style.display = 'none'; doc.documentElement.style.cursor = ''; }
         if (e.target.closest && e.target.closest('#lb-tb')) return;
@@ -164,6 +167,7 @@
       var h = hit(e.clientX, e.clientY);
       if (h && h.type === 'img') { e.preventDefault(); pickImage(h.el); }
       else if (h && h.type === 'video') { e.preventDefault(); focusVideo(h.el); }
+      else if (h && h.type === 'map') { e.preventDefault(); focusMap(h.el); }
     }, true);
     doc.addEventListener('input', queueSave);
     doc.addEventListener('keydown', function (e) {
@@ -286,6 +290,12 @@
     if (row) { row.scrollIntoView({ block: 'center', behavior: 'smooth' }); row.classList.add('hl'); var i = $('input', row); if (i) i.focus(); setTimeout(function () { row.classList.remove('hl'); }, 1600); }
   }
 
+  function focusMap(el) {
+    switchTab('content');
+    var idx = $$('[data-map]', doc).indexOf(el), row = $$('#mapList .vrow')[idx];
+    if (row) { row.scrollIntoView({ block: 'center', behavior: 'smooth' }); row.classList.add('hl'); var i = $('input', row); if (i) i.focus(); setTimeout(function () { row.classList.remove('hl'); }, 1600); }
+  }
+
   /* ---------- undo ---------- */
   function pushHistory() {
     try { history.push({ html: serialize(false), y: doc.documentElement.scrollTop }); if (history.length > 30) history.shift(); } catch (e) {}
@@ -363,6 +373,18 @@
       vb.appendChild(row);
     });
     if (!vb.children.length) vb.innerHTML = '<p class="hint">This template has no video block.</p>';
+    /* maps */
+    var mb = $('#mapList'); mb.innerHTML = '';
+    $$('[data-map]', doc).forEach(function (m, i) {
+      var row = document.createElement('div'); row.className = 'vrow';
+      row.innerHTML = '<div class="vt"><b>' + esc(m.getAttribute('data-label') || 'Map ' + (i + 1)) + '</b><button class="mini" data-a="go">Show</button></div>' +
+        '<input placeholder="Shop 12, MG Road, Pune  — or paste the map embed code" value="' + esc(m.getAttribute('data-q') || '') + '"><div class="hint" style="margin:0">Tip: Google Maps → Share → Embed a map → copy HTML and paste here.</div>';
+      var inp = row.querySelector('input');
+      inp.addEventListener('input', function () { m.setAttribute('data-q', inp.value.trim()); m._lbQ = null; win.LBRT.renderMap(m); queueSave(); });
+      row.querySelector('button').onclick = function () { m.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+      mb.appendChild(row);
+    });
+    if (!mb.children.length) mb.innerHTML = '<p class="hint">This template has no map block.</p>';
   }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -394,20 +416,22 @@
 
   /* ---------- config <-> form fields ---------- */
   var F = {};
-  ['webUrl', 'gfUrl', 'askEmail', 'enTitle', 'enSub', 'enBtn', 'enThanks', 'waOn', 'waNum', 'waMsg', 'callOn', 'callNum', 'cdOn', 'cdDate', 'headCode', 'pgTitle', 'pgDesc']
+  ['exOn', 'exLabel', 'exOpts', 'barOn', 'barText', 'webUrl', 'gfUrl', 'askEmail', 'enTitle', 'enSub', 'enBtn', 'enThanks', 'waOn', 'waNum', 'waMsg', 'callOn', 'callNum', 'cdOn', 'cdDate', 'headCode', 'pgTitle', 'pgDesc']
     .forEach(function (k) { F[k] = $('#' + k); });
 
   function fillFields() {
     $$('input[name=mode]').forEach(function (r) { r.checked = r.value === cfg.enroll.mode; });
     F.webUrl.value = cfg.enroll.webinarUrl; F.gfUrl.value = cfg.enroll.formUrl; F.askEmail.checked = !!cfg.enroll.askEmail;
     F.enTitle.value = cfg.enroll.title; F.enSub.value = cfg.enroll.sub; F.enBtn.value = cfg.enroll.button; F.enThanks.value = cfg.enroll.thanks;
+    F.exOn.checked = !!cfg.enroll.extraOn; F.exLabel.value = cfg.enroll.extraLabel; F.exOpts.value = cfg.enroll.extraOptions;
+    F.barOn.checked = !!cfg.bar.on; F.barText.value = cfg.bar.text;
     F.waOn.checked = !!cfg.whatsapp.on; F.waNum.value = cfg.whatsapp.number; F.waMsg.value = cfg.whatsapp.message;
     F.callOn.checked = !!cfg.call.on; F.callNum.value = cfg.call.number;
     F.cdOn.checked = !!cfg.countdown.on; F.cdDate.value = cfg.countdown.date;
     F.headCode.value = cfg.headCode; F.pgTitle.value = cfg.title; F.pgDesc.value = cfg.description;
     parseGoogleForm(false); toggleFormBox();
   }
-  function toggleFormBox() { $('#formBox').style.display = cfg.enroll.mode === 'form' ? '' : 'none'; }
+  function toggleFormBox() { $('#formBox').style.display = cfg.enroll.mode === 'form' ? '' : 'none'; $('#exBox').style.display = F.exOn.checked ? '' : 'none'; }
 
   function syncCfgToFrame() {
     if (win && win.LBRT) { var el = doc.getElementById('lb-config'); if (el) el.textContent = JSON.stringify(cfg); win.LBRT.apply(cfg); }
@@ -416,6 +440,8 @@
     cfg.enroll.mode = ($('input[name=mode]:checked') || {}).value || 'form';
     cfg.enroll.webinarUrl = F.webUrl.value.trim(); cfg.enroll.askEmail = F.askEmail.checked;
     cfg.enroll.title = F.enTitle.value; cfg.enroll.sub = F.enSub.value; cfg.enroll.button = F.enBtn.value; cfg.enroll.thanks = F.enThanks.value;
+    cfg.enroll.extraOn = F.exOn.checked; cfg.enroll.extraLabel = F.exLabel.value || 'Service'; cfg.enroll.extraOptions = F.exOpts.value;
+    cfg.bar.on = F.barOn.checked; cfg.bar.text = F.barText.value || 'Book Now';
     cfg.whatsapp.on = F.waOn.checked; cfg.whatsapp.number = F.waNum.value.trim(); cfg.whatsapp.message = F.waMsg.value;
     cfg.call.on = F.callOn.checked; cfg.call.number = F.callNum.value.trim();
     cfg.countdown.on = F.cdOn.checked; cfg.countdown.date = F.cdDate.value;
@@ -429,7 +455,7 @@
   function parseGoogleForm(write) {
     var url = F.gfUrl.value.trim(), st = $('#gfStatus');
     if (write !== false) { cfg.enroll.formUrl = url; }
-    var e = cfg.enroll; e.actionUrl = ''; e.entryName = ''; e.entryPhone = ''; e.entryEmail = '';
+    var e = cfg.enroll; e.actionUrl = ''; e.entryName = ''; e.entryPhone = ''; e.entryEmail = ''; e.entryExtra = '';
     if (!url) { st.className = 'status'; st.textContent = 'Optional. Without it, the popup just collects nothing and opens your session link.'; return; }
     var u; try { u = new URL(url); } catch (x) { st.className = 'status bad'; st.textContent = '⚠ This is not a valid link.'; return; }
     var m = /\/forms\/d\/e\/([^/]+)\//.exec(u.pathname);
@@ -438,9 +464,9 @@
     u.searchParams.forEach(function (val, key) {
       if (key.indexOf('entry.') !== 0) return;
       var v = val.trim().toLowerCase();
-      if (v === 'name') e.entryName = key; else if (v === 'phone' || v === 'mobile' || v === 'number') e.entryPhone = key; else if (v === 'email') e.entryEmail = key;
+      if (v === 'name') e.entryName = key; else if (v === 'phone' || v === 'mobile' || v === 'number') e.entryPhone = key; else if (v === 'email') e.entryEmail = key; else if (v === 'service' || v === 'course' || v === 'interest' || v === 'extra') e.entryExtra = key;
     });
-    var found = [e.entryName && 'Name', e.entryPhone && 'Phone', e.entryEmail && 'Email'].filter(Boolean);
+    var found = [e.entryName && 'Name', e.entryPhone && 'Phone', e.entryEmail && 'Email', e.entryExtra && 'Service/Choice'].filter(Boolean);
     if (!found.length) { st.className = 'status bad'; st.textContent = '⚠ Form found, but no fields matched. In the pre-filled link type exactly: name, phone, email.'; }
     else { st.className = 'status ok'; st.textContent = '✓ Form connected · fields: ' + found.join(', '); }
   }

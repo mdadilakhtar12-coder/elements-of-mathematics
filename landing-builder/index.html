@@ -18,7 +18,7 @@
 
 <div class="g-main">
   <div class="cats" id="cats"></div>
-  <div class="sec-t"><h2 id="catTitle">Education &amp; Coaching</h2><span id="catCount"></span></div>
+  <div class="sec-t"><h2 id="catTitle"></h2><span id="catCount"></span></div>
   <div class="grid" id="grid"></div>
   <p class="foot-note">More categories coming soon — Salon, Real Estate, Clinic, Fitness &amp; more.</p>
 </div>
@@ -30,6 +30,11 @@
 <script src="templates/edu-brightpath.js"></script>
 <script src="templates/edu-topper.js"></script>
 <script src="templates/edu-skillpro.js"></script>
+<script src="templates/salon-glow.js"></script>
+<script src="templates/salon-bloom.js"></script>
+<script src="templates/salon-barber.js"></script>
+<script src="templates/salon-zen.js"></script>
+<script src="templates/salon-bridal.js"></script>
 <script>
 (function () {
   var cur = 'education';
@@ -48,6 +53,7 @@
     drawCats();
     var list = LB.templates.filter(function (t) { return t.category === cur; });
     document.getElementById('catCount').textContent = list.length + ' templates';
+    document.getElementById('catTitle').textContent = LB.categories.filter(function (c) { return c.id === cur; })[0].name;
     grid.innerHTML = '';
     list.forEach(function (t) {
       var card = document.createElement('div'); card.className = 'tcard';

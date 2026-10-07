@@ -4,7 +4,7 @@
   LB.templates = [];
   LB.categories = [
     { id: 'education', name: 'Education & Coaching', icon: '🎓', live: true },
-    { id: 'salon', name: 'Salon · Beauty · Spa', icon: '💇', live: false },
+    { id: 'salon', name: 'Salon · Beauty · Spa', icon: '💇', live: true },
     { id: 'realestate', name: 'Real Estate', icon: '🏠', live: false },
     { id: 'clinic', name: 'Health · Clinic · Dental', icon: '🩺', live: false },
     { id: 'fitness', name: 'Fitness · Gym · Yoga', icon: '💪', live: false }
@@ -21,8 +21,10 @@
         entryName: '', entryPhone: '', entryEmail: '', askEmail: true,
         title: 'Reserve your free seat',
         sub: 'Fill in your details and we will take you straight to the session.',
-        button: 'Confirm my seat', thanks: 'You are registered!'
+        button: 'Confirm my seat', thanks: 'You are registered!',
+        extraOn: false, extraLabel: 'Service', extraOptions: '', entryExtra: ''
       },
+      bar: { on: false, text: 'Book Now' },
       countdown: { on: true, date: '' },
       headCode: '', title: '', description: ''
     };
@@ -52,6 +54,11 @@
         '<circle cx="' + w * 0.1 + '" cy="' + h * 0.95 + '" r="' + 150 * s + '" fill="#fff" opacity=".07"/>' +
         '<g transform="translate(' + (cx - 70 * s) + ' ' + (cy - 55 * s) + ') scale(' + s + ')" fill="#fff" opacity=".85">' +
         '<rect x="0" y="0" width="140" height="110" rx="14" fill="none" stroke="#fff" stroke-width="9"/><circle cx="42" cy="38" r="12"/><path d="M12 98l38-38 24 24 18-18 38 38z"/></g></svg>');
+    },
+    bg: function (c1, c2, w, h) {
+      w = w || 1600; h = h || 1000;
+      return uri('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '">' + grad(c1, c2) +
+        '<rect width="' + w + '" height="' + h + '" fill="url(#g)"/><circle cx="' + w * 0.82 + '" cy="' + h * 0.25 + '" r="' + h * 0.38 + '" fill="#fff" opacity=".06"/><circle cx="' + w * 0.6 + '" cy="' + h * 1.0 + '" r="' + h * 0.45 + '" fill="#fff" opacity=".05"/></svg>');
     },
     logo: function (c1, c2, letter) {
       letter = letter || 'A';

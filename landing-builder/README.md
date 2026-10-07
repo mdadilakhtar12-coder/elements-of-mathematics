@@ -3,7 +3,7 @@
 Pure HTML/JS, no server, no build step, no cost. Open `index.html` in Chrome
 (double-click) or host the folder on any static host.
 
-1. `index.html` – template gallery (category: Education & Coaching, 5 templates)
+1. `index.html` – template gallery (Education & Coaching ×5, Salon · Beauty · Spa ×5)
 2. `editor.html?t=<id>` – click-to-edit editor, preview, **Download ZIP**
 
 ## What the editor can do
@@ -14,6 +14,7 @@ Pure HTML/JS, no server, no build step, no cost. Open `index.html` in Chrome
 - Brand colours, page title & description
 - WhatsApp button, Call button (each can be switched off)
 - Enroll popup → saves lead to **Google Form** → redirects to webinar link (e.g. webinar.gg)
+- Google Maps block (type an address), Before/After slider, optional service dropdown in the popup, mobile bottom bar (Call · WhatsApp · Book)
 - Countdown timer + auto-filled event date (IST)
 - Meta Pixel / Analytics code box
 - Auto-save in the browser; Undo for structure changes
@@ -26,4 +27,4 @@ Copy `templates/edu-aurora.js`, change `id`, register it in `index.html` and
 `data-cta="enroll|whatsapp|call"`, `data-countdown`, `data-acc` (accordion).
 
 ## Next categories
-Salon/Beauty/Spa, Real Estate, Clinic/Dental, Fitness/Gym/Yoga.
+Real Estate, Clinic/Dental, Fitness/Gym/Yoga.
