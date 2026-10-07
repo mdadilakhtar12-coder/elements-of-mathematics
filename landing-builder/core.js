@@ -6,7 +6,7 @@
     { id: 'education', name: 'Education & Coaching', icon: '🎓', live: true },
     { id: 'salon', name: 'Salon · Beauty · Spa', icon: '💇', live: true },
     { id: 'realestate', name: 'Real Estate', icon: '🏠', live: true },
-    { id: 'clinic', name: 'Health · Clinic · Dental', icon: '🩺', live: false },
+    { id: 'clinic', name: 'Health · Clinic · Dental', icon: '🩺', live: true },
     { id: 'fitness', name: 'Fitness · Gym · Yoga', icon: '💪', live: false }
   ];
   LB.register = function (t) { LB.templates.push(t); };
