@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PageCraft — Editor</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body class="ed">
+<div class="topbar">
+  <a class="back" href="index.html" title="Back to templates">← Templates</a>
+  <div class="tname"><b id="tplName">Template</b><span id="saveState">Saved</span></div>
+  <div class="seg" id="modeSeg"><button class="on" data-mode="edit">✎ Edit</button><button data-mode="preview">▶ Preview</button></div>
+  <div class="seg" id="devSeg"><button class="on" data-dev="desktop" title="Desktop">🖥</button><button data-dev="mobile" title="Mobile">📱</button></div>
+  <span class="grow"></span>
+  <button class="ghostbtn" id="undoBtn" title="Undo last structure change">↶ Undo</button>
+  <button class="ghostbtn" id="resetBtn" title="Discard all changes">Reset</button>
+  <button class="primary" id="dlBtn">⬇ Download ZIP</button>
+</div>
+
+<div class="shell">
+  <aside class="panel">
+    <div class="tabs" id="tabs">
+      <button class="on" data-tab="content">Content</button>
+      <button data-tab="design">Design</button>
+      <button data-tab="contact">Buttons &amp; Form</button>
+      <button data-tab="publish">Publish</button>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="tabbody on" id="tab-content">
+      <div class="tip">💡 Click any <b>text</b> on the page to edit it. Click an <b>image</b> to replace it. Hover a card to duplicate or delete it.</div>
+      <h4>Sections <small>show / hide / reorder</small></h4>
+      <div id="secList" class="rows"></div>
+      <h4>Images <small>click an image on the page, or here</small></h4>
+      <div id="imgList" class="rows"></div>
+      <h4>Videos <small>paste a YouTube link</small></h4>
+      <div id="vidList" class="rows"></div>
+    </div>
+
+    <!-- DESIGN -->
+    <div class="tabbody" id="tab-design">
+      <h4>Brand colours</h4>
+      <div id="colorList" class="rows"></div>
+      <button class="linkbtn" id="colorReset">↺ Back to original colours</button>
+      <h4>Page info <small>shown on Google &amp; browser tab</small></h4>
+      <label class="f">Page title<input id="pgTitle" placeholder="e.g. Free Masterclass — Your Academy"></label>
+      <label class="f">Short description<textarea id="pgDesc" rows="3" placeholder="One or two lines about this page"></textarea></label>
+    </div>
+
+    <!-- CONTACT & FORM -->
+    <div class="tabbody" id="tab-contact">
+      <h4>Enroll / Register button</h4>
+      <p class="hint">What happens when a student clicks <b>Enroll Now</b> / <b>Register</b>:</p>
+      <label class="radio"><input type="radio" name="mode" value="form"><span><b>Popup form</b> → saves to Google Form → opens your session link</span></label>
+      <label class="radio"><input type="radio" name="mode" value="link"><span><b>Direct link</b> — go straight to your link</span></label>
+      <label class="radio"><input type="radio" name="mode" value="whatsapp"><span><b>WhatsApp</b> — open a WhatsApp chat</span></label>
+      <label class="f">Session / webinar link <small>(webinar.gg, Zoom, YouTube Live, any link)</small><input id="webUrl" placeholder="https://webinar.gg/your-session"></label>
+
+      <div id="formBox">
+        <h4>Google Form <small>stores each lead in a Google Sheet</small></h4>
+        <label class="f">Paste your <b>pre-filled link</b><input id="gfUrl" placeholder="https://docs.google.com/forms/d/e/…/viewform?usp=pp_url&amp;entry.123=name…"></label>
+        <div id="gfStatus" class="status"></div>
+        <details class="how"><summary>How to get this link (2 minutes)</summary>
+          <ol>
+            <li>In <b>forms.google.com</b> make a form with 3 short-answer questions: <b>Name</b>, <b>Phone</b>, <b>Email</b>.</li>
+            <li>Click <b>⋮ (3 dots, top right) → Get pre-filled link</b>.</li>
+            <li>Type exactly <code>name</code> in the Name box, <code>phone</code> in Phone, <code>email</code> in Email.</li>
+            <li>Click <b>Get link → Copy link</b> and paste it above.</li>
+            <li>Keep other questions optional. Responses appear in the form's <b>Responses → Sheets</b>.</li>
+          </ol>
+        </details>
+        <label class="chk"><input type="checkbox" id="askEmail"> Ask for email in the popup</label>
+        <label class="f">Popup heading<input id="enTitle"></label>
+        <label class="f">Popup sub-text<textarea id="enSub" rows="2"></textarea></label>
+        <label class="f">Submit button text<input id="enBtn"></label>
+        <label class="f">After-submit message<input id="enThanks"></label>
+        <button class="linkbtn" id="testPopup">👁 Test the popup</button>
+      </div>
+
+      <h4>WhatsApp button</h4>
+      <label class="switch"><input type="checkbox" id="waOn"><i></i><span>Show WhatsApp button</span></label>
+      <label class="f">WhatsApp number <small>(10 digits = India; or add country code)</small><input id="waNum" inputmode="tel" placeholder="9876543210"></label>
+      <label class="f">Pre-filled message<input id="waMsg"></label>
+
+      <h4>Call button</h4>
+      <label class="switch"><input type="checkbox" id="callOn"><i></i><span>Show Call button</span></label>
+      <label class="f">Phone number<input id="callNum" inputmode="tel" placeholder="+91 98765 43210"></label>
+
+      <h4>Webinar date &amp; countdown</h4>
+      <label class="switch"><input type="checkbox" id="cdOn"><i></i><span>Show countdown timer &amp; date</span></label>
+      <label class="f">Date &amp; time <small>(Indian time, IST)</small><input type="datetime-local" id="cdDate"></label>
+      <p class="hint">If you leave the date empty (or it has passed), the timer hides itself automatically.</p>
+    </div>
+
+    <!-- PUBLISH -->
+    <div class="tabbody" id="tab-publish">
+      <h4>Download &amp; host</h4>
+      <p class="hint">Press <b>Download ZIP</b>. You get one folder with <code>index.html</code>, <code>lb.js</code> and your images. Upload it anywhere — drag &amp; drop the folder on <b>Netlify Drop</b>, <b>Cloudflare Pages</b>, GitHub Pages, or your hosting's file manager.</p>
+      <button class="primary wide" id="dlBtn2">⬇ Download ZIP</button>
+      <h4>Tracking code <small>optional</small></h4>
+      <label class="f">Paste Meta Pixel / Google Analytics / any script <small>(goes inside &lt;head&gt;)</small>
+        <textarea id="headCode" rows="6" placeholder="&lt;!-- Meta Pixel Code --&gt;&#10;&lt;script&gt;…&lt;/script&gt;"></textarea></label>
+      <p class="hint">Tracking code only works on the downloaded page, not inside this editor.</p>
+    </div>
+  </aside>
+
+  <main class="canvas" id="canvas">
+    <div class="deviceframe" id="deviceFrame"><iframe id="frame" title="Page editor"></iframe></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="lib/jszip.min.js"></script>
+<script src="runtime.js"></script>
+<script src="core.js"></script>
+<script src="templates/edu-aurora.js"></script>
+<script src="templates/edu-scholar.js"></script>
+<script src="templates/edu-brightpath.js"></script>
+<script src="templates/edu-topper.js"></script>
+<script src="templates/edu-skillpro.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

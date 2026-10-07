@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PageCraft — Landing Page Builder</title>
+<link rel="stylesheet" href="builder.css">
+</head>
+<body>
+<div class="g-head">
+  <div class="g-nav"><i>✦</i> PageCraft</div>
+  <div class="g-hero">
+    <h1>Pick a template. Edit it. <em>Download &amp; publish.</em></h1>
+    <p>Premium, ready-made landing pages. Change text, images, videos, colours and buttons in minutes — then download one ZIP and host it anywhere.</p>
+    <div class="steps"><span>1 · Choose</span><span>2 · Edit</span><span>3 · Preview</span><span>4 · Download ZIP</span></div>
+  </div>
+</div>
+
+<div class="g-main">
+  <div class="cats" id="cats"></div>
+  <div class="sec-t"><h2 id="catTitle">Education &amp; Coaching</h2><span id="catCount"></span></div>
+  <div class="grid" id="grid"></div>
+  <p class="foot-note">More categories coming soon — Salon, Real Estate, Clinic, Fitness &amp; more.</p>
+</div>
+
+<script src="runtime.js"></script>
+<script src="core.js"></script>
+<script src="templates/edu-aurora.js"></script>
+<script src="templates/edu-scholar.js"></script>
+<script src="templates/edu-brightpath.js"></script>
+<script src="templates/edu-topper.js"></script>
+<script src="templates/edu-skillpro.js"></script>
+<script>
+(function () {
+  var cur = 'education';
+  var cats = document.getElementById('cats'), grid = document.getElementById('grid');
+  function drawCats() {
+    cats.innerHTML = '';
+    LB.categories.forEach(function (c) {
+      var b = document.createElement('button');
+      b.className = 'cat' + (c.id === cur ? ' on' : '') + (c.live ? '' : ' soon');
+      b.innerHTML = c.icon + ' ' + c.name + (c.live ? '' : ' <small>Soon</small>');
+      if (c.live) b.onclick = function () { cur = c.id; draw(); };
+      cats.appendChild(b);
+    });
+  }
+  function draw() {
+    drawCats();
+    var list = LB.templates.filter(function (t) { return t.category === cur; });
+    document.getElementById('catCount').textContent = list.length + ' templates';
+    grid.innerHTML = '';
+    list.forEach(function (t) {
+      var card = document.createElement('div'); card.className = 'tcard';
+      card.innerHTML = '<a class="thumb" href="editor.html?t=' + t.id + '"><iframe loading="lazy" tabindex="-1" title="' + t.name + ' preview"></iframe><div class="ov"><span>Use this template →</span></div></a>' +
+        '<div class="tinfo"><h3>' + t.name + '</h3><p>' + t.tagline + '</p><span class="best">' + t.best + '</span>' +
+        '<div class="row"><a class="b-pri" href="editor.html?t=' + t.id + '">Edit this template</a></div></div>';
+      var f = card.querySelector('iframe');
+      f.srcdoc = LB.buildDoc(t.html, { edit: true });
+      grid.appendChild(card);
+    });
+    scaleThumbs();
+  }
+  function scaleThumbs() {
+    document.querySelectorAll('.thumb').forEach(function (th) {
+      var k = th.clientWidth / 1280, f = th.querySelector('iframe');
+      f.style.transform = 'scale(' + k + ')'; th.style.height = Math.round(k * 900) + 'px';
+    });
+  }
+  window.addEventListener('resize', scaleThumbs);
+  draw();
+})();
+</script>
+</body>
+</html>
