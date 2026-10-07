@@ -3,7 +3,7 @@
 Pure HTML/JS, no server, no build step, no cost. Open `index.html` in Chrome
 (double-click) or host the folder on any static host.
 
-1. `index.html` – template gallery (Education & Coaching ×5, Salon · Beauty · Spa ×5)
+1. `index.html` – template gallery (5 categories × 5 templates (Education, Salon, Real Estate, Clinic, Fitness))
 2. `editor.html?t=<id>` – click-to-edit editor, preview, **Download ZIP**
 
 ## What the editor can do
@@ -27,4 +27,4 @@ Copy `templates/edu-aurora.js`, change `id`, register it in `index.html` and
 `data-cta="enroll|whatsapp|call"`, `data-countdown`, `data-acc` (accordion).
 
 ## Next categories
-Real Estate, Clinic/Dental, Fitness/Gym/Yoga.
+More categories: add templates in templates/ and run python3 sync_scripts.py.
