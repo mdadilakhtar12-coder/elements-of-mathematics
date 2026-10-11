@@ -2,6 +2,7 @@ package com.elementsofmathematics.app
 
 import android.net.Uri
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -25,6 +26,10 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.elementsofmathematics.app.data.Repository
 import com.elementsofmathematics.app.ui.MainViewModel
+import com.elementsofmathematics.app.ui.UpdateViewModel
+import com.elementsofmathematics.app.ui.UpdateHost
+import com.elementsofmathematics.app.ui.SearchScreen
+import com.elementsofmathematics.app.ui.DownloadsScreen
 import com.elementsofmathematics.app.ui.home.HomeScreen
 import com.elementsofmathematics.app.ui.pdf.PdfViewerScreen
 import com.elementsofmathematics.app.ui.section.SectionScreen
@@ -35,6 +40,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // Protect PDFs, dialogs and navigation transitions from ordinary screen capture.
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             AppTheme {
                 if (Repository.isFirebaseConfigured(LocalContext.current)) AppNavigation() else FirebaseMissing()
@@ -45,6 +52,8 @@ class MainActivity : ComponentActivity() {
 
 object Routes {
     const val HOME = "home"
+    const val SEARCH = "search"
+    const val DOWNLOADS = "downloads"
     const val SECTION = "section/{sectionId}"
     const val VIDEO = "video/{sectionId}/{itemId}"
     const val PDF = "pdf?path={path}&title={title}&key={key}"
@@ -59,9 +68,23 @@ object Routes {
 private fun AppNavigation() {
     val nav = rememberNavController()
     val vm: MainViewModel = viewModel()
+    val updates: UpdateViewModel = viewModel()
+    UpdateHost(updates)
     NavHost(navController = nav, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeScreen(vm, onOpenSection = { nav.navigate(Routes.section(it)) })
+            HomeScreen(vm, onOpenSection = { nav.navigate(Routes.section(it)) },
+                onSearch = { nav.navigate(Routes.SEARCH) }, onDownloads = { nav.navigate(Routes.DOWNLOADS) },
+                onCheckUpdates = { updates.check(manual = true) })
+        }
+        composable(Routes.SEARCH) {
+            SearchScreen(vm, onBack = { nav.popBackStack() },
+                onPdf = { path, title, key -> nav.navigate(Routes.pdf(path, title, key)) },
+                onVideo = { section, item -> nav.navigate(Routes.video(section, item)) },
+                onSection = { nav.navigate(Routes.section(it)) })
+        }
+        composable(Routes.DOWNLOADS) {
+            DownloadsScreen(onBack = { nav.popBackStack() },
+                onPdf = { path, title, key -> nav.navigate(Routes.pdf(path, title, key)) })
         }
         composable(Routes.SECTION) { entry ->
             val sectionId = entry.arguments?.getString("sectionId").orEmpty()

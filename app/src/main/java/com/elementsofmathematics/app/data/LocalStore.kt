@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
+import com.google.gson.Gson
 
 enum class PdfMode { NORMAL, HIGHLIGHTER }
 
@@ -17,6 +18,15 @@ object LocalStore {
     fun init(context: Context) {
         prefs = context.getSharedPreferences("local_store", Context.MODE_PRIVATE)
     }
+
+    /** Offline catalog only; never store PDF binary chunks or authentication credentials here. */
+    fun saveCatalog(key: String, value: Any) {
+        prefs.edit().putString("catalog_$key", Gson().toJson(value)).apply()
+    }
+
+    fun <T> catalog(key: String, type: Class<T>): T? = runCatching {
+        prefs.getString("catalog_$key", null)?.let { Gson().fromJson(it, type) }
+    }.getOrNull()
 
     var pdfMode: PdfMode
         get() = runCatching { PdfMode.valueOf(prefs.getString("pdf_mode", null)!!) }.getOrDefault(PdfMode.NORMAL)

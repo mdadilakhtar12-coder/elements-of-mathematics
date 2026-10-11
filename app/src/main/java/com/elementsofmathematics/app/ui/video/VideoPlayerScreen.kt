@@ -72,7 +72,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 
 @Composable
 fun VideoPlayerScreen(vm: MainViewModel, sectionId: String, initialItemId: String, onBack: () -> Unit) {
-    val items by remember(sectionId) { vm.items(sectionId) }.collectAsStateWithLifecycle()
+    val allItems by remember(sectionId) { vm.items(sectionId) }.collectAsStateWithLifecycle()
+    val items = allItems?.filter { !it.isFolder }
     var currentId by rememberSaveable { mutableStateOf(initialItemId) }
     val current = items?.firstOrNull { it.id == currentId }
     val videoId = current?.let { YouTube.videoId(it.url) }

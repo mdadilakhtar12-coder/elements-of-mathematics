@@ -24,6 +24,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,10 +81,12 @@ fun BannerCarousel(
         pageCount = { if (count > 1) VIRTUAL_PAGES else 1 },
     )
     val context = LocalContext.current
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
+    val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
 
     // Restarts after every settle, so a manual swipe resets the timer.
-    LaunchedEffect(pagerState.settledPage, intervalSec, count) {
-        if (count > 1 && intervalSec > 0) {
+    LaunchedEffect(pagerState.settledPage, intervalSec, count, resumed) {
+        if (resumed && count > 1 && intervalSec > 0) {
             delay(intervalSec * 1000L)
             if (!pagerState.isScrollInProgress) {
                 if (pagerState.currentPage == VIRTUAL_PAGES - 1) {

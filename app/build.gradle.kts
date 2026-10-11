@@ -13,13 +13,14 @@ if (file("google-services.json").exists()) {
 android {
     namespace = "com.elementsofmathematics.app"
     compileSdk = 35
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "com.elementsofmathematics.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 6
+        versionName = "1.3.0"
     }
 
     buildTypes {
@@ -42,6 +43,7 @@ android {
 }
 
 dependencies {
+    implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")

@@ -32,4 +32,4 @@ if ([IO.Path]::GetFullPath($GoogleServicesFile) -ne [IO.Path]::GetFullPath($task
 }
 $taskProjectJson = @{ projects = @{ default = $ProjectId } } | ConvertTo-Json
 [IO.File]::WriteAllText((Join-Path $taskRoot '.firebaserc'), $taskProjectJson, $taskUtf8)
-Write-Output 'Local Firebase configuration is ready. Enable Email/Password authentication, create the admin account, and publish the rules before testing.'
+Write-Output 'Local Firebase configuration is ready. Enable Email/Password and Anonymous authentication, create the admin account, and deploy Firestore rules and index exclusions before testing.'

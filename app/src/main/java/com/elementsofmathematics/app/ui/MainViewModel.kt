@@ -19,6 +19,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.retryWhen
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import com.elementsofmathematics.app.data.LibraryCatalog
+import com.elementsofmathematics.app.data.LibraryItem
 
 class MainViewModel : ViewModel() {
     private val _loadErrors = MutableStateFlow<Map<String, String>>(emptyMap())
@@ -53,6 +58,17 @@ class MainViewModel : ViewModel() {
     fun items(sectionId: String): StateFlow<List<ContentItem>?> = itemFlows.getOrPut(sectionId) {
         Repository.itemsFlow(sectionId).reportErrors("content:$sectionId").stateIn(viewModelScope, SharingStarted.WhileSubscribed(60_000), null)
     }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val library: StateFlow<LibraryCatalog> = sections.flatMapLatest { list ->
+        if (list == null) flowOf(LibraryCatalog())
+        else if (list.isEmpty()) flowOf(LibraryCatalog(loading = false))
+        else combine(list.map { items(it.id) }) { content ->
+            LibraryCatalog(list.flatMapIndexed { index, section ->
+                content[index].orEmpty().map { LibraryItem(section, it) }
+            }, loading = content.any { it == null })
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryCatalog())
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: SharedFlow<String> = _messages

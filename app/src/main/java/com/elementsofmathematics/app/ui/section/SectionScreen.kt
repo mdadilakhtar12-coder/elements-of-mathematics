@@ -30,6 +30,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -66,6 +70,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.elementsofmathematics.app.data.ContentItem
+import com.elementsofmathematics.app.data.FolderTree
 import com.elementsofmathematics.app.data.PdfCache
 import com.elementsofmathematics.app.data.Repository
 import com.elementsofmathematics.app.data.SectionType
@@ -105,6 +110,19 @@ fun SectionScreen(
     val snackbar = remember { SnackbarHostState() }
 
     var editing by remember { mutableStateOf<ContentItem?>(null) }
+    var folderId by rememberSaveable(sectionId) { mutableStateOf("") }
+    var showAdd by remember { mutableStateOf(false) }
+    val folderPath = runCatching { FolderTree.ancestors(items.orEmpty(), folderId) }.getOrDefault(emptyList())
+    fun goBack() {
+        if (folderId.isEmpty()) onBack()
+        else folderId = items.orEmpty().firstOrNull { it.id == folderId }?.parentId.orEmpty()
+    }
+    BackHandler(enabled = folderId.isNotEmpty()) { goBack() }
+    LaunchedEffect(items, folderId) {
+        if (items != null && folderId.isNotEmpty() && items.orEmpty().none { it.id == folderId && it.isFolder }) {
+            folderId = ""
+        }
+    }
     var deleting by remember { mutableStateOf<ContentItem?>(null) }
     var removingDownload by remember { mutableStateOf<ContentItem?>(null) }
     var downloadProgress by remember { mutableStateOf<Float?>(null) }
@@ -143,21 +161,32 @@ fun SectionScreen(
     }
 
     Scaffold(
-        topBar = { InnerTopBar(section?.title ?: "", onBack) },
+        topBar = {
+            Column {
+                InnerTopBar(folderPath.lastOrNull()?.title ?: section?.title.orEmpty(), ::goBack)
+                if (folderId.isNotEmpty()) {
+                    Text(
+                        (listOf(section?.title.orEmpty()) + folderPath.map { it.title }).joinToString(" / "),
+                        fontSize = 12.sp, color = Color.Gray,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (isAdmin && section != null) {
                 ExtendedFloatingActionButton(
-                    onClick = { editing = ContentItem() },
+                    onClick = { showAdd = true },
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text(addLabel(type)) },
+                    text = { Text("Add") },
                     containerColor = Purple,
                     contentColor = Color.White,
                 )
             }
         },
     ) { padding ->
-        val list = items
+        val list = items?.let { FolderTree.children(it, folderId) }
         Box(
             Modifier
                 .fillMaxSize()
@@ -179,7 +208,7 @@ fun SectionScreen(
                         .padding(32.dp),
                 )
 
-                type == SectionType.VIDEO -> LazyVerticalGrid(
+                type == SectionType.VIDEO && list.none { it.isFolder } -> LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     contentPadding = PaddingValues(12.dp, 12.dp, 12.dp, 96.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -204,15 +233,24 @@ fun SectionScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     itemsIndexed(list, key = { _, it -> it.id }) { index, item ->
-                        val isLink = type == SectionType.LINK
-                        val downloaded = remember(item.id, item.url, cacheVersion) { !isLink && PdfCache.isDownloaded(context, item) }
+                        val isLink = type != SectionType.PDF
+                        val downloaded = remember(item.id, item.url, item.storagePath, cacheVersion) {
+                            !item.isFolder && !isLink && PdfCache.isDownloaded(context, item)
+                        }
                         ChapterRow(
                             number = index + 1,
                             item = item,
                             downloaded = downloaded,
                             isLink = isLink,
                             isAdmin = isAdmin,
-                            onClick = { if (isLink) Links.open(context, item.url) else openPdf(item) },
+                            onClick = {
+                                when {
+                                    item.isFolder -> folderId = item.id
+                                    type == SectionType.VIDEO -> onOpenVideo(item.id)
+                                    isLink -> Links.open(context, item.url)
+                                    else -> openPdf(item)
+                                }
+                            },
                             onLongClick = { if (downloaded) removingDownload = item },
                             onEdit = { editing = item },
                             onDelete = { deleting = item },
@@ -252,24 +290,44 @@ fun SectionScreen(
         )
     }
 
+    if (showAdd) {
+        AlertDialog(
+            onDismissRequest = { showAdd = false },
+            title = { Text("Add content") },
+            text = { Column {
+                TextButton(onClick = { showAdd = false; editing = ContentItem(isFolder = true, parentId = folderId) }) {
+                    Icon(Icons.Default.Folder, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Add Folder")
+                }
+                TextButton(onClick = { showAdd = false; editing = ContentItem(parentId = folderId) }) {
+                    Icon(Icons.Default.Add, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(addLabel(type))
+                }
+            } },
+            confirmButton = { TextButton(onClick = { showAdd = false }) { Text("Cancel") } },
+        )
+    }
     editing?.let { item ->
         ItemEditorDialog(
             type = type,
             item = item,
+            folders = items.orEmpty(),
             onDismiss = { editing = null },
             onSave = { updated, oldPath ->
+                Repository.saveItem(sectionId, updated, vm.nextOrder(items) { it.order })
                 editing = null
-                vm.run("Saved") {
-                    Repository.saveItem(sectionId, updated, vm.nextOrder(items) { it.order })
-                    if (!oldPath.isNullOrEmpty() && oldPath != updated.storagePath) Repository.deleteStorageFile(oldPath)
-                }
+                vm.showMessage("Saved")
+                if (!oldPath.isNullOrEmpty()) vm.run(null) { Repository.deleteStorageFile(oldPath) }
             },
         )
     }
     deleting?.let { item ->
         ConfirmDialog(
             title = "Delete \"${item.title}\"?",
-            message = "It will be removed for all students.",
+            message = if (item.isFolder) "Only empty folders can be deleted. Move or delete its contents first."
+                else "It will be removed for all students.",
             onDismiss = { deleting = null },
             onConfirm = {
                 deleting = null
@@ -321,7 +379,8 @@ private fun ChapterRow(
             Modifier.padding(horizontal = 12.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            NumberBubble(number)
+            if (item.isFolder) Icon(Icons.Default.Folder, "Folder", tint = Purple, modifier = Modifier.size(40.dp))
+            else NumberBubble(number)
             Spacer(Modifier.width(14.dp))
             Text(
                 item.title,
@@ -330,7 +389,9 @@ private fun ChapterRow(
                 color = Color(0xFF1E1E1E),
                 modifier = Modifier.weight(1f),
             )
-            if (isLink) {
+            if (item.isFolder) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Open folder", tint = Purple)
+            } else if (isLink) {
                 Icon(Icons.AutoMirrored.Filled.OpenInNew, "Open", tint = Purple, modifier = Modifier.size(28.dp))
             } else if (downloaded) {
                 Box(

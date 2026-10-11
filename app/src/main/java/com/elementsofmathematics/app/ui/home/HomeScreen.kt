@@ -42,6 +42,9 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -93,6 +96,7 @@ import com.elementsofmathematics.app.data.PdfMode
 import com.elementsofmathematics.app.data.Repository
 import com.elementsofmathematics.app.data.Section
 import com.elementsofmathematics.app.ui.MainViewModel
+import com.elementsofmathematics.app.ui.PublishUpdateDialog
 import com.elementsofmathematics.app.ui.admin.AdminLoginDialog
 import com.elementsofmathematics.app.ui.admin.AppSettingsDialog
 import com.elementsofmathematics.app.ui.admin.BannerManagerDialog
@@ -109,7 +113,8 @@ private const val TAPS_TO_OPEN_ADMIN = 5
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
+fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit,
+               onSearch: () -> Unit, onDownloads: () -> Unit, onCheckUpdates: () -> Unit) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val banners by vm.banners.collectAsStateWithLifecycle()
     val sections by vm.sections.collectAsStateWithLifecycle()
@@ -125,6 +130,7 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
     var showBanners by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
+    var showPublishUpdate by remember { mutableStateOf(false) }
     var editingSection by remember { mutableStateOf<Section?>(null) }
     var deletingSection by remember { mutableStateOf<Section?>(null) }
 
@@ -154,6 +160,10 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
                 onAction = { action ->
                     scope.launch { drawerState.close() }
                     when (action) {
+                        DrawerAction.Search -> onSearch()
+                        DrawerAction.Downloads -> onDownloads()
+                        DrawerAction.Updates -> onCheckUpdates()
+                        DrawerAction.PublishUpdate -> showPublishUpdate = true
                         DrawerAction.PdfMode -> showPdfMode = true
                         DrawerAction.Feedback -> Links.sendFeedback(context, settings.feedbackEmail, settings.appTitle)
                         DrawerAction.Share -> Links.shareApp(context, settings.appTitle)
@@ -194,6 +204,7 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
                         }
                     },
                     actions = {
+                        IconButton(onClick = onSearch) { Icon(Icons.Default.Search, contentDescription = "Search") }
                         if (isAdmin) {
                             Icon(
                                 Icons.Default.AdminPanelSettings,
@@ -302,12 +313,16 @@ fun HomeScreen(vm: MainViewModel, onOpenSection: (String) -> Unit) {
     if (showPassword) {
         ChangePasswordDialog(
             onDismiss = { showPassword = false },
-            onSave = {
+                onSave = { current, replacement ->
                 showPassword = false
-                vm.run("Password changed") { Repository.changeAdminPassword(it) }
+                    vm.run("Password changed") { Repository.changeAdminPassword(current, replacement) }
             },
         )
     }
+    if (showPublishUpdate && isAdmin) PublishUpdateDialog(
+        onDismiss = { showPublishUpdate = false },
+        onPublished = { showPublishUpdate = false; vm.showMessage("App update published") },
+    )
     editingSection?.let { section ->
         SectionEditorDialog(
             section = section,
@@ -430,6 +445,10 @@ fun AddCard(label: String, height: Int = 132, onClick: () -> Unit) {
 }
 
 private sealed interface DrawerAction {
+    data object Search : DrawerAction
+    data object Downloads : DrawerAction
+    data object Updates : DrawerAction
+    data object PublishUpdate : DrawerAction
     data object PdfMode : DrawerAction
     data object Feedback : DrawerAction
     data object Share : DrawerAction
@@ -457,6 +476,9 @@ private fun AppDrawer(
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = 16.dp),
             )
             DrawerRow(Icons.Default.Edit, Color(0xFFFFC107), "Normal / Highlighter Mode") { onAction(DrawerAction.PdfMode) }
+            DrawerRow(Icons.Default.Search, Purple, "Search") { onAction(DrawerAction.Search) }
+            DrawerRow(Icons.Default.Download, Purple, "Downloads") { onAction(DrawerAction.Downloads) }
+            DrawerRow(Icons.Default.SystemUpdate, Purple, "Check for updates") { onAction(DrawerAction.Updates) }
             DrawerRow(Icons.Default.Email, Color(0xFFEA4335), "Feedback") { onAction(DrawerAction.Feedback) }
             DrawerRow(Icons.Default.Share, Color(0xFF00BCD4), "Share App") { onAction(DrawerAction.Share) }
             DrawerRow(Icons.Default.Star, Color(0xFFFFB300), "Rate Us: It motivates us") { onAction(DrawerAction.Rate) }
@@ -474,6 +496,7 @@ private fun AppDrawer(
                 Text("Admin", color = Purple, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
                 DrawerRow(Icons.Default.PhotoLibrary, Purple, "Manage Banners") { onAction(DrawerAction.Banners) }
                 DrawerRow(Icons.Default.Settings, Purple, "App Settings") { onAction(DrawerAction.Settings) }
+                DrawerRow(Icons.Default.SystemUpdate, Purple, "Publish app update") { onAction(DrawerAction.PublishUpdate) }
                 DrawerRow(Icons.Default.Key, Purple, "Change Admin Password") { onAction(DrawerAction.Password) }
                 DrawerRow(Icons.Default.Logout, Color(0xFFD32F2F), "Exit Admin Mode") { onAction(DrawerAction.Logout) }
             }

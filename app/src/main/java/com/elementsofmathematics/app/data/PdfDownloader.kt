@@ -10,6 +10,7 @@ import java.net.URL
 
 /** Saves only complete, validated downloads; failures and cancellation remove temporary files. */
 internal object PdfDownloader {
+    const val MAX_BYTES = 100L * 1024 * 1024
     suspend fun download(link: String, target: File, onProgress: (Float?) -> Unit): File =
         withContext(Dispatchers.IO) {
             val part = File.createTempFile("pdf-", ".part", target.parentFile)
@@ -34,6 +35,7 @@ internal object PdfDownloader {
                         }
                         if (code != HttpURLConnection.HTTP_OK) throw IOException("Server returned $code")
                         val total = conn.contentLengthLong
+                        if (total > MAX_BYTES) throw IOException("PDF exceeds the 100 MB limit")
                         var done = 0L
                         conn.inputStream.use { input ->
                             part.outputStream().use { output ->
@@ -42,8 +44,9 @@ internal object PdfDownloader {
                                     ensureActive()
                                     val n = input.read(buffer)
                                     if (n < 0) break
-                                    output.write(buffer, 0, n)
                                     done += n
+                                    if (done > MAX_BYTES) throw IOException("PDF exceeds the 100 MB limit")
+                                    output.write(buffer, 0, n)
                                     onProgress(if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else null)
                                 }
                             }

@@ -12,3 +12,11 @@ build/
 app/google-services.json
 *.jks
 *.keystore
+node_modules/
+*-debug.log
+.firebase/
+delivery/
+verification/*.apk
+connector/.runtime/
+connector/.env
+connector/deploy/.env
