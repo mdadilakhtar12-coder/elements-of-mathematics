@@ -47,6 +47,9 @@ data class ContentItem(
     /** Firebase Storage path when the PDF was uploaded from the app. */
     val storagePath: String = "",
     val order: Long = 0,
+    val isFolder: Boolean = false,
+    /** null/empty is the section root, including content from older versions. */
+    val parentId: String? = null,
 )
 
 /** Special icon key that renders a YouTube logo instead of an emoji. */

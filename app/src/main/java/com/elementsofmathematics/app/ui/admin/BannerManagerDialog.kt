@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -60,6 +61,7 @@ import com.elementsofmathematics.app.data.Repository
 import com.elementsofmathematics.app.ui.MainViewModel
 import com.elementsofmathematics.app.ui.common.InnerTopBar
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlin.math.roundToInt
 
 @Composable
@@ -98,7 +100,7 @@ fun BannerManagerDialog(vm: MainViewModel, banners: List<Banner>, settings: AppS
                         Text("  Add Banner")
                     }
                     Text(
-                        "Tip: use wide images (2:1), e.g. 1200 × 600 pixels.",
+                        "Use wide images (2:1), e.g. 1200 × 600 pixels. Uploaded images are compressed; maximum 500 KB after compression.",
                         fontSize = 12.sp,
                         color = Color.Gray,
                         modifier = Modifier.padding(top = 4.dp),
@@ -144,8 +146,9 @@ fun BannerManagerDialog(vm: MainViewModel, banners: List<Banner>, settings: AppS
         AddBannerDialog(
             onDismiss = { showAdd = false },
             onSave = { banner ->
+                Repository.saveBanner(banner, vm.nextOrder(banners) { it.order })
                 showAdd = false
-                vm.run("Banner added") { Repository.saveBanner(banner, vm.nextOrder(banners) { it.order }) }
+                vm.showMessage("Banner added")
             },
         )
     }
@@ -184,7 +187,8 @@ fun BannerManagerDialog(vm: MainViewModel, banners: List<Banner>, settings: AppS
 }
 
 @Composable
-private fun AddBannerDialog(onDismiss: () -> Unit, onSave: (Banner) -> Unit) {
+private fun AddBannerDialog(onDismiss: () -> Unit, onSave: suspend (Banner) -> Unit) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var picked by remember { mutableStateOf<Uri?>(null) }
     var imageUrl by remember { mutableStateOf("") }
@@ -247,19 +251,21 @@ private fun AddBannerDialog(onDismiss: () -> Unit, onSave: (Banner) -> Unit) {
                 enabled = (picked != null || imageUrl.isNotBlank()) && progress == null,
                 onClick = {
                     val uri = picked
-                    if (uri == null) {
-                        onSave(Banner(imageUrl = imageUrl.trim(), linkUrl = link.trim()))
-                    } else {
-                        scope.launch {
-                            progress = 0f
-                            try {
-                                val (url, path) = Repository.uploadFile(uri, "banners", "jpg") { progress = it }
+                    scope.launch {
+                        progress = 0f
+                        try {
+                            if (uri == null) {
+                                onSave(Banner(imageUrl = imageUrl.trim(), linkUrl = link.trim()))
+                            } else {
+                                val (url, path) = Repository.uploadFile(context, uri, "banners", "jpg") { progress = it }
                                 onSave(Banner(imageUrl = url, storagePath = path, linkUrl = link.trim()))
-                            } catch (e: Exception) {
-                                error = "Upload failed: ${e.localizedMessage}"
-                            } finally {
-                                progress = null
                             }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            error = "Could not save: ${e.localizedMessage}"
+                        } finally {
+                            progress = null
                         }
                     }
                 },

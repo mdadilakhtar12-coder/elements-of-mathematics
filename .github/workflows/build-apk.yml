@@ -25,13 +25,21 @@ jobs:
         if: env.GOOGLE_SERVICES_JSON != ''
         run: echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
 
-      - name: Build debug APK
+      - name: Test, lint and build debug APK
         run: |
           set -o pipefail
-          ./gradlew assembleDebug 2>&1 | tee build.log || {
+          ./gradlew testDebugUnitTest lintDebug assembleDebug 2>&1 | tee build.log || {
             echo "::group::Compile errors"; grep -E "^e: " build.log || true; echo "::endgroup::"
             exit 1
           }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-reports
+          path: |
+            app/build/reports/
+            build.log
 
       - uses: actions/upload-artifact@v4
         with:

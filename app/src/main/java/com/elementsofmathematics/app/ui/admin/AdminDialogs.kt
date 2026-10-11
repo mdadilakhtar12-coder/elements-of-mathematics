@@ -73,6 +73,10 @@ import com.elementsofmathematics.app.ui.theme.Purple
 import com.elementsofmathematics.app.util.YouTube
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
@@ -114,6 +118,8 @@ fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
                         try {
                             Repository.adminLogin(password)
                             onSuccess()
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: FirebaseAuthInvalidCredentialsException) {
                             error = "Wrong password"
                         } catch (e: Exception) {
@@ -213,12 +219,15 @@ fun SectionEditorDialog(section: Section, onDismiss: () -> Unit, onSave: (Sectio
 fun ItemEditorDialog(
     type: SectionType,
     item: ContentItem,
+    folders: List<ContentItem> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (ContentItem, oldStoragePathToDelete: String?) -> Unit,
+    onSave: suspend (ContentItem, oldStoragePathToDelete: String?) -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var title by remember { mutableStateOf(item.title) }
+    var parentId by remember { mutableStateOf(item.parentId.orEmpty()) }
+    var selectingFolder by remember { mutableStateOf(false) }
     var link by remember { mutableStateOf(if (item.storagePath.isEmpty()) item.url else "") }
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
     var pickedName by remember { mutableStateOf<String?>(null) }
@@ -241,6 +250,7 @@ fun ItemEditorDialog(
     val uploading = progress != null
     val hasExistingUpload = item.storagePath.isNotEmpty() && pickedUri == null && link.isBlank()
     val canSave = title.isNotBlank() && !uploading && when {
+        item.isFolder -> true
         isVideo -> videoId != null
         isLink -> link.isNotBlank()
         else -> pickedUri != null || link.isNotBlank() || hasExistingUpload
@@ -248,7 +258,7 @@ fun ItemEditorDialog(
 
     AlertDialog(
         onDismissRequest = { if (!uploading) onDismiss() },
-        title = { Text(if (item.id.isEmpty()) addLabel(type) else "Edit") },
+        title = { Text(if (item.id.isNotEmpty()) "Edit" else if (item.isFolder) "Add Folder" else addLabel(type)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
@@ -260,7 +270,15 @@ fun ItemEditorDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))
-                if (isLink) {
+                OutlinedButton(onClick = { selectingFolder = true }, enabled = !uploading, modifier = Modifier.fillMaxWidth()) {
+                    Text("Location: " + runCatching {
+                        com.elementsofmathematics.app.data.FolderTree.path(folders, parentId)
+                    }.getOrDefault("Folder unavailable"))
+                }
+                Spacer(Modifier.height(12.dp))
+                if (item.isFolder) {
+                    Text("Add PDFs, videos or links inside this folder using the Add button.", fontSize = 12.sp, color = Color.Gray)
+                } else if (isLink) {
                     OutlinedTextField(
                         value = link,
                         onValueChange = { link = it },
@@ -304,7 +322,7 @@ fun ItemEditorDialog(
                     if (hasExistingUpload) {
                         Text("Current: uploaded PDF (choose a new file to replace it)", fontSize = 12.sp, color = Color.Gray)
                     }
-                    Text("— or —", color = Color.Gray, modifier = Modifier.align(Alignment.CenterHorizontally).padding(8.dp))
+                    Text("External links can be accessed outside this app. Upload a PDF for protected access.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
                     OutlinedTextField(
                         value = link,
                         onValueChange = { link = it; if (it.isNotBlank()) { pickedUri = null; pickedName = null } },
@@ -327,26 +345,54 @@ fun ItemEditorDialog(
             Button(enabled = canSave, onClick = {
                 error = null
                 val uri = pickedUri
-                when {
-                    isVideo || isLink -> onSave(item.copy(title = title.trim(), url = link.trim(), storagePath = ""), null)
-                    uri != null -> scope.launch {
-                        progress = 0f
-                        try {
-                            val (url, path) = Repository.uploadFile(uri, "pdfs", "pdf") { progress = it }
-                            onSave(item.copy(title = title.trim(), url = url, storagePath = path), item.storagePath)
-                        } catch (e: Exception) {
-                            error = "Upload failed: ${e.localizedMessage}"
-                        } finally {
-                            progress = null
+                scope.launch {
+                    progress = 0f
+                    var uploadedPath: String? = null
+                    try {
+                        val updated = when {
+                            item.isFolder -> item.copy(title = title.trim())
+                            isVideo || isLink -> item.copy(title = title.trim(), url = link.trim(), storagePath = "")
+                            uri != null -> {
+                            val (url, path) = Repository.uploadFile(context, uri, "pdfs", "pdf") { progress = it }
+                                uploadedPath = path
+                                item.copy(title = title.trim(), url = url, storagePath = path)
+                            }
+                            link.isNotBlank() -> item.copy(title = title.trim(), url = link.trim(), storagePath = "")
+                            else -> item.copy(title = title.trim())
                         }
+                        onSave(updated.copy(parentId = parentId), item.storagePath.takeIf { it.isNotEmpty() && it != updated.storagePath })
+                        uploadedPath = null
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        error = "Could not save: ${e.localizedMessage}"
+                    } finally {
+                        uploadedPath?.let { path ->
+                            withContext(NonCancellable) { withTimeoutOrNull(15_000) { runCatching { Repository.deleteStorageFile(path) } } }
+                        }
+                        progress = null
                     }
-                    link.isNotBlank() -> onSave(item.copy(title = title.trim(), url = link.trim(), storagePath = ""), item.storagePath)
-                    else -> onSave(item.copy(title = title.trim()), null)
                 }
             }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !uploading) { Text("Cancel") } },
     )
+    if (selectingFolder) {
+        AlertDialog(
+            onDismissRequest = { selectingFolder = false },
+            title = { Text("Choose location") },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+                TextButton(onClick = { parentId = ""; selectingFolder = false }) { Text("Section root") }
+                com.elementsofmathematics.app.data.FolderTree.destinations(folders, item.copy(title = title.ifBlank { "Untitled" }))
+                    .forEach { folder ->
+                        TextButton(onClick = { parentId = folder.id; selectingFolder = false }) {
+                            Text(com.elementsofmathematics.app.data.FolderTree.path(folders, folder.id))
+                        }
+                    }
+            } },
+            confirmButton = { TextButton(onClick = { selectingFolder = false }) { Text("Cancel") } },
+        )
+    }
 }
 
 fun addLabel(type: SectionType) = when (type) {
@@ -412,15 +458,18 @@ fun AppSettingsDialog(settings: AppSettings, onDismiss: () -> Unit, onSave: (App
 }
 
 @Composable
-fun ChangePasswordDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
+fun ChangePasswordDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+    var current by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
-    val valid = pass.length >= 6 && pass == confirm
+    val valid = current.isNotEmpty() && pass.length >= 6 && pass == confirm
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Change Admin Password") },
         text = {
             Column {
+                OutlinedTextField(current, { current = it }, label = { Text("Current password") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation())
                 OutlinedTextField(
                     pass, { pass = it }, label = { Text("New password (min 6 characters)") }, singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -432,7 +481,7 @@ fun ChangePasswordDialog(onDismiss: () -> Unit, onSave: (String) -> Unit) {
                 )
             }
         },
-        confirmButton = { Button(enabled = valid, onClick = { onSave(pass) }) { Text("Change") } },
+        confirmButton = { Button(enabled = valid, onClick = { onSave(current, pass) }) { Text("Change") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

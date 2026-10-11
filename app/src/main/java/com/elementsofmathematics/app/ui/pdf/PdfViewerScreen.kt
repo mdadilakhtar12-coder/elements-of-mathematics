@@ -69,6 +69,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -77,6 +78,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -102,6 +104,7 @@ import com.elementsofmathematics.app.data.PdfMode
 import com.elementsofmathematics.app.ui.common.StatusBarIcons
 import com.elementsofmathematics.app.ui.theme.Purple
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -130,16 +133,22 @@ private sealed interface LoadState {
 
 @Composable
 fun PdfViewerScreen(path: String, title: String, docKey: String, onBack: () -> Unit) {
+    val context = LocalContext.current
     val state by produceState<LoadState>(LoadState.Loading, path) {
         value = try {
-            LoadState.Ready(PdfDocument.open(File(path)))
+            LoadState.Ready(PdfDocument.open(context, File(path)))
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             File(path).delete() // corrupt download: fetch it again next time
             LoadState.Failed("Could not open this PDF. Please go back and download it again.")
         }
     }
-    DisposableEffect(state) {
-        onDispose { (state as? LoadState.Ready)?.doc?.close() }
+    // Capture this composition's document. Reading the mutable state in onDispose
+    // closes the newly loaded document when the previous Loading effect is removed.
+    val document = (state as? LoadState.Ready)?.doc
+    DisposableEffect(document) {
+        onDispose { document?.close() }
     }
     StatusBarIcons(dark = true)
 
@@ -371,10 +380,18 @@ private fun PdfPage(
     onDoubleTap: (Offset) -> Unit,
 ) {
     // Keeps showing the previous bitmap while a sharper one renders after zooming.
-    var bitmap by remember(index) { mutableStateOf<Bitmap?>(doc.cached(index, renderWidth)) }
-    LaunchedEffect(index, renderWidth) {
-        val rendered = doc.render(index, renderWidth)
-        if (rendered != null) bitmap = rendered
+    var bitmap by remember(doc, index) { mutableStateOf<Bitmap?>(doc.cached(index, renderWidth)) }
+    var renderError by remember(doc, index) { mutableStateOf(false) }
+    var renderAttempt by remember(doc, index) { mutableIntStateOf(0) }
+    LaunchedEffect(doc, index, renderWidth, renderAttempt) {
+        renderError = false
+        try {
+            bitmap = doc.render(index, renderWidth)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            renderError = true
+        }
     }
     var current by remember { mutableStateOf<List<Offset>>(emptyList()) }
 
@@ -418,12 +435,21 @@ private fun PdfPage(
                 colorFilter = if (night) InvertFilter else null,
                 modifier = Modifier.fillMaxSize(),
             )
-        } else {
+        } else if (!renderError) {
             CircularProgressIndicator(Modifier.align(Alignment.Center).size(32.dp))
         }
         Canvas(Modifier.fillMaxSize()) {
             strokes.forEach { drawHighlight(it.points.map { (x, y) -> Offset(x, y) }, Color(it.color)) }
             if (current.size > 1) drawHighlight(current, Color(highlightColor))
+        }
+        if (renderError) {
+            Column(
+                Modifier.align(Alignment.Center).padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("Could not display this page.", color = if (night) Color.White else Color.Black)
+                TextButton(onClick = { renderAttempt++ }) { Text("Retry") }
+            }
         }
     }
 }
@@ -597,4 +623,3 @@ private fun GoToPageDialog(pageCount: Int, onDismiss: () -> Unit, onGo: (Int) ->
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
-

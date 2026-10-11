@@ -1,5 +1,6 @@
 package com.elementsofmathematics.app.ui.pdf
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
@@ -12,6 +13,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.elementsofmathematics.app.data.PdfCache
 
 /** Wraps Android's PdfRenderer. It is not thread-safe, so every access goes through a mutex. */
 class PdfDocument private constructor(
@@ -31,10 +33,10 @@ class PdfDocument private constructor(
 
     fun cached(page: Int, width: Int): Bitmap? = cache.get("$page@$width")
 
-    suspend fun render(page: Int, width: Int): Bitmap? = withContext(Dispatchers.IO) {
+    suspend fun render(page: Int, width: Int): Bitmap = withContext(Dispatchers.IO) {
         cached(page, width)?.let { return@withContext it }
         mutex.withLock {
-            if (closed) return@withLock null
+            check(!closed) { "This PDF has been closed" }
             val p = renderer.openPage(page)
             try {
                 val height = (width * p.height.toFloat() / p.width).toInt().coerceAtLeast(1)
@@ -62,18 +64,25 @@ class PdfDocument private constructor(
     }
 
     companion object {
-        suspend fun open(file: File): PdfDocument = withContext(Dispatchers.IO) {
-            val fd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+        suspend fun open(context: Context, file: File): PdfDocument = withContext(Dispatchers.IO) {
+            val fd = PdfCache.openDescriptor(context, file)
             val renderer = try {
                 PdfRenderer(fd)
             } catch (e: Exception) {
                 fd.close()
                 throw e
             }
-            val ratios = List(renderer.pageCount) { i ->
-                renderer.openPage(i).use { it.width.toFloat() / it.height }
+            try {
+                require(renderer.pageCount > 0) { "This PDF has no pages" }
+                val ratios = List(renderer.pageCount) { i ->
+                    renderer.openPage(i).use { it.width.toFloat() / it.height }
+                }
+                PdfDocument(fd, renderer, ratios)
+            } catch (e: Exception) {
+                renderer.close()
+                fd.close()
+                throw e
             }
-            PdfDocument(fd, renderer, ratios)
         }
     }
 }

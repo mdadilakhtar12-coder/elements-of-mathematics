@@ -3,13 +3,36 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Replace with the same email as AppConfig.ADMIN_EMAIL
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == "admin@example.com";
+      return request.auth != null && request.auth.token.email == "mdadilakhtar12@gmail.com";
     }
 
-    // Students can read everything; only the admin can add/edit/delete.
-    match /{document=**} {
+    // Public catalog; PDF binary data requires a signed-in student or admin.
+    match /config/{id} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+    match /banners/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /sections/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+      match /items/{item} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+    match /protectedFiles/{file} {
+      allow get: if request.auth != null;
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+      match /chunks/{chunk} {
+        allow get: if isAdmin() || (request.auth != null &&
+          get(/databases/$(database)/documents/protectedFiles/$(file)).data.state == 'ready');
+        allow list: if isAdmin();
+        allow write: if isAdmin();
+      }
     }
   }
 }
