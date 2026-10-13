@@ -12,3 +12,5 @@ build/
 app/google-services.json
 *.jks
 *.keystore
+# Added by code-review-graph
+.code-review-graph/
