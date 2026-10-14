@@ -1,7 +1,7 @@
 // Cache the app shell so the page opens on slow networks. API responses are never cached,
 // so deadlines always come from the server.
-const VERSION = 'sf-v1';
-const SHELL = ['/', '/index.html', '/app.js', '/styles.css', '/shared/eligibility.js', '/icon.svg', '/manifest.webmanifest'];
+const VERSION = 'sf-v2';
+const SHELL = ['/', '/index.html', '/app.js', '/styles.css', '/shared/eligibility.js', '/shared/options.js', '/icon.svg', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

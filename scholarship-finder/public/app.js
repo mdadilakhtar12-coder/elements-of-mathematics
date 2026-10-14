@@ -156,7 +156,7 @@ function renderForm(errors = [], current = null) {
 
       <label class="consent">
         <input type="checkbox" name="consent" ${p.consent ? 'checked' : ''}>
-        <span>Save my details so the team can help me with scholarship applications. Your details are used only for this and are not shared. Leave this unticked to just see results.</span>
+        <span>Save my details so the team can help me with scholarship applications. If I am under 18, my parent or guardian agrees. Leave this unticked to just see results. <a href="/privacy" target="_blank" rel="noopener">Read the privacy notice</a>.</span>
       </label>
 
       <div id="formError" class="error-box" role="alert" ${errors.length ? '' : 'hidden'}>

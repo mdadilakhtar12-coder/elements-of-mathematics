@@ -1,0 +1,26 @@
+# Render Blueprint for the Scholarship Finder website (the app lives in the scholarship-finder folder).
+# In Render: New -> Blueprint -> pick this repository and branch. Render asks for the secret values below.
+services:
+  - type: web
+    name: scholarship-finder
+    runtime: node
+    rootDir: scholarship-finder
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: ORG_NAME
+        sync: false
+      - key: CONTACT_EMAIL
+        sync: false

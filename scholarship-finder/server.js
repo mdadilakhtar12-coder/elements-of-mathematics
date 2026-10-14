@@ -1,10 +1,11 @@
 import { createServer } from 'node:http';
-import { readFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { readFileSync, existsSync } from 'node:fs';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openDb, loadSeed, listPublished, getPublished, insertProfile } from './src/db.js';
+import { openStore } from './src/store.js';
 import { handleAdmin } from './src/admin.js';
+import { privacyPage } from './src/privacy.js';
 import { validateProfile } from './shared/validate.js';
 import { GROUP_KEYS } from './shared/options.js';
 import {
@@ -21,7 +22,6 @@ import {
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
-const DB_PATH = process.env.DB_PATH || join(ROOT, 'data', 'scholarships.db');
 const SEED_PATH = join(ROOT, 'seed', 'scholarships.json');
 
 const MIME = {
@@ -34,10 +34,9 @@ const MIME = {
   '.png': 'image/png',
 };
 
-await mkdir(dirname(DB_PATH), { recursive: true });
-const db = openDb(DB_PATH);
-// Adds any seed scholarships that are not in the database yet. Existing rows (and admin edits) are kept.
-loadSeed(db, SEED_PATH);
+const store = await openStore();
+// Adds any seed scholarships that are not stored yet. Existing rows (and admin edits) are kept.
+await store.seed(JSON.parse(readFileSync(SEED_PATH, 'utf8')));
 
 // Turns the free-form form values into a clean profile. Unknown values become null,
 // which the matcher treats as "not given", so it never excludes on bad input.
@@ -62,10 +61,15 @@ export function cleanProfile(raw = {}) {
   };
 }
 
-export function buildMatches(profile, now = new Date()) {
+function isNew(createdAt, now) {
+  const t = Date.parse(createdAt);
+  return Number.isFinite(t) && now.getTime() - t <= NEW_DAYS * 24 * 60 * 60 * 1000;
+}
+
+export async function buildMatches(profile, now = new Date()) {
   const today = todayIST(now);
   const results = [];
-  for (const s of listPublished(db)) {
+  for (const s of await store.listPublished()) {
     if (!isOpen(s, today)) continue;
     if (!checkEligibility(s, profile).eligible) continue;
     const left = daysLeft(s.last_date, today);
@@ -88,19 +92,15 @@ export function buildMatches(profile, now = new Date()) {
   return { today, count: results.length, results };
 }
 
-function isNew(createdAt, now) {
-  const t = Date.parse(createdAt);
-  return Number.isFinite(t) && now.getTime() - t <= NEW_DAYS * 24 * 60 * 60 * 1000;
-}
-
-export function buildDetail(id, now = new Date()) {
-  const row = getPublished(db, id);
-  if (!row || !isOpen(row, todayIST(now))) return null;
+export async function buildDetail(id, now = new Date()) {
+  const row = await store.getPublished(id);
   const today = todayIST(now);
+  if (!row || !isOpen(row, today)) return null;
+  const left = row.last_date ? daysLeft(row.last_date, today) : null;
   return {
     ...row,
-    days_left: row.last_date ? daysLeft(row.last_date, today) : null,
-    closing_soon: row.last_date ? daysLeft(row.last_date, today) <= CLOSING_SOON_DAYS : false,
+    days_left: left,
+    closing_soon: left !== null && left <= CLOSING_SOON_DAYS,
     newly_added: isNew(row.created_at, now),
     criteria: criteriaText(row),
     today,
@@ -143,13 +143,17 @@ const server = createServer(async (req, res) => {
     const path = url.pathname;
 
     if (path === '/admin' || path.startsWith('/admin/')) {
-      await handleAdmin(req, res, url, db);
+      await handleAdmin(req, res, url, store);
       return;
+    }
+
+    if (req.method === 'GET' && path === '/privacy') {
+      return send(res, 200, privacyPage(), 'text/html; charset=utf-8');
     }
 
     if (req.method === 'POST' && path === '/api/match') {
       const profile = cleanProfile(await readJson(req));
-      return send(res, 200, buildMatches(profile));
+      return send(res, 200, await buildMatches(profile));
     }
 
     // Stores a student's details only when they ticked the consent box.
@@ -158,18 +162,19 @@ const server = createServer(async (req, res) => {
       if (body.consent !== true) return send(res, 400, { error: 'Consent is needed to save your details.' });
       const { value, errors } = validateProfile(body);
       if (errors.length) return send(res, 422, { error: errors[0], errors });
-      insertProfile(db, value);
+      await store.insertProfile(value);
       return send(res, 201, { ok: true });
     }
 
     const detail = path.match(/^\/api\/scholarships\/([\w-]{1,80})$/);
     if (req.method === 'GET' && detail) {
-      const item = buildDetail(detail[1]);
+      const item = await buildDetail(detail[1]);
       return item ? send(res, 200, item) : send(res, 404, { error: 'Not found or closed' });
     }
 
     if (req.method === 'GET' && path === '/api/health') {
-      return send(res, 200, { ok: true, today: todayIST() });
+      await store.ping();
+      return send(res, 200, { ok: true, today: todayIST(), store: store.kind });
     }
 
     if (req.method === 'GET' || req.method === 'HEAD') return serveStatic(res, path);
@@ -182,7 +187,7 @@ const server = createServer(async (req, res) => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  server.listen(PORT, () => console.log(`Scholarship Finder running on http://localhost:${PORT}`));
+  server.listen(PORT, () => console.log(`Scholarship Finder running on http://localhost:${PORT} (data: ${store.kind})`));
 }
 
-export { server, db };
+export { server, store };

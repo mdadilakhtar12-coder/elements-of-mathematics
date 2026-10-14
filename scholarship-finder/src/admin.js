@@ -1,14 +1,7 @@
 // Admin panel: server-rendered pages under /admin. Nothing here runs in the browser except plain forms.
-import {
-  listAllScholarships,
-  getScholarship,
-  saveScholarship,
-  setStatus,
-  listProfiles,
-  PROFILE_COLUMNS,
-} from './db.js';
 import * as auth from './auth.js';
-import { validateScholarship } from '../shared/validate.js';
+import { retentionMonths } from './privacy.js';
+import { validateScholarship, realDate } from '../shared/validate.js';
 import { LEVELS, CATEGORIES } from '../shared/eligibility.js';
 import { STATES, GENDERS, GROUPS } from '../shared/options.js';
 
@@ -20,6 +13,11 @@ const SECURITY_HEADERS = {
   'Content-Security-Policy':
     "default-src 'self'; style-src 'self'; script-src 'none'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
+
+const CSV_COLUMNS = [
+  'created_at', 'name', 'phone', 'email', 'school_or_college', 'institution', 'level', 'stream', 'course',
+  'honours_subject', 'minor_subject', 'percentage', 'category', 'gender', 'state', 'income', 'disability', 'groups',
+];
 
 export const esc = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -111,13 +109,38 @@ function scholarshipRows(items) {
     .join('');
 }
 
-function dashboardPage(db, { msg = '' } = {}) {
-  const all = listAllScholarships(db);
+function suggestionRows(suggestions, byId) {
+  return suggestions
+    .map((g) => {
+      const s = byId.get(g.scholarship_id);
+      const link = g.source_url ? `<a href="${esc(g.source_url)}" target="_blank" rel="noopener noreferrer">source</a>` : '';
+      return `<tr>
+      <td>${s ? `<a href="/admin/scholarships/${esc(s.id)}">${esc(s.name)}</a>` : esc(g.scholarship_id)}</td>
+      <td>${esc(g.field === 'last_date' ? 'Last date' : 'Start date')}</td>
+      <td>${esc(g.old_value || 'none')} → <strong>${esc(g.new_value)}</strong></td>
+      <td class="small">${esc(g.note || '')} ${link}</td>
+      <td class="actions-cell">
+        <form method="post" action="/admin/suggestions/${esc(g.id)}/apply" class="inline-form"><button class="small-btn" type="submit">Apply</button></form>
+        <form method="post" action="/admin/suggestions/${esc(g.id)}/dismiss" class="inline-form"><button class="ghost-dark" type="submit">Dismiss</button></form>
+      </td></tr>`;
+    })
+    .join('');
+}
+
+async function dashboardPage(store, { msg = '' } = {}) {
+  const [all, suggestions, profileCount] = await Promise.all([store.listAll(), store.listSuggestions('open'), store.countProfiles()]);
+  const byId = new Map(all.map((s) => [s.id, s]));
   const drafts = all.filter((s) => s.status === 'draft');
   const count = (st) => all.filter((s) => s.status === st).length;
   const table = (items) => `<div class="table-wrap"><table>
     <thead><tr><th>Scholarship</th><th>Status</th><th>Last date</th><th>Verified</th><th>Official link</th><th></th></tr></thead>
     <tbody>${scholarshipRows(items)}</tbody></table></div>`;
+  const suggestionBlock = suggestions.length
+    ? `<h2>Suggested changes (${suggestions.length})</h2>
+       <p class="muted small">Found by the daily update. Open the source, check it, then apply or dismiss. Applying changes only the date. After applying, update "last verified" on the scholarship.</p>
+       <div class="table-wrap"><table><thead><tr><th>Scholarship</th><th>Field</th><th>Change</th><th>Note</th><th></th></tr></thead>
+       <tbody>${suggestionRows(suggestions, byId)}</tbody></table></div>`
+    : '';
   return layout(
     'Dashboard',
     `${flash(msg)}
@@ -125,10 +148,11 @@ function dashboardPage(db, { msg = '' } = {}) {
       <div class="stat"><strong>${count('published')}</strong><span>Published</span></div>
       <div class="stat"><strong>${count('draft')}</strong><span>Drafts</span></div>
       <div class="stat"><strong>${count('expired')}</strong><span>Expired</span></div>
-      <div class="stat"><strong>${listProfiles(db, 100000).length}</strong><span>Student profiles</span></div>
+      <div class="stat"><strong>${profileCount}</strong><span>Student profiles</span></div>
     </section>
     <p class="actions"><a class="primary-link" href="/admin/scholarships/new">+ Add scholarship</a>
       <a class="secondary-link" href="/admin/students">Student profiles</a></p>
+    ${suggestionBlock}
     <h2>Review queue (drafts)</h2>
     <p class="muted small">Drafts are hidden from students. Check each one on the official site, then publish.</p>
     ${table(drafts)}
@@ -196,8 +220,6 @@ function scholarshipFormPage(values, errors, opts) {
 function asFormValues(s) {
   return {
     ...s,
-    levels: s.levels,
-    categories: s.categories,
     min_percentage: s.min_percentage ?? '',
     max_income: s.max_income ?? '',
     documents: s.documents.join('\n'),
@@ -205,26 +227,8 @@ function asFormValues(s) {
   };
 }
 
-function studentsPage(db) {
-  const rows = listProfiles(db);
-  const body = rows.length
-    ? `<div class="table-wrap"><table class="students"><thead><tr>
-        <th>When</th><th>Name</th><th>Mobile</th><th>Email</th><th>School / college</th><th>Class / course</th><th>Marks</th><th>Category</th><th>State</th><th>Income</th><th>Groups</th></tr></thead><tbody>
-        ${rows
-          .map(
-            (r) => `<tr><td>${esc(r.created_at.slice(0, 10))}</td><td>${esc(r.name || '')}</td><td>${esc(r.phone)}</td><td>${esc(r.email || '')}</td>
-            <td>${esc(r.school_or_college)}${r.institution ? `<div class="muted small">${esc(r.institution)}</div>` : ''}</td>
-            <td>${esc(classLabel(r))}</td><td>${esc(r.percentage ?? '')}</td><td>${esc(r.category || '')}</td><td>${esc(r.state || '')}</td>
-            <td>${r.income == null ? '' : `₹${Number(r.income).toLocaleString('en-IN')}`}</td><td class="small">${esc(parseGroups(r.groups).join(', '))}</td></tr>`,
-          )
-          .join('')}</tbody></table></div>
-        <p><a class="secondary-link" href="/admin/students.csv">Download CSV</a></p>`
-    : `<p class="muted">No student profiles yet.</p>`;
-  return layout('Students', `<p><a href="/admin">← Back to dashboard</a></p><h1>Student profiles</h1>
-    <p class="muted small">Only students who ticked the consent box appear here. Handle these details with care.</p>${body}`);
-}
-
 function parseGroups(v) {
+  if (Array.isArray(v)) return v;
   try {
     const a = JSON.parse(v || '[]');
     return Array.isArray(a) ? a : [];
@@ -241,6 +245,35 @@ function classLabel(r) {
   return base;
 }
 
+async function studentsPage(store, { msg = '' } = {}) {
+  const rows = await store.listProfiles();
+  const months = retentionMonths();
+  const body = rows.length
+    ? `<div class="table-wrap"><table class="students"><thead><tr>
+        <th>When</th><th>Name</th><th>Mobile</th><th>Email</th><th>School / college</th><th>Class / course</th><th>Marks</th><th>Category</th><th>State</th><th>Income</th><th>Groups</th><th></th></tr></thead><tbody>
+        ${rows
+          .map(
+            (r) => `<tr><td>${esc(String(r.created_at).slice(0, 10))}</td><td>${esc(r.name || '')}</td><td>${esc(r.phone)}</td><td>${esc(r.email || '')}</td>
+            <td>${esc(r.school_or_college)}${r.institution ? `<div class="muted small">${esc(r.institution)}</div>` : ''}</td>
+            <td>${esc(classLabel(r))}</td><td>${esc(r.percentage ?? '')}</td><td>${esc(r.category || '')}</td><td>${esc(r.state || '')}</td>
+            <td>${r.income == null ? '' : `₹${Number(r.income).toLocaleString('en-IN')}`}</td><td class="small">${esc(parseGroups(r.groups).join(', '))}</td>
+            <td><form method="post" action="/admin/students/${esc(r.id)}/delete" class="inline-form"><button class="ghost-dark" type="submit">Delete</button></form></td></tr>`,
+          )
+          .join('')}</tbody></table></div>`
+    : `<p class="muted">No student profiles yet.</p>`;
+  return layout(
+    'Students',
+    `<p><a href="/admin">← Back to dashboard</a></p><h1>Student profiles</h1>${flash(msg)}
+    <p class="muted small">Only students who ticked the consent box appear here. Handle these details with care.</p>
+    ${body}
+    <p class="actions"><a class="secondary-link" href="/admin/students.csv">Download CSV</a></p>
+    <form method="post" action="/admin/students/purge" class="card stack">
+      <p>Delete every profile older than ${months} months (the period promised in the privacy notice).</p>
+      <button class="ghost-dark" type="submit">Delete old profiles</button>
+    </form>`,
+  );
+}
+
 // CSV cell: quoted, and formula-like cells are prefixed so spreadsheets do not run them.
 export function csvCell(v) {
   let s = v == null ? '' : String(v);
@@ -248,18 +281,38 @@ export function csvCell(v) {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-export function studentsCsv(db) {
-  const cols = ['created_at', ...PROFILE_COLUMNS];
-  const lines = [cols.join(',')];
-  for (const r of listProfiles(db, 100000)) {
-    lines.push(cols.map((c) => csvCell(c === 'groups' ? parseGroups(r.groups).join(';') : r[c])).join(','));
+export async function studentsCsv(store) {
+  const lines = [CSV_COLUMNS.join(',')];
+  for (const r of await store.listProfiles(100000)) {
+    lines.push(CSV_COLUMNS.map((c) => csvCell(c === 'groups' ? parseGroups(r.groups).join(';') : r[c])).join(','));
   }
   return lines.join('\n') + '\n';
 }
 
+const notFound = (res) => send(res, 404, layout('Not found', '<p>Page not found.</p>'));
+
+// Applies a date suggestion from the daily update. Only the date field changes.
+async function applySuggestion(store, id) {
+  const g = await store.getSuggestion(id);
+  if (!g || g.status !== 'open') return 'That suggestion was already handled.';
+  const s = await store.get(g.scholarship_id);
+  if (!s) {
+    await store.resolveSuggestion(id, 'dismissed');
+    return 'The scholarship no longer exists. Suggestion dismissed.';
+  }
+  if (!realDate(g.new_value)) return 'The suggested date is not valid. Dismiss it.';
+  const next = { ...s, [g.field]: g.new_value };
+  if (next.start_date && next.last_date && next.last_date < next.start_date) {
+    return 'That date would put the last date before the start date. Check the source, edit the scholarship by hand, then dismiss.';
+  }
+  await store.save(next);
+  await store.resolveSuggestion(id, 'applied');
+  return `Updated ${g.field === 'last_date' ? 'last date' : 'start date'} of "${s.name}" to ${g.new_value}. Now check the official page and update "last verified".`;
+}
+
 // ---- Router ----
 
-export async function handleAdmin(req, res, url, db) {
+export async function handleAdmin(req, res, url, store) {
   const path = url.pathname.replace(/\/+$/, '') || '/admin';
   const method = req.method;
 
@@ -314,21 +367,47 @@ export async function handleAdmin(req, res, url, db) {
     send(res, 403, layout('Blocked', '<p>Request blocked.</p>'));
     return true;
   }
+  const msgParam = url.searchParams.get('msg') || '';
 
   if (path === '/admin' && method === 'GET') {
-    send(res, 200, dashboardPage(db, { msg: url.searchParams.get('msg') || '' }));
+    send(res, 200, await dashboardPage(store, { msg: msgParam }));
     return true;
   }
 
   if (path === '/admin/students' && method === 'GET') {
-    send(res, 200, studentsPage(db));
+    send(res, 200, await studentsPage(store, { msg: msgParam }));
     return true;
   }
 
   if (path === '/admin/students.csv' && method === 'GET') {
-    send(res, 200, studentsCsv(db), 'text/csv; charset=utf-8', {
+    send(res, 200, await studentsCsv(store), 'text/csv; charset=utf-8', {
       'Content-Disposition': 'attachment; filename="student-profiles.csv"',
     });
+    return true;
+  }
+
+  const delStudent = path.match(/^\/admin\/students\/(\d{1,12})\/delete$/);
+  if (delStudent && method === 'POST') {
+    const n = await store.deleteProfile(Number(delStudent[1]));
+    redirect(res, `/admin/students?msg=${encodeURIComponent(n ? 'Profile deleted.' : 'Profile not found.')}`);
+    return true;
+  }
+
+  if (path === '/admin/students/purge' && method === 'POST') {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - retentionMonths());
+    const n = await store.deleteProfilesBefore(cutoff.toISOString());
+    redirect(res, `/admin/students?msg=${encodeURIComponent(`Deleted ${n} old profile${n === 1 ? '' : 's'}.`)}`);
+    return true;
+  }
+
+  const suggestion = path.match(/^\/admin\/suggestions\/(\d{1,12})\/(apply|dismiss)$/);
+  if (suggestion && method === 'POST') {
+    const id = Number(suggestion[1]);
+    let msg;
+    if (suggestion[2] === 'apply') msg = await applySuggestion(store, id);
+    else msg = (await store.resolveSuggestion(id, 'dismissed')) ? 'Suggestion dismissed.' : 'That suggestion was already handled.';
+    redirect(res, `/admin?msg=${encodeURIComponent(msg)}`);
     return true;
   }
 
@@ -339,12 +418,12 @@ export async function handleAdmin(req, res, url, db) {
 
   const edit = path.match(/^\/admin\/scholarships\/([a-z0-9-]{3,80})$/);
   if (edit && method === 'GET') {
-    const s = getScholarship(db, edit[1]);
+    const s = await store.get(edit[1]);
     if (!s) {
-      send(res, 404, layout('Not found', '<p>No such scholarship.</p>'));
+      notFound(res);
       return true;
     }
-    send(res, 200, scholarshipFormPage(asFormValues(s), [], { isNew: false, msg: url.searchParams.get('msg') || '' }));
+    send(res, 200, scholarshipFormPage(asFormValues(s), [], { isNew: false, msg: msgParam }));
     return true;
   }
 
@@ -353,22 +432,22 @@ export async function handleAdmin(req, res, url, db) {
     const isNew = form.is_new === '1';
     const { value, errors } = validateScholarship(form);
     if (!isNew) value.id = String(form.id || '');
-    if (isNew && getScholarship(db, value.id)) errors.push(`A scholarship with ID "${value.id}" already exists.`);
+    const existing = await store.get(value.id);
+    if (isNew && existing) errors.push(`A scholarship with ID "${value.id}" already exists.`);
     if (errors.length) {
       send(res, 422, scholarshipFormPage({ ...form, ...value, levels: value.levels, categories: value.categories }, errors, { isNew }));
       return true;
     }
-    const existing = getScholarship(db, value.id);
-    saveScholarship(db, { ...value, created_at: existing ? existing.created_at : undefined });
+    await store.save({ ...value, created_at: existing ? existing.created_at : undefined });
     redirect(res, `/admin/scholarships/${encodeURIComponent(value.id)}?msg=Saved`);
     return true;
   }
 
   const action = path.match(/^\/admin\/scholarships\/([a-z0-9-]{3,80})\/status$/);
   if (action && method === 'POST') {
-    const s = getScholarship(db, action[1]);
+    const s = await store.get(action[1]);
     if (!s) {
-      send(res, 404, layout('Not found', '<p>No such scholarship.</p>'));
+      notFound(res);
       return true;
     }
     const form = await readForm(req, 1000);
@@ -383,12 +462,11 @@ export async function handleAdmin(req, res, url, db) {
       send(res, 422, scholarshipFormPage({ ...asFormValues(s), status: 'draft' }, errors, { isNew: false }));
       return true;
     }
-    setStatus(db, s.id, next);
+    await store.setStatus(s.id, next);
     redirect(res, `/admin/scholarships/${encodeURIComponent(s.id)}?msg=${encodeURIComponent(`Status set to ${next}`)}`);
     return true;
   }
 
-  send(res, 404, layout('Not found', '<p>Page not found.</p>'));
+  notFound(res);
   return true;
 }
-

@@ -57,6 +57,21 @@ CREATE TABLE IF NOT EXISTS student_profiles (
 );
 `;
 
+// Date changes found by the daily update. An admin applies or dismisses each one.
+export const SUGGESTIONS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS suggestions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  scholarship_id TEXT NOT NULL,
+  field TEXT NOT NULL CHECK (field IN ('last_date', 'start_date')),
+  old_value TEXT,
+  new_value TEXT NOT NULL,
+  source_url TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'applied', 'dismissed'))
+);
+`;
+
 export const PROFILE_COLUMNS = [
   'name', 'phone', 'email', 'school_or_college', 'institution', 'level', 'stream', 'course',
   'honours_subject', 'minor_subject', 'percentage', 'category', 'gender', 'state', 'income', 'disability', 'groups',
@@ -82,6 +97,7 @@ export function openDb(path) {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
   db.exec(PROFILE_SCHEMA);
+  db.exec(SUGGESTIONS_SCHEMA);
   addMissingColumns(db);
   return db;
 }
@@ -135,10 +151,9 @@ export function saveScholarship(db, r) {
   db.prepare(UPSERT).run(toRow(r));
 }
 
-// Adds scholarships from the seed file. Rows that already exist are left alone, so edits and
-// publishing done in the admin panel survive a restart. Pass update: true to overwrite them.
-export function loadSeed(db, path, { replace = false, update = false } = {}) {
-  const rows = JSON.parse(readFileSync(path, 'utf8'));
+// Adds scholarships. Rows that already exist are left alone, so edits and publishing done in the
+// admin panel survive a restart. Pass update: true to overwrite them, replace: true to clear first.
+export function seedRows(db, rows, { replace = false, update = false } = {}) {
   const stmt = db.prepare(update ? UPSERT : INSERT_IF_NEW);
   db.exec('BEGIN');
   try {
@@ -150,6 +165,10 @@ export function loadSeed(db, path, { replace = false, update = false } = {}) {
     throw err;
   }
   return rows.length;
+}
+
+export function loadSeed(db, path, opts = {}) {
+  return seedRows(db, JSON.parse(readFileSync(path, 'utf8')), opts);
 }
 
 // Public reads: only published items with an official link. Expiry is checked by the caller.
@@ -177,6 +196,11 @@ export function getScholarship(db, id) {
   return row ? fromRow(row) : null;
 }
 
+// Used only to clean up the temporary row created by the store check.
+export function deleteScholarship(db, id) {
+  return db.prepare('DELETE FROM scholarships WHERE id = ?').run(id).changes;
+}
+
 export function setStatus(db, id, status) {
   return db.prepare('UPDATE scholarships SET status = ? WHERE id = ?').run(status, id).changes;
 }
@@ -192,4 +216,43 @@ export function insertProfile(db, p) {
 
 export function listProfiles(db, limit = 2000) {
   return db.prepare('SELECT * FROM student_profiles ORDER BY id DESC LIMIT ?').all(limit);
+}
+
+export function countProfiles(db) {
+  return db.prepare('SELECT COUNT(*) AS n FROM student_profiles').get().n;
+}
+
+export function deleteProfile(db, id) {
+  return db.prepare('DELETE FROM student_profiles WHERE id = ?').run(id).changes;
+}
+
+// Deletes profiles created before the given ISO timestamp. Returns how many were removed.
+export function deleteProfilesBefore(db, iso) {
+  return db.prepare('DELETE FROM student_profiles WHERE created_at < ?').run(iso).changes;
+}
+
+export function addSuggestion(db, s) {
+  db.prepare(
+    `INSERT INTO suggestions (scholarship_id, field, old_value, new_value, source_url, note)
+     VALUES (:scholarship_id, :field, :old_value, :new_value, :source_url, :note)`,
+  ).run({
+    scholarship_id: s.scholarship_id,
+    field: s.field,
+    old_value: s.old_value ?? null,
+    new_value: s.new_value,
+    source_url: s.source_url ?? null,
+    note: s.note ?? null,
+  });
+}
+
+export function listSuggestions(db, status = 'open') {
+  return db.prepare('SELECT * FROM suggestions WHERE status = ? ORDER BY id').all(status);
+}
+
+export function getSuggestion(db, id) {
+  return db.prepare('SELECT * FROM suggestions WHERE id = ?').get(id) ?? null;
+}
+
+export function resolveSuggestion(db, id, status) {
+  return db.prepare(`UPDATE suggestions SET status = ? WHERE id = ? AND status = 'open'`).run(status, id).changes;
 }

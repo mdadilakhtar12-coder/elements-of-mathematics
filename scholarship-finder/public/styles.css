@@ -198,3 +198,7 @@ th { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowra
 .check input { margin-top: 3px; flex: none; }
 .stack-checks { display: grid; gap: 6px; }
 .stack-checks label.inline { margin: 0; }
+.ghost-dark { font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+.legal h2 { margin-top: 1.4rem; }
+.legal ul { padding-left: 1.2rem; }
+.footer-links { margin-top: 6px; }

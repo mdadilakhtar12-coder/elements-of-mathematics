@@ -1,0 +1,42 @@
+# Runs the Scholarship Finder daily update: searches for new scholarships and changed dates,
+# and saves DRAFTS and date SUGGESTIONS only. Nothing is published. Then removes old student profiles.
+#
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
+name: Scholarship daily update
+
+on:
+  schedule:
+    - cron: '30 22 * * *' # 04:00 India time
+  workflow_dispatch: {} # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: scholarship-finder
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      RETENTION_MONTHS: ${{ vars.RETENTION_MONTHS }}
+      UPDATE_MODEL: ${{ vars.UPDATE_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scholarship-finder/package-lock.json
+      - run: npm ci
+      - name: Check the database is reachable
+        run: npm run check-store
+      - name: Search for new scholarships and date changes
+        run: npm run update
+      - name: Delete student profiles past the retention period
+        run: npm run purge
