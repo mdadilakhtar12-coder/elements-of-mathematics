@@ -143,3 +143,54 @@ input[type="radio"] { width: 18px; height: 18px; accent-color: var(--brand); }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Student form extras */
+fieldset.plain { border: 0; padding: 0; margin: 0; }
+fieldset:not(.plain) { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0; display: grid; gap: 12px; }
+fieldset:not(.plain) > legend { padding: 0 6px; color: var(--muted); font-size: .85rem; }
+.consent { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: .92rem; color: var(--muted); }
+.consent input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--brand); flex: none; }
+[hidden] { display: none !important; }
+.error-box { border: 1px solid var(--red); background: var(--red-bg); color: var(--red); border-radius: 10px; padding: 10px 14px; }
+.error-box ul { margin: 6px 0 0 1.1rem; padding: 0; }
+.notice { border: 1px solid var(--ok); background: var(--ok-bg); color: var(--ok); border-radius: 10px; padding: 10px 14px; }
+
+/* Admin */
+.admin { padding-top: 12px; }
+.admin h1 { margin-top: 8px; }
+.admin .card.narrow, .narrow { max-width: 420px; margin: 40px auto; }
+.stack { display: grid; gap: 14px; }
+.stack textarea, .stack select, .stack input:not([type=checkbox]):not([type=radio]) {
+  width: 100%; margin-top: 6px; font: inherit; color: var(--text); background: var(--card);
+  padding: 10px; border: 1px solid var(--line); border-radius: 10px;
+}
+.stack textarea { font-family: inherit; }
+.stack label { font-weight: 600; font-size: .92rem; }
+.stack label.inline { font-weight: 400; margin-right: 14px; }
+.stack input[readonly] { opacity: .7; }
+.small { font-size: .82rem; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 12px 0; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.stat strong { display: block; font-size: 1.5rem; }
+.stat span { color: var(--muted); font-size: .85rem; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 18px; }
+.primary-link, .secondary-link, .small-btn, .ghost {
+  font: inherit; font-size: .92rem; font-weight: 600; text-decoration: none; cursor: pointer;
+  padding: 9px 14px; border-radius: 10px; border: 1px solid var(--brand);
+}
+.primary-link, .primary, .small-btn { background: var(--brand); color: var(--brand-ink); }
+.secondary-link, .ghost { background: transparent; color: var(--brand); }
+.ghost { border-color: var(--brand-ink); color: var(--brand-ink); }
+.top .inline-form { margin: 0; }
+.inline-form { display: inline; }
+.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowrap; }
+.actions-cell { white-space: nowrap; }
+.actions-cell form { margin-left: 8px; }
+.pill { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--grey-bg); color: var(--grey); }
+.pill.published { background: var(--ok-bg); color: var(--ok); }
+.pill.draft { background: #fff4d6; color: #7a5200; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.draft { background: #3d3216; color: #ffd98a; } }
+.students td, .students th { font-size: .85rem; }

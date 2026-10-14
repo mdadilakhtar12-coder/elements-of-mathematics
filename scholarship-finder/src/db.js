@@ -31,72 +31,102 @@ CREATE TABLE IF NOT EXISTS scholarships (
 CREATE INDEX IF NOT EXISTS idx_scholarships_status_last_date ON scholarships (status, last_date);
 `;
 
+// Students who agreed to be contacted/stored. Personal data: admin-only access.
+export const PROFILE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS student_profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+  name TEXT,
+  phone TEXT NOT NULL,
+  email TEXT,
+  school_or_college TEXT NOT NULL,
+  institution TEXT,
+  level TEXT NOT NULL,
+  stream TEXT,
+  course TEXT,
+  honours_subject TEXT,
+  minor_subject TEXT,
+  percentage REAL,
+  category TEXT,
+  gender TEXT,
+  state TEXT,
+  income INTEGER,
+  disability INTEGER
+);
+`;
+
+export const PROFILE_COLUMNS = [
+  'name', 'phone', 'email', 'school_or_college', 'institution', 'level', 'stream', 'course',
+  'honours_subject', 'minor_subject', 'percentage', 'category', 'gender', 'state', 'income', 'disability',
+];
+
+const COLUMNS = [
+  'id', 'name', 'provider', 'levels', 'min_percentage', 'categories', 'gender', 'state', 'max_income',
+  'disability_only', 'amount', 'start_date', 'last_date', 'documents', 'apply_steps', 'official_link',
+  'source_url', 'criteria_note', 'status', 'last_verified_on', 'verification_note', 'created_at',
+];
+
+const UPSERT = `
+INSERT INTO scholarships (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map((c) => `:${c}`).join(', ')})
+ON CONFLICT(id) DO UPDATE SET ${COLUMNS.filter((c) => c !== 'id' && c !== 'created_at')
+  .map((c) => `${c} = excluded.${c}`)
+  .join(', ')}`;
+
 export function openDb(path) {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
+  db.exec(PROFILE_SCHEMA);
   return db;
 }
 
-// Turns a DB row into the API shape: JSON columns parsed, booleans fixed.
+// DB row -> API shape: JSON columns parsed, booleans fixed.
 export function fromRow(row) {
   const out = { ...row, disability_only: Boolean(row.disability_only) };
   for (const f of JSON_FIELDS) out[f] = JSON.parse(row[f] || '[]');
   return out;
 }
 
+// API shape -> DB parameters. Used by the seed loader and the admin panel.
+export function toRow(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    provider: r.provider,
+    levels: JSON.stringify(r.levels ?? []),
+    min_percentage: r.min_percentage ?? null,
+    categories: JSON.stringify(r.categories ?? []),
+    gender: r.gender ?? 'any',
+    state: r.state ?? 'All India',
+    max_income: r.max_income ?? null,
+    disability_only: r.disability_only ? 1 : 0,
+    amount: r.amount ?? null,
+    start_date: r.start_date ?? null,
+    last_date: r.last_date ?? null,
+    documents: JSON.stringify(r.documents ?? []),
+    apply_steps: JSON.stringify(r.apply_steps ?? []),
+    official_link: r.official_link ?? null,
+    source_url: r.source_url ?? null,
+    criteria_note: r.criteria_note ?? null,
+    status: r.status ?? 'draft',
+    last_verified_on: r.last_verified_on ?? null,
+    verification_note: r.verification_note ?? null,
+    created_at: r.created_at ?? new Date().toISOString(),
+  };
+}
+
+export function saveScholarship(db, r) {
+  db.prepare(UPSERT).run(toRow(r));
+}
+
 export function loadSeed(db, path, { replace = false } = {}) {
   const rows = JSON.parse(readFileSync(path, 'utf8'));
-  const stmt = db.prepare(`
-    INSERT INTO scholarships (
-      id, name, provider, levels, min_percentage, categories, gender, state, max_income,
-      disability_only, amount, start_date, last_date, documents, apply_steps,
-      official_link, source_url, criteria_note, status, last_verified_on, verification_note, created_at
-    ) VALUES (
-      :id, :name, :provider, :levels, :min_percentage, :categories, :gender, :state, :max_income,
-      :disability_only, :amount, :start_date, :last_date, :documents, :apply_steps,
-      :official_link, :source_url, :criteria_note, :status, :last_verified_on, :verification_note, :created_at
-    )
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name, provider = excluded.provider, levels = excluded.levels,
-      min_percentage = excluded.min_percentage, categories = excluded.categories,
-      gender = excluded.gender, state = excluded.state, max_income = excluded.max_income,
-      disability_only = excluded.disability_only, amount = excluded.amount,
-      start_date = excluded.start_date, last_date = excluded.last_date,
-      documents = excluded.documents, apply_steps = excluded.apply_steps,
-      official_link = excluded.official_link, source_url = excluded.source_url,
-      criteria_note = excluded.criteria_note, status = excluded.status,
-      last_verified_on = excluded.last_verified_on, verification_note = excluded.verification_note
-  `);
+  const stmt = db.prepare(UPSERT);
   db.exec('BEGIN');
   try {
     if (replace) db.exec('DELETE FROM scholarships');
-    for (const r of rows) {
-      stmt.run({
-        id: r.id,
-        name: r.name,
-        provider: r.provider,
-        levels: JSON.stringify(r.levels ?? []),
-        min_percentage: r.min_percentage ?? null,
-        categories: JSON.stringify(r.categories ?? []),
-        gender: r.gender ?? 'any',
-        state: r.state ?? 'All India',
-        max_income: r.max_income ?? null,
-        disability_only: r.disability_only ? 1 : 0,
-        amount: r.amount ?? null,
-        start_date: r.start_date ?? null,
-        last_date: r.last_date ?? null,
-        documents: JSON.stringify(r.documents ?? []),
-        apply_steps: JSON.stringify(r.apply_steps ?? []),
-        official_link: r.official_link ?? null,
-        source_url: r.source_url ?? null,
-        criteria_note: r.criteria_note ?? null,
-        status: r.status ?? 'draft',
-        last_verified_on: r.last_verified_on ?? null,
-        verification_note: r.verification_note ?? null,
-        created_at: r.created_at ?? new Date().toISOString(),
-      });
-    }
+    for (const r of rows) stmt.run(toRow(r));
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
@@ -105,8 +135,7 @@ export function loadSeed(db, path, { replace = false } = {}) {
   return rows.length;
 }
 
-// Only published, open scholarships with an official link. Expiry is checked
-// against today's date in the caller, so nothing stale is ever shown.
+// Public reads: only published items with an official link. Expiry is checked by the caller.
 export function listPublished(db) {
   return db
     .prepare(`SELECT * FROM scholarships WHERE status = 'published' AND official_link IS NOT NULL AND official_link <> ''`)
@@ -119,4 +148,31 @@ export function getPublished(db, id) {
     .prepare(`SELECT * FROM scholarships WHERE id = ? AND status = 'published' AND official_link IS NOT NULL AND official_link <> ''`)
     .get(id);
   return row ? fromRow(row) : null;
+}
+
+// Admin reads and writes.
+export function listAllScholarships(db) {
+  return db.prepare('SELECT * FROM scholarships ORDER BY status, last_date IS NULL, last_date, name').all().map(fromRow);
+}
+
+export function getScholarship(db, id) {
+  const row = db.prepare('SELECT * FROM scholarships WHERE id = ?').get(id);
+  return row ? fromRow(row) : null;
+}
+
+export function setStatus(db, id, status) {
+  return db.prepare('UPDATE scholarships SET status = ? WHERE id = ?').run(status, id).changes;
+}
+
+export function insertProfile(db, p) {
+  const cols = PROFILE_COLUMNS;
+  // node:sqlite does not bind JS booleans, so store disability as 1/0.
+  const params = Object.fromEntries(
+    cols.map((c) => [c, typeof p[c] === 'boolean' ? (p[c] ? 1 : 0) : p[c] ?? null]),
+  );
+  db.prepare(`INSERT INTO student_profiles (${cols.join(', ')}) VALUES (${cols.map((c) => `:${c}`).join(', ')})`).run(params);
+}
+
+export function listProfiles(db, limit = 2000) {
+  return db.prepare('SELECT * FROM student_profiles ORDER BY id DESC LIMIT ?').all(limit);
 }

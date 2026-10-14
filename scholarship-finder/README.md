@@ -2,8 +2,8 @@
 
 A mobile-first website that also installs as an app (PWA). Students of Odisha (Class 10 to UG) fill a short form and see the scholarships they may be eligible for, with deadlines and official apply links.
 
-**Status: prototype.** Done: student form, matching, cards, detail page, days-left counter, Closing soon filter, Newly added tag, PWA install and offline shell, seed data (7 entries, 2 published).
-Not yet built: admin panel, review queue, daily update script, MCP server. See "Next steps".
+**Status: prototype.** Done: student form (contact, school/college, class/stream, B.Sc Honours and Minor), matching, cards, detail page, days-left counter, Closing soon filter, Newly added tag, PWA install and offline shell, admin panel with password login, review queue, student list with CSV export, seed data (7 entries, 2 published).
+Not yet built: daily update script, MCP server, and the full 30–40 verified scholarship list. See "Next steps".
 
 ## Run it locally
 
@@ -18,7 +18,23 @@ npm start         # http://localhost:3000
 
 Open the page on a phone (same Wi-Fi, use your computer's IP) or in Chrome's device mode. On Android Chrome, use the menu → "Install app".
 
-`npm run seed -- --replace` clears the table first. Without it, existing rows are updated by `id`.
+`npm run seed -- --replace` clears the table first.
+
+### Admin panel
+
+1. Set a password on the server (never commit it):
+   ```bash
+   ADMIN_PASSWORD='choose-a-long-password' npm start
+   ```
+   Without `ADMIN_PASSWORD` the admin pages stay off.
+2. Open `/admin`, log in, and:
+   - **Review queue**: drafts are listed first. "Publish" re-runs the checks. A scholarship cannot be published unless it has an https official link, a last date, a verified date, documents, apply steps and an amount.
+   - **Add / edit**: all fields are on one form. Lists (documents, steps) are one item per line.
+   - **Student profiles**: only students who ticked the consent box. Download as CSV. Formula-like cells are neutralised for spreadsheets.
+
+Security: passwords are compared in constant time. Five wrong attempts block an IP for 15 minutes. The session cookie is HttpOnly and SameSite=Strict, and expires after 8 hours. Restarting the server logs everyone out. Cross-site form posts are blocked.
+
+Note: the login limiter keys on the first `X-Forwarded-For` address. If the host does not set that header, all users share one limit. Without it, existing rows are updated by `id`.
 
 ## How it works
 
@@ -32,6 +48,7 @@ Rules to know:
 - **Days left is never stored.** It is computed from `last_date` in India time (Asia/Kolkata) on every request and again in the browser.
 - **Expired items are hidden automatically** (last date before today).
 - **Missing profile values never exclude a scholarship.** If a student skips "marks", the marks rule is not applied. Results may therefore include items the student does not qualify for, so eligibility shown is "may be eligible".
+- **Student details** are saved only with consent. The form collects name, mobile, email, school/college, class or course (B.Sc students also give Honours and Minor subjects), marks, category, gender, state, income and disability. The server checks all of it. Phone and email are personal data: show a privacy notice before going live and decide how long to keep them.
 - **Every card and detail page** shows "Please confirm on the official website before applying" and the "last verified" date.
 
 ## Seed data: please review before publishing

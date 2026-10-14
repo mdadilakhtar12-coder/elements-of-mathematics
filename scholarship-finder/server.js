@@ -3,7 +3,9 @@ import { readFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { extname, join, normalize, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { openDb, loadSeed, listPublished, getPublished } from './src/db.js';
+import { openDb, loadSeed, listPublished, getPublished, insertProfile } from './src/db.js';
+import { handleAdmin } from './src/admin.js';
+import { validateProfile } from './shared/validate.js';
 import {
   LEVELS,
   CATEGORIES,
@@ -139,9 +141,24 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
 
+    if (path === '/admin' || path.startsWith('/admin/')) {
+      await handleAdmin(req, res, url, db);
+      return;
+    }
+
     if (req.method === 'POST' && path === '/api/match') {
       const profile = cleanProfile(await readJson(req));
       return send(res, 200, buildMatches(profile));
+    }
+
+    // Stores a student's details only when they ticked the consent box.
+    if (req.method === 'POST' && path === '/api/profile') {
+      const body = await readJson(req);
+      if (body.consent !== true) return send(res, 400, { error: 'Consent is needed to save your details.' });
+      const { value, errors } = validateProfile(body);
+      if (errors.length) return send(res, 422, { error: errors[0], errors });
+      insertProfile(db, value);
+      return send(res, 201, { ok: true });
     }
 
     const detail = path.match(/^\/api\/scholarships\/([\w-]{1,80})$/);
