@@ -1,0 +1,14 @@
+{
+  "name": "Scholarship Finder",
+  "short_name": "Scholarships",
+  "description": "Scholarships for students of Odisha, Class 10 to UG.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f9",
+  "theme_color": "#1f6feb",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
