@@ -202,3 +202,6 @@ th { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowra
 .legal h2 { margin-top: 1.4rem; }
 .legal ul { padding-left: 1.2rem; }
 .footer-links { margin-top: 6px; }
+/* Admin pages use the full width on desktop; dates and status stay on one line. */
+main.admin { max-width: 1040px; }
+.admin td:nth-child(2), .admin td:nth-child(3), .admin td:nth-child(4) { white-space: nowrap; }
