@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { openDb, loadSeed, listPublished, getPublished, insertProfile } from './src/db.js';
 import { handleAdmin } from './src/admin.js';
 import { validateProfile } from './shared/validate.js';
+import { GROUP_KEYS } from './shared/options.js';
 import {
   LEVELS,
   CATEGORIES,
@@ -35,9 +36,8 @@ const MIME = {
 
 await mkdir(dirname(DB_PATH), { recursive: true });
 const db = openDb(DB_PATH);
-if (db.prepare('SELECT COUNT(*) AS n FROM scholarships').get().n === 0) {
-  loadSeed(db, SEED_PATH);
-}
+// Adds any seed scholarships that are not in the database yet. Existing rows (and admin edits) are kept.
+loadSeed(db, SEED_PATH);
 
 // Turns the free-form form values into a clean profile. Unknown values become null,
 // which the matcher treats as "not given", so it never excludes on bad input.
@@ -58,6 +58,7 @@ export function cleanProfile(raw = {}) {
     income: num(raw.income, 0, 1e12),
     disability: typeof raw.disability === 'boolean' ? raw.disability : null,
     institution: pick(raw.institution, ['government', 'aided', 'private', 'other']),
+    groups: Array.isArray(raw.groups) ? raw.groups.filter((g) => GROUP_KEYS.includes(g)) : null,
   };
 }
 

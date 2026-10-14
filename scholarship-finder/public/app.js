@@ -6,6 +6,7 @@ import {
   SCIENCE_SUBJECTS,
   INSTITUTIONS,
   GENDERS,
+  GROUPS,
 } from '/shared/options.js';
 
 const app = document.getElementById('app');
@@ -148,6 +149,11 @@ function renderForm(errors = [], current = null) {
         </fieldset>
       </fieldset>
 
+      <fieldset>
+        <legend>Tick any that apply to you <span class="muted">(some scholarships are only for these groups)</span></legend>
+        ${GROUPS.map((g) => `<label class="inline check"><input type="checkbox" name="groups" value="${g.key}" ${(p.groups || []).includes(g.key) ? 'checked' : ''}> <span>${esc(g.label)}</span></label>`).join('')}
+      </fieldset>
+
       <label class="consent">
         <input type="checkbox" name="consent" ${p.consent ? 'checked' : ''}>
         <span>Save my details so the team can help me with scholarship applications. Your details are used only for this and are not shared. Leave this unticked to just see results.</span>
@@ -193,6 +199,7 @@ function renderForm(errors = [], current = null) {
       state: str('state') || null,
       income: str('income') ? Number(str('income')) : null,
       disability: f.get('disability') === 'yes' ? true : f.get('disability') === 'no' ? false : null,
+      groups: f.getAll('groups'),
       consent: f.get('consent') === 'on',
     };
 

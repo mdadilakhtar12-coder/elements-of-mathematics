@@ -10,7 +10,7 @@ import {
 import * as auth from './auth.js';
 import { validateScholarship } from '../shared/validate.js';
 import { LEVELS, CATEGORIES } from '../shared/eligibility.js';
-import { STATES, GENDERS } from '../shared/options.js';
+import { STATES, GENDERS, GROUPS } from '../shared/options.js';
 
 const SECURITY_HEADERS = {
   'Cache-Control': 'no-store',
@@ -172,6 +172,7 @@ function scholarshipForm(values, errors, { isNew }) {
     ${text('min_percentage', 'Minimum marks (%)', { type: 'number', hint: 'blank = no rule' })}
     ${text('max_income', 'Max annual family income (₹)', { type: 'number', hint: 'blank = no limit' })}
     <label class="inline"><input type="checkbox" name="disability_only" ${v.disability_only ? 'checked' : ''}> Only for students with a disability</label>
+    <fieldset><legend>Only for these groups (leave unticked if open to all)</legend><div class="stack-checks">${checks('required_groups', GROUPS.map((g) => [g.key, g.short]), v.required_groups)}</div></fieldset>
     ${text('amount', 'Amount / benefit', { placeholder: 'e.g. ₹5,000 per year (as per the official notice)' })}
     ${text('start_date', 'Start date', { type: 'date' })}
     ${text('last_date', 'Last date', { type: 'date' })}
@@ -208,19 +209,28 @@ function studentsPage(db) {
   const rows = listProfiles(db);
   const body = rows.length
     ? `<div class="table-wrap"><table class="students"><thead><tr>
-        <th>When</th><th>Name</th><th>Mobile</th><th>Email</th><th>School / college</th><th>Class / course</th><th>Marks</th><th>Category</th><th>State</th><th>Income</th></tr></thead><tbody>
+        <th>When</th><th>Name</th><th>Mobile</th><th>Email</th><th>School / college</th><th>Class / course</th><th>Marks</th><th>Category</th><th>State</th><th>Income</th><th>Groups</th></tr></thead><tbody>
         ${rows
           .map(
             (r) => `<tr><td>${esc(r.created_at.slice(0, 10))}</td><td>${esc(r.name || '')}</td><td>${esc(r.phone)}</td><td>${esc(r.email || '')}</td>
             <td>${esc(r.school_or_college)}${r.institution ? `<div class="muted small">${esc(r.institution)}</div>` : ''}</td>
             <td>${esc(classLabel(r))}</td><td>${esc(r.percentage ?? '')}</td><td>${esc(r.category || '')}</td><td>${esc(r.state || '')}</td>
-            <td>${r.income == null ? '' : `₹${Number(r.income).toLocaleString('en-IN')}`}</td></tr>`,
+            <td>${r.income == null ? '' : `₹${Number(r.income).toLocaleString('en-IN')}`}</td><td class="small">${esc(parseGroups(r.groups).join(', '))}</td></tr>`,
           )
           .join('')}</tbody></table></div>
         <p><a class="secondary-link" href="/admin/students.csv">Download CSV</a></p>`
     : `<p class="muted">No student profiles yet.</p>`;
   return layout('Students', `<p><a href="/admin">← Back to dashboard</a></p><h1>Student profiles</h1>
     <p class="muted small">Only students who ticked the consent box appear here. Handle these details with care.</p>${body}`);
+}
+
+function parseGroups(v) {
+  try {
+    const a = JSON.parse(v || '[]');
+    return Array.isArray(a) ? a : [];
+  } catch {
+    return [];
+  }
 }
 
 function classLabel(r) {
@@ -241,7 +251,9 @@ export function csvCell(v) {
 export function studentsCsv(db) {
   const cols = ['created_at', ...PROFILE_COLUMNS];
   const lines = [cols.join(',')];
-  for (const r of listProfiles(db, 100000)) lines.push(cols.map((c) => csvCell(r[c])).join(','));
+  for (const r of listProfiles(db, 100000)) {
+    lines.push(cols.map((c) => csvCell(c === 'groups' ? parseGroups(r.groups).join(';') : r[c])).join(','));
+  }
   return lines.join('\n') + '\n';
 }
 

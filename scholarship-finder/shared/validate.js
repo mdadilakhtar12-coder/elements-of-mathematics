@@ -1,7 +1,7 @@
 // Validation rules used by the server. The browser also runs the student checks for quick feedback,
 // but the server is the one that decides.
 import { LEVELS, CATEGORIES } from './eligibility.js';
-import { STATES, STREAMS, UG_COURSES, SCIENCE_SUBJECTS, INSTITUTIONS, GENDERS } from './options.js';
+import { STATES, STREAMS, UG_COURSES, SCIENCE_SUBJECTS, INSTITUTIONS, GENDERS, GROUP_KEYS } from './options.js';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]{2,79}$/;
@@ -70,6 +70,7 @@ export function validateProfile(raw = {}) {
     state: pick(str(raw.state), STATES),
     income: num(raw.income, 0, 1e9),
     disability: typeof raw.disability === 'boolean' ? raw.disability : null,
+    groups: (Array.isArray(raw.groups) ? raw.groups : []).filter((g) => GROUP_KEYS.includes(g)),
   };
   if (Number.isNaN(value.percentage)) errors.push('Marks must be between 0 and 100.');
   if (Number.isNaN(value.income)) errors.push('Income must be a number of rupees.');
@@ -157,6 +158,7 @@ export function validateScholarship(raw = {}) {
     state,
     max_income,
     disability_only: raw.disability_only === true || raw.disability_only === 'on',
+    required_groups: (Array.isArray(raw.required_groups) ? raw.required_groups : [raw.required_groups]).filter((g) => GROUP_KEYS.includes(g)),
     amount: str(raw.amount).slice(0, 300) || null,
     start_date,
     last_date,

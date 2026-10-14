@@ -3,9 +3,15 @@
     "id": "nsp-post-matric-sc",
     "name": "Post Matric Scholarship for SC Students",
     "provider": "Ministry of Social Justice & Empowerment (via National Scholarship Portal)",
-    "levels": ["class11", "class12", "ug"],
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
     "min_percentage": null,
-    "categories": ["SC"],
+    "categories": [
+      "SC"
+    ],
     "gender": "any",
     "state": "All India",
     "max_income": 250000,
@@ -40,9 +46,15 @@
     "id": "pm-yasasvi-top-class",
     "name": "PM YASASVI Top Class Education Scholarship",
     "provider": "Ministry of Social Justice & Empowerment (via National Scholarship Portal)",
-    "levels": ["class11", "class12", "ug"],
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
     "min_percentage": null,
-    "categories": ["OBC"],
+    "categories": [
+      "OBC"
+    ],
     "gender": "any",
     "state": "All India",
     "max_income": 250000,
@@ -76,123 +88,583 @@
     "id": "nsp-post-matric-st",
     "name": "Post Matric Scholarship for ST Students",
     "provider": "Ministry of Tribal Affairs (via National Scholarship Portal)",
-    "levels": ["class11", "class12", "ug"],
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
     "min_percentage": null,
-    "categories": ["ST"],
+    "categories": [
+      "ST"
+    ],
     "gender": "any",
     "state": "All India",
     "max_income": 250000,
     "disability_only": false,
-    "amount": "As per central norms (tuition and maintenance). Confirm the amount for your course on the portal.",
+    "required_groups": [],
+    "amount": "Fee reimbursement plus maintenance allowance, as per central norms. Confirm the amount for your course.",
     "start_date": "2026-06-01",
     "last_date": "2026-10-31",
     "documents": [
       "Aadhaar card",
-      "ST caste certificate",
-      "Family income certificate",
       "Previous year marksheet",
-      "Bank account passbook",
-      "OTR ID from NSP"
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "ST caste certificate",
+      "Family income certificate"
     ],
     "apply_steps": [
-      "Open scholarships.gov.in and log in or register.",
-      "Create your OTR ID if you do not have one.",
-      "Select the Post Matric Scholarship for ST students and fill the form.",
-      "Upload documents and submit. Save the application ID.",
-      "Track verification on the NSP dashboard."
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
     ],
     "official_link": "https://scholarships.gov.in",
     "source_url": "https://scholarships.gov.in",
+    "criteria_note": null,
     "status": "draft",
     "last_verified_on": null,
-    "verification_note": "Not checked. Dates and amount need confirmation before publishing.",
+    "verification_note": "Not checked on the official site. Confirm the amount and the 31 Oct 2026 date (reported by secondary sources).",
     "created_at": "2026-10-14T00:00:00Z"
   },
   {
-    "id": "odisha-post-matric",
-    "name": "Odisha State Post Matric Scholarship",
-    "provider": "Government of Odisha (Odisha State Scholarship Portal)",
-    "levels": ["class11", "class12", "ug"],
+    "id": "dr-ambedkar-post-matric-ebc",
+    "name": "Dr. Ambedkar Post Matric Scholarship for EBC Students",
+    "provider": "Ministry of Social Justice & Empowerment (via National Scholarship Portal)",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
     "min_percentage": null,
-    "categories": [],
+    "categories": [
+      "General",
+      "EWS"
+    ],
     "gender": "any",
-    "state": "Odisha",
-    "max_income": null,
+    "state": "All India",
+    "max_income": 100000,
     "disability_only": false,
-    "amount": "To be confirmed on the Odisha portal",
-    "start_date": null,
+    "required_groups": [],
+    "amount": "Maintenance allowance up to ₹750 per month plus fee reimbursement (as reported; confirm on the portal)",
+    "start_date": "2026-06-01",
     "last_date": "2026-10-31",
     "documents": [
       "Aadhaar card",
-      "Caste or category certificate",
-      "Income certificate",
       "Previous year marksheet",
-      "Bank account passbook",
-      "College admission proof"
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Family income certificate",
+      "EBC / income-based eligibility proof as asked on the portal"
     ],
     "apply_steps": [
-      "Open scholarship.odisha.gov.in and register.",
-      "Log in and apply for the Post Matric Scholarship for the current year.",
-      "Fill personal, academic and bank details and upload documents.",
-      "Submit and save the application number.",
-      "Track the status on the portal."
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
     ],
-    "official_link": "https://scholarship.odisha.gov.in",
-    "source_url": "https://scholarship.odisha.gov.in",
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://indianpaycalculator.in/sarkari-result/scholarship/dr-ambedkar-post-matric-ebc-2026",
+    "criteria_note": "For Economically Backward Class students from the General category.",
     "status": "draft",
     "last_verified_on": null,
-    "verification_note": "Opening for 2026-27 found in a news source; deadline and eligibility not confirmed.",
+    "verification_note": "One secondary source only. Confirm who qualifies (EBC, General category), the income ceiling and the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-post-matric-minorities",
+    "name": "Post Matric Scholarship for Minorities",
+    "provider": "Ministry of Minority Affairs (via National Scholarship Portal)",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [
+      "minority"
+    ],
+    "amount": "Course fee and maintenance allowance, as per scheme norms. Confirm on the portal.",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Family income certificate",
+      "Minority community declaration (as asked on the portal)"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/post-matric-scholarship-scheme-for-minorities-nsp/income-limit",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Income limit of ₹2.5 lakh and the 31 Oct 2026 date come from secondary sources. Minimum-marks rule and amount were not found. Confirm all of them.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-mcm-minorities",
+    "name": "Merit-cum-Means Scholarship for Minorities (Professional and Technical Courses)",
+    "provider": "Ministry of Minority Affairs (via National Scholarship Portal)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [
+      "minority"
+    ],
+    "amount": "Course fee up to ₹20,000 per year plus a maintenance allowance (sources differ on the amount)",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Family income certificate",
+      "Minority self-declaration",
+      "Admission receipt"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/merit-cum-means-scholarship-for-minorities-professional-and-technical-courses-central",
+    "criteria_note": "Only for professional and technical courses.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Sources agree on the ₹2.5 lakh income limit and a 31 Oct 2026 date, but differ on the maintenance amount. Confirm the amount and the marks rule.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-pre-matric-minorities",
+    "name": "Pre Matric Scholarship for Minorities",
+    "provider": "Ministry of Minority Affairs (via National Scholarship Portal)",
+    "levels": [
+      "class10"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 100000,
+    "disability_only": false,
+    "required_groups": [
+      "minority"
+    ],
+    "amount": "As per scheme norms (maintenance allowance and fee reimbursement). Confirm on the portal.",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Family income certificate",
+      "Minority community declaration"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://indianpaycalculator.in/sarkari-result/scholarship/nsp-pre-matric-2026",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "One source gives an income limit of ₹1 lakh. Class range and amount are not confirmed (sources conflict). Confirm everything on the portal.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-pre-matric-sc-st",
+    "name": "Pre Matric Scholarship for SC and ST Students (Class 9-10)",
+    "provider": "Ministry of Social Justice & Empowerment / Ministry of Tribal Affairs (via National Scholarship Portal)",
+    "levels": [
+      "class10"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "SC",
+      "ST"
+    ],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Monthly maintenance allowance plus fee reimbursement, as per scheme norms. Confirm on the portal.",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Caste certificate",
+      "Family income certificate"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://indianpaycalculator.in/sarkari-result/scholarship/nsp-pre-matric-2026",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Income limit of ₹2.5 lakh and the 31 Oct 2026 date are from one secondary source. Some state versions close earlier. Confirm the amount and any extra conditions.",
     "created_at": "2026-10-14T00:00:00Z"
   },
   {
     "id": "csss-college",
     "name": "Central Sector Scheme of Scholarship for College and University Students",
     "provider": "Ministry of Education (via National Scholarship Portal)",
-    "levels": ["ug"],
+    "levels": [
+      "ug"
+    ],
     "min_percentage": null,
     "categories": [],
     "gender": "any",
     "state": "All India",
-    "max_income": 800000,
+    "max_income": 450000,
     "disability_only": false,
-    "amount": "Fixed amount per year, as per scheme norms. Confirm on the portal.",
+    "required_groups": [],
+    "amount": "₹12,000 per year for the first three years of UG (₹20,000 per year for PG and later professional years). Confirm on the portal.",
     "start_date": "2026-06-01",
     "last_date": "2026-10-31",
     "documents": [
       "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
       "Class 12 marksheet",
-      "College admission proof",
       "Family income certificate",
-      "Bank account passbook",
-      "OTR ID from NSP"
+      "College admission proof"
     ],
     "apply_steps": [
-      "Open scholarships.gov.in and log in with your OTR ID.",
-      "Select the Central Sector Scheme for college students.",
-      "Fill in your Class 12 result and college details.",
-      "Upload documents and submit.",
-      "Your college verifies the application."
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
     ],
     "official_link": "https://scholarships.gov.in",
-    "source_url": "https://scholarships.gov.in",
-    "criteria_note": "Class 12 merit rule applies (see scheme guidelines). Not checked in this prototype.",
+    "source_url": "https://www.indiascholarships.in/scholarships/central-sector-scholarship-csss",
+    "criteria_note": "Class 12 marks must be in the top 20 percent of successful candidates of your board and stream. Renewal needs 50 percent marks and 75 percent attendance. Not available if you get another scholarship.",
     "status": "draft",
     "last_verified_on": null,
-    "verification_note": "Sources disagree on the deadline (30 Sep vs 31 Oct 2026). Merit and income rules not confirmed.",
+    "verification_note": "Sources disagree on the deadline (30 Sep, 31 Oct or 31 Dec 2026) and on the amount (₹10,000 vs ₹12,000). Most give the ₹4.5 lakh income limit. Confirm all three.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-higher-education-sc",
+    "name": "National Scholarship for Higher Education for SC Students (formerly Top Class Education)",
+    "provider": "Ministry of Social Justice & Empowerment (via National Scholarship Portal)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "SC"
+    ],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 800000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Tuition and non-refundable fees (up to ₹2 lakh per year at private institutes) plus an academic allowance of ₹86,000 in year one and ₹41,000 later",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Caste certificate",
+      "Family income certificate",
+      "Fee receipt",
+      "Admission proof"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.nitk.ac.in/document/attachments/9953/NSP_Notice-2026.pdf",
+    "criteria_note": "Only for students admitted to notified top institutions. Slots are limited and based on rank.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Income limit and 31 Oct 2026 date come from an institute notice that quotes NSP. Confirm the amount, which institutes are covered and the selection rule.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-higher-education-st",
+    "name": "National Scholarship for Higher Education for ST Students (formerly Top Class Education)",
+    "provider": "Ministry of Tribal Affairs (via National Scholarship Portal)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "ST"
+    ],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 600000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Tuition and non-refundable fees plus an academic allowance (confirm the amounts for ST students on the portal)",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "ST caste certificate",
+      "Family income certificate",
+      "Fee receipt",
+      "Admission proof"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.nitk.ac.in/document/attachments/9953/NSP_Notice-2026.pdf",
+    "criteria_note": "Only for students admitted to notified top institutions. Slots are limited and based on rank.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The ST income limit (₹6 lakh) is from an institute notice. Confirm the amount, which institutes are covered and the selection rule.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "aicte-pragati-girls",
+    "name": "AICTE Pragati Scholarship for Girls",
+    "provider": "All India Council for Technical Education (via National Scholarship Portal)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "female",
+    "state": "All India",
+    "max_income": 800000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹50,000 per year",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Admission proof in an AICTE-approved institute",
+      "Family income certificate",
+      "Class 12 marksheet"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.buddy4study.com/article/aicte-scholarships",
+    "criteria_note": "Only for girls in AICTE-approved technical degree or diploma courses. Maximum two girl children per family.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Amount (₹50,000 per year) and the 31 Oct 2026 date are widely reported. The ₹8 lakh income limit comes from one source only. Confirm it.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "aicte-saksham-disabled",
+    "name": "AICTE Saksham Scholarship for Students with Disabilities",
+    "provider": "All India Council for Technical Education (via National Scholarship Portal)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": null,
+    "disability_only": true,
+    "required_groups": [],
+    "amount": "₹50,000 per year",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Disability certificate (40% or more) / UDID card",
+      "Admission proof in an AICTE-approved institute",
+      "Family income certificate"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.buddy4study.com/article/aicte-scholarships",
+    "criteria_note": "Only for students with 40% or more disability in AICTE-approved technical degree or diploma courses.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Amount and the 31 Oct 2026 date are widely reported. The income limit was not found. Confirm it.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "nsp-post-matric-disabled",
+    "name": "Post Matric Scholarship for Students with Disabilities",
+    "provider": "Department of Empowerment of Persons with Disabilities (via National Scholarship Portal)",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 250000,
+    "disability_only": true,
+    "required_groups": [],
+    "amount": "Maintenance allowance, disability allowance and fees, as per scheme norms. Confirm on the portal.",
+    "start_date": "2026-06-01",
+    "last_date": "2026-10-31",
+    "documents": [
+      "Aadhaar card",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Passport-size photo",
+      "OTR ID from NSP",
+      "Disability certificate (40% or more) / UDID card",
+      "Family income certificate from a revenue officer"
+    ],
+    "apply_steps": [
+      "Open scholarships.gov.in and register or log in with your Aadhaar-linked mobile number.",
+      "Create your One Time Registration (OTR) ID if you do not have one.",
+      "Choose this scheme, fill your personal, academic and bank details, and upload your documents.",
+      "Submit the form and save your application ID.",
+      "Your school or college verifies the application, then the state or ministry officer. Track the status on your NSP dashboard."
+    ],
+    "official_link": "https://scholarships.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/post-matric-scholarship-for-students-with-disabilities-depwd",
+    "criteria_note": "Disability of 40% or more. Not available if you receive another scholarship or stipend (check the guidelines).",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Sources agree on 40% disability and the ₹2.5 lakh income limit, but give different dates (31 Aug and 31 Oct 2026). Confirm the date and the amount.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "pmss-ex-servicemen",
+    "name": "Prime Minister's Scholarship Scheme (wards of ex-servicemen and armed forces)",
+    "provider": "Kendriya Sainik Board (Ministry of Defence)",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": 60,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": null,
+    "disability_only": false,
+    "required_groups": [
+      "defence"
+    ],
+    "amount": "₹3,000 per month for girls and ₹2,500 per month for boys",
+    "start_date": null,
+    "last_date": "2026-12-31",
+    "documents": [
+      "Aadhaar card",
+      "Class 12 marksheet",
+      "Admission proof in a professional course",
+      "Service or discharge certificate of the parent",
+      "Bank account passbook"
+    ],
+    "apply_steps": [
+      "Check on ksb.gov.in (and NSP) where the application for this year is taken.",
+      "Register and fill in the form with your details and the parent's service details.",
+      "Upload the documents and submit.",
+      "Keep the application number and track the status."
+    ],
+    "official_link": "https://ksb.gov.in",
+    "source_url": "https://indianpaycalculator.in/sarkari-result/scholarship/pm-scholarship-scheme-2026",
+    "criteria_note": "Only for first-year students of professional courses recognised by a government regulator (such as AICTE or NMC). Maximum two children per family.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Amounts agree across sources. The last date differs (31 Oct or 31 Dec 2026), and the sources disagree on whether it is applied for on ksb.gov.in or NSP, and on CAPF coverage. Confirm all of these.",
     "created_at": "2026-10-14T00:00:00Z"
   },
   {
     "id": "inspire-she",
     "name": "INSPIRE Scholarship for Higher Education (SHE)",
     "provider": "Department of Science & Technology, Government of India",
-    "levels": ["class12"],
+    "levels": [
+      "class12"
+    ],
     "min_percentage": null,
     "categories": [],
     "gender": "any",
     "state": "All India",
     "max_income": null,
     "disability_only": false,
-    "amount": "Around ₹80,000 per year for B.Sc. or equivalent (confirm on the portal)",
+    "required_groups": [],
+    "amount": "About ₹80,000 per year (₹5,000 per month plus a yearly mentorship grant) for B.Sc, B.S. or integrated M.Sc in basic sciences",
     "start_date": null,
     "last_date": null,
     "documents": [
@@ -203,52 +675,596 @@
       "Admission proof for a science course"
     ],
     "apply_steps": [
-      "Open online-inspire.gov.in during the application window.",
+      "Open online-inspire.gov.in when the call is announced.",
       "Register and fill the form with your Class 12 details.",
       "Upload documents and submit.",
       "Track the application on the portal."
     ],
     "official_link": "https://online-inspire.gov.in",
-    "source_url": "https://online-inspire.gov.in",
-    "criteria_note": "Top 1% in Class 12 board, or a high JEE/NEET rank, or other merit routes. Students must join a B.Sc. or basic-science course.",
+    "source_url": "https://www.indiascholarships.in/scholarships/inspire-scholarship-for-higher-education-she",
+    "criteria_note": "Top 1 percent in your Class 12 board, or a top-10,000 JEE or NEET rank, or other merit routes. You must join a B.Sc, B.S. or integrated M.Sc in a basic science.",
     "status": "draft",
     "last_verified_on": null,
-    "verification_note": "No confirmed 2026 cycle date. Next cycle is expected early 2027.",
+    "verification_note": "No 2026 call was found (one source says none open on 5 Oct 2026). The next call is expected in early 2027. Add the date when the call opens.",
     "created_at": "2026-10-14T00:00:00Z"
   },
   {
-    "id": "aicte-pragati-girls",
-    "name": "Pragati Scholarship for Girls (AICTE)",
-    "provider": "All India Council for Technical Education",
-    "levels": ["ug"],
+    "id": "odisha-post-matric-sc",
+    "name": "Odisha Post Matric Scholarship for SC Students",
+    "provider": "ST & SC Development Department, Government of Odisha",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
     "min_percentage": null,
-    "categories": [],
-    "gender": "female",
-    "state": "All India",
-    "max_income": 800000,
+    "categories": [
+      "SC"
+    ],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 250000,
     "disability_only": false,
-    "amount": "Confirm on the AICTE site (scheme has a yearly fixed amount)",
+    "required_groups": [],
+    "amount": "Amount varies by course and hostel status (sources report about ₹20,000 per year). Confirm on the portal.",
     "start_date": null,
     "last_date": null,
     "documents": [
       "Aadhaar card",
-      "Admission proof in an AICTE-approved technical course",
-      "Income certificate",
-      "Class 12 marksheet",
-      "Bank account passbook"
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "SC caste certificate"
     ],
     "apply_steps": [
-      "Open the AICTE scholarship portal from the official site.",
-      "Register and open the Pragati Scholarship form.",
-      "Fill your details and upload documents.",
-      "Submit and save the application number."
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
     ],
-    "official_link": "https://www.aicte-india.org",
-    "source_url": "https://www.aicte-india.org",
-    "criteria_note": "Only for girls in AICTE-approved technical courses (diploma and degree).",
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/post-matric-scholarship-for-sc-students-odisha/income-limit",
+    "criteria_note": null,
     "status": "draft",
     "last_verified_on": null,
-    "verification_note": "Not checked. Application window and amount need confirmation.",
+    "verification_note": "No 2026-27 notice found (the 2025-26 round closed on 31 Dec 2025). Income limit ₹2.5 lakh is from secondary sources; the amount differs between sources (about ₹20,000). Confirm on the portal and add the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-post-matric-st",
+    "name": "Odisha Post Matric Scholarship for ST Students",
+    "provider": "ST & SC Development Department, Government of Odisha",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "ST"
+    ],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Amount varies by course and hostel status. Confirm on the portal.",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "ST caste certificate"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/post-matric-scholarship-for-st-students-odisha/income-limit",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "No 2026-27 notice found (the 2025-26 round closed on 31 Dec 2025). Income limit ₹2.5 lakh is from secondary sources. Confirm the amount and add the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-post-matric-obc",
+    "name": "Odisha Post Matric Scholarship for OBC / SEBC Students",
+    "provider": "Backward Classes Welfare Department, Government of Odisha",
+    "levels": [
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": 50,
+    "categories": [
+      "OBC"
+    ],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "About ₹13,000 per year (sources differ). Confirm on the portal.",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "OBC / SEBC caste certificate"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships-in/odisha/obc",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "No 2026-27 notice found. One source says a 50 percent marks rule applies and another does not mention it. Amount (about ₹13,000) and income limit (₹2.5 lakh) are from secondary sources. Confirm all of these and add the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-pre-matric",
+    "name": "Odisha Pre-Matric Scholarship (Class 9-10)",
+    "provider": "Government of Odisha (ST & SC Development / Backward Classes Welfare)",
+    "levels": [
+      "class10"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "SC",
+      "ST",
+      "OBC"
+    ],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": null,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹6,000 per year (SC/ST), ₹4,000 per year (OBC/SEBC). Confirm on the portal.",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Caste certificate"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships-in/odisha",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "A listing says ₹6,000 for SC/ST and ₹4,000 for OBC/SEBC/EBC, with a 31 Jan 2026 deadline for the last cycle. No 2026-27 notice found. Confirm the amounts, the income limit and add the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-shahid-madho-singh",
+    "name": "Shahid Madho Singh Haath Kharcha Yojana (ST students)",
+    "provider": "ST & SC Development Department, Government of Odisha",
+    "levels": [
+      "class10",
+      "class11",
+      "class12"
+    ],
+    "min_percentage": null,
+    "categories": [
+      "ST"
+    ],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹5,000 (confirm on the portal)",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "ST caste certificate"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships-in/odisha",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "One listing: ₹5,000, ST students, income under ₹2.5 lakh, Class 9-12. No 2026-27 notice found. Confirm the details and add the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-emedhabruti-ug",
+    "name": "e-Medhabruti UG Merit Scholarship (Odisha)",
+    "provider": "Higher Education Department, Government of Odisha",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": 55,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 800000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹10,000 per year for 3 years",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Class 12 marksheet",
+      "Domicile proof of Odisha"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.buddy4study.com/scholarship/e-medhabruti-scholarship-scheme-ug-merit-odisha-2026",
+    "criteria_note": "Apply in the first year of a 3-year degree (BA, B.Sc, B.Com, BBA, BCA and similar) in a recognised institute. Not for open or distance learning.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Sources agree on 55% in Class 12 and ₹10,000 per year. They conflict on the income limit (₹6 lakh vs ₹8 lakh). The 2025-26 round closed on 4 Nov 2025; no 2026-27 date found. Confirm the limit and the date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-junior-merit",
+    "name": "Junior Merit Scholarship (Class 11, Odisha)",
+    "provider": "Higher Education Department, Government of Odisha (e-Medhabruti)",
+    "levels": [
+      "class11"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 600000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹3,000 per year for two years",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Class 10 marksheet"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/junior-merit-scholarship",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "One listing: ₹3,000 per year for two years, income under ₹6 lakh. The last tentative date seen was 15 Jan 2026. Confirm the details and the 2026-27 date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-gssy",
+    "name": "Gopabandhu Sikhya Sahayata Yojana (Odisha)",
+    "provider": "Higher Education Department, Government of Odisha",
+    "levels": [
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [
+      "vulnerable"
+    ],
+    "amount": "₹20,000 per year",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Proof of the family situation (as asked on the portal)"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/gopabandhu-sikhya-sahayata-yojana-odisha",
+    "criteria_note": "Means-based support for students of vulnerable families, studying regularly in a recognised college or university in Odisha.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Amount (₹20,000 per year) is consistent. Sources disagree on the income limit (₹2.5 lakh vs about ₹1.2 lakh). The last date seen was 9 Oct 2025. Confirm the limit, who counts as vulnerable, and the 2026 date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-banishree",
+    "name": "Banishree Scholarship (students with disabilities, Odisha)",
+    "provider": "Social Security & Empowerment of Persons with Disabilities Department, Government of Odisha",
+    "levels": [
+      "class10",
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": null,
+    "disability_only": true,
+    "required_groups": [],
+    "amount": "Yearly allowance by class (confirm the current rate on the portal)",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Disability certificate / UDID card"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.indiascholarships.in/scholarships/banishree-scholarship-odisha/last-date",
+    "criteria_note": null,
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "Rates differ between sources (older ₹400-₹700 per month; one 2026 listing ₹4,800-₹8,400 per year). The last date seen has passed. Confirm the rate, eligibility and the 2026-27 date.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "odisha-nirman-shramik",
+    "name": "Nirman Shramik Kalyan Yojana Scholarship (Odisha)",
+    "provider": "Labour & ESI Department, Government of Odisha (BOCW Welfare Board)",
+    "levels": [
+      "class10",
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": null,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": null,
+    "disability_only": false,
+    "required_groups": [
+      "bocw"
+    ],
+    "amount": "Confirm on the portal",
+    "start_date": null,
+    "last_date": "2026-07-31",
+    "documents": [
+      "Aadhaar card",
+      "Income certificate from a revenue officer (private employer certificates and plain-paper declarations are not accepted)",
+      "Previous year marksheet",
+      "Bank account passbook linked to Aadhaar",
+      "Admission proof from your school or college",
+      "Parent's BOCW registration card"
+    ],
+    "apply_steps": [
+      "Open scholarship.odisha.gov.in and register, or log in if you already have an account.",
+      "Choose this scheme for the current year and fill your personal, academic and bank details.",
+      "Upload your documents and submit the form.",
+      "Save the application number and track the status on the portal."
+    ],
+    "official_link": "https://scholarship.odisha.gov.in",
+    "source_url": "https://www.buddy4study.com/article/top-scholarships-for-students-of-odisha",
+    "criteria_note": "For children of workers registered with the Odisha Building and Other Construction Workers Welfare Board.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The 2026 deadline seen was 31 Jul 2026, which has passed. Confirm the next round, the classes covered and the amount.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "vidyadhan-odisha-plus2",
+    "name": "Vidyadhan Scholarship for Odisha (after Class 10)",
+    "provider": "Sarojini Damodaran Foundation",
+    "levels": [
+      "class10"
+    ],
+    "min_percentage": 80,
+    "categories": [],
+    "gender": "any",
+    "state": "Odisha",
+    "max_income": 200000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Up to ₹10,000 per year",
+    "start_date": null,
+    "last_date": null,
+    "documents": [
+      "Class 10 marksheet",
+      "Income certificate from a competent authority (ration card not accepted)",
+      "Passport-size photo",
+      "Aadhaar card"
+    ],
+    "apply_steps": [
+      "Open vidyadhan.org when the Odisha round opens.",
+      "Register and fill the application form.",
+      "Upload the Class 10 marksheet, income certificate and photo.",
+      "Submit and note the application number."
+    ],
+    "official_link": "https://www.vidyadhan.org",
+    "source_url": "https://www.buddy4study.com/scholarship/vidyadhan-odisha-plus-2-scholarship-program",
+    "criteria_note": "For students who passed Class 10 in Odisha with 80% marks (65% for students with disabilities) and plan to study Class 11 and beyond.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The 2026 round is marked closed. Details are from one secondary source. Wait for the next round and confirm the marks, income and amount on vidyadhan.org.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "hdfc-parivartan-ecss",
+    "name": "HDFC Bank Parivartan Educational Crisis Support Scholarship",
+    "provider": "HDFC Bank Parivartan",
+    "levels": [
+      "class10",
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": 55,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 250000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Up to ₹30,000-₹45,000 (general UG) or ₹50,000-₹75,000 (professional UG) per year; less for school classes",
+    "start_date": null,
+    "last_date": "2026-08-31",
+    "documents": [
+      "Previous year marksheet",
+      "Income proof",
+      "Aadhaar card",
+      "Fee receipt",
+      "Proof of any recent family crisis (if applicable)"
+    ],
+    "apply_steps": [
+      "Open parivartanecss.com when the new round starts.",
+      "Register and fill the application form.",
+      "Upload documents and submit.",
+      "Wait for the shortlist and complete any interview or document check."
+    ],
+    "official_link": "https://www.parivartanecss.com",
+    "source_url": "https://www.indiascholarships.in/scholarships/hdfc-bank-parivartan-ecss-scholarship",
+    "criteria_note": "Students with a recent personal or family crisis get priority.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The window closed on 31 Aug 2026 (some sources say 30 Sep 2026). Amounts for UG are reported as ₹30,000-₹75,000 depending on the course. Wait for the next round and confirm everything.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "sbi-asha-scholarship",
+    "name": "SBI Platinum Jubilee Asha Scholarship",
+    "provider": "SBI Foundation",
+    "levels": [
+      "class10",
+      "class11",
+      "class12",
+      "ug"
+    ],
+    "min_percentage": 75,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 600000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "₹15,000 to ₹15 lakh per year depending on the track (school, UG, PG, IIT, IIM, abroad)",
+    "start_date": null,
+    "last_date": "2026-09-19",
+    "documents": [
+      "Previous year marksheet",
+      "Income proof",
+      "Aadhaar card",
+      "Admission proof",
+      "Bank account details"
+    ],
+    "apply_steps": [
+      "Open sbiashascholarship.co.in when the next round starts.",
+      "Register and choose your track.",
+      "Fill the form and upload documents.",
+      "Submit and note the application number."
+    ],
+    "official_link": "https://www.sbiashascholarship.co.in",
+    "source_url": "https://www.buddy4study.com/article/sbi-asha-scholarship",
+    "criteria_note": "75 percent marks or 7.5 CGPA in the previous year. The income limit is lower for school students (about ₹3 lakh).",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The 2026-27 window was reported to close on 19 Sep 2026 (extended from 4 Sep), so it has passed. Income limits differ by track. Confirm the next round, the limits and the amount.",
+    "created_at": "2026-10-14T00:00:00Z"
+  },
+  {
+    "id": "reliance-foundation-ug",
+    "name": "Reliance Foundation Undergraduate Scholarships",
+    "provider": "Reliance Foundation",
+    "levels": [
+      "class12",
+      "ug"
+    ],
+    "min_percentage": 60,
+    "categories": [],
+    "gender": "any",
+    "state": "All India",
+    "max_income": 1500000,
+    "disability_only": false,
+    "required_groups": [],
+    "amount": "Up to ₹2 lakh over the duration of the degree",
+    "start_date": null,
+    "last_date": "2026-10-05",
+    "documents": [
+      "Class 12 marksheet",
+      "Admission proof (when asked)",
+      "Income proof",
+      "Aadhaar card",
+      "Passport-size photo"
+    ],
+    "apply_steps": [
+      "Open the Reliance Foundation scholarship page when applications open.",
+      "Register and fill the application form.",
+      "Complete the aptitude test.",
+      "Upload documents and submit."
+    ],
+    "official_link": "https://www.reliancefoundation.org",
+    "source_url": "https://www.buddy4study.com/article/reliance-foundation-ug-scholarships",
+    "criteria_note": "For first-year undergraduate students. An aptitude test is part of the selection.",
+    "status": "draft",
+    "last_verified_on": null,
+    "verification_note": "The 2026-27 deadline reported was 5 Oct 2026, which has passed (check for an extension). Details are from secondary sources. Confirm the next round, the marks, the income limit and the amount.",
     "created_at": "2026-10-14T00:00:00Z"
   }
 ]

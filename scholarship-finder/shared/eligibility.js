@@ -1,5 +1,6 @@
 // Pure matching and date logic. Used by the server (Node) and the browser (served as /shared/eligibility.js).
 // No DOM, no Node-only APIs.
+import { GROUPS } from './options.js';
 
 export const LEVELS = {
   class10: 'Class 10',
@@ -48,6 +49,9 @@ export function checkEligibility(s, p) {
   if (s.state && s.state !== 'All India' && p.state && s.state !== p.state) failed.push('state');
   if (s.max_income != null && p.income != null && p.income > s.max_income) failed.push('income');
   if (s.disability_only && p.disability === false) failed.push('disability');
+  // Group rule: the student must belong to at least one of the required groups.
+  // If the profile has no group list at all, the rule is skipped (unknown).
+  if (s.required_groups?.length && Array.isArray(p.groups) && !s.required_groups.some((g) => p.groups.includes(g))) failed.push('group');
   return { eligible: failed.length === 0, failed };
 }
 
@@ -62,6 +66,9 @@ export function criteriaText(s) {
   out.push(s.state && s.state !== 'All India' ? `Domicile: ${s.state}` : 'Domicile: All India');
   if (s.max_income != null) out.push(`Annual family income: up to ₹${s.max_income.toLocaleString('en-IN')}`);
   if (s.disability_only) out.push('Only for students with a disability');
+  if (s.required_groups?.length) {
+    out.push(`For: ${s.required_groups.map((k) => GROUPS.find((g) => g.key === k)?.short ?? k).join(' or ')}`);
+  }
   if (s.criteria_note) out.push(s.criteria_note);
   return out;
 }

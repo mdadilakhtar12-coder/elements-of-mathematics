@@ -194,3 +194,7 @@ th { font-size: .8rem; color: var(--muted); font-weight: 700; white-space: nowra
 .pill.draft { background: #fff4d6; color: #7a5200; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.draft { background: #3d3216; color: #ffd98a; } }
 .students td, .students th { font-size: .85rem; }
+.check { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 8px; }
+.check input { margin-top: 3px; flex: none; }
+.stack-checks { display: grid; gap: 6px; }
+.stack-checks label.inline { margin: 0; }

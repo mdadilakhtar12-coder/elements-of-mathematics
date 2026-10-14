@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 
-const JSON_FIELDS = ['levels', 'categories', 'documents', 'apply_steps'];
+const JSON_FIELDS = ['levels', 'categories', 'documents', 'apply_steps', 'required_groups'];
 
 export const SCHEMA = `
 CREATE TABLE IF NOT EXISTS scholarships (
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS scholarships (
   state TEXT NOT NULL DEFAULT 'All India',
   max_income INTEGER,
   disability_only INTEGER NOT NULL DEFAULT 0,
+  required_groups TEXT NOT NULL DEFAULT '[]',
   amount TEXT,
   start_date TEXT,
   last_date TEXT,
@@ -51,18 +52,19 @@ CREATE TABLE IF NOT EXISTS student_profiles (
   gender TEXT,
   state TEXT,
   income INTEGER,
-  disability INTEGER
+  disability INTEGER,
+  groups TEXT
 );
 `;
 
 export const PROFILE_COLUMNS = [
   'name', 'phone', 'email', 'school_or_college', 'institution', 'level', 'stream', 'course',
-  'honours_subject', 'minor_subject', 'percentage', 'category', 'gender', 'state', 'income', 'disability',
+  'honours_subject', 'minor_subject', 'percentage', 'category', 'gender', 'state', 'income', 'disability', 'groups',
 ];
 
 const COLUMNS = [
   'id', 'name', 'provider', 'levels', 'min_percentage', 'categories', 'gender', 'state', 'max_income',
-  'disability_only', 'amount', 'start_date', 'last_date', 'documents', 'apply_steps', 'official_link',
+  'disability_only', 'required_groups', 'amount', 'start_date', 'last_date', 'documents', 'apply_steps', 'official_link',
   'source_url', 'criteria_note', 'status', 'last_verified_on', 'verification_note', 'created_at',
 ];
 
@@ -72,13 +74,25 @@ ON CONFLICT(id) DO UPDATE SET ${COLUMNS.filter((c) => c !== 'id' && c !== 'creat
   .map((c) => `${c} = excluded.${c}`)
   .join(', ')}`;
 
+const INSERT_IF_NEW = `INSERT INTO scholarships (${COLUMNS.join(', ')}) VALUES (${COLUMNS.map((c) => `:${c}`).join(', ')}) ON CONFLICT(id) DO NOTHING`;
+
 export function openDb(path) {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(SCHEMA);
   db.exec(PROFILE_SCHEMA);
+  addMissingColumns(db);
   return db;
+}
+
+// Databases created by an older version lack newer columns. Add them in place.
+function addMissingColumns(db) {
+  const has = (table, col) => db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col);
+  if (!has('scholarships', 'required_groups')) {
+    db.exec(`ALTER TABLE scholarships ADD COLUMN required_groups TEXT NOT NULL DEFAULT '[]'`);
+  }
+  if (!has('student_profiles', 'groups')) db.exec('ALTER TABLE student_profiles ADD COLUMN groups TEXT');
 }
 
 // DB row -> API shape: JSON columns parsed, booleans fixed.
@@ -101,6 +115,7 @@ export function toRow(r) {
     state: r.state ?? 'All India',
     max_income: r.max_income ?? null,
     disability_only: r.disability_only ? 1 : 0,
+    required_groups: JSON.stringify(r.required_groups ?? []),
     amount: r.amount ?? null,
     start_date: r.start_date ?? null,
     last_date: r.last_date ?? null,
@@ -120,9 +135,11 @@ export function saveScholarship(db, r) {
   db.prepare(UPSERT).run(toRow(r));
 }
 
-export function loadSeed(db, path, { replace = false } = {}) {
+// Adds scholarships from the seed file. Rows that already exist are left alone, so edits and
+// publishing done in the admin panel survive a restart. Pass update: true to overwrite them.
+export function loadSeed(db, path, { replace = false, update = false } = {}) {
   const rows = JSON.parse(readFileSync(path, 'utf8'));
-  const stmt = db.prepare(UPSERT);
+  const stmt = db.prepare(update ? UPSERT : INSERT_IF_NEW);
   db.exec('BEGIN');
   try {
     if (replace) db.exec('DELETE FROM scholarships');
@@ -168,7 +185,7 @@ export function insertProfile(db, p) {
   const cols = PROFILE_COLUMNS;
   // node:sqlite does not bind JS booleans, so store disability as 1/0.
   const params = Object.fromEntries(
-    cols.map((c) => [c, typeof p[c] === 'boolean' ? (p[c] ? 1 : 0) : p[c] ?? null]),
+    cols.map((c) => [c, typeof p[c] === 'boolean' ? (p[c] ? 1 : 0) : Array.isArray(p[c]) ? JSON.stringify(p[c]) : p[c] ?? null]),
   );
   db.prepare(`INSERT INTO student_profiles (${cols.join(', ')}) VALUES (${cols.map((c) => `:${c}`).join(', ')})`).run(params);
 }

@@ -30,3 +30,13 @@ export const GENDERS = [
   ['male', 'Male'],
   ['other', 'Other'],
 ];
+
+// Background groups that some scholarships are limited to. The student ticks any that apply.
+// `label` is shown on the form; `short` is used in the eligibility list.
+export const GROUPS = [
+  { key: 'minority', label: 'I belong to a notified minority community (Muslim, Christian, Sikh, Buddhist, Jain or Parsi)', short: 'Notified minority community' },
+  { key: 'defence', label: 'My parent is an ex-serviceman, or serves in the armed forces or CAPF', short: 'Child of ex-servicemen, armed forces or CAPF personnel' },
+  { key: 'bocw', label: 'My parent is a registered construction (BOCW) worker', short: 'Child of a registered construction (BOCW) worker' },
+  { key: 'vulnerable', label: 'My family is in a vulnerable group (orphan, single parent, destitute or homeless, HIV/AIDS-affected, PVTG or similar)', short: 'Vulnerable family group (orphan, single parent, destitute, HIV/AIDS-affected, PVTG or similar)' },
+];
+export const GROUP_KEYS = GROUPS.map((g) => g.key);
