@@ -1,0 +1,705 @@
+{
+  "files": [
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/App.kt",
+      "package": "com.elementsofmathematics.app",
+      "lines": 12,
+      "group": "(root)",
+      "public_declarations": [
+        "App"
+      ],
+      "used_by": 0,
+      "uses": 1
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/AppConfig.kt",
+      "package": "com.elementsofmathematics.app",
+      "lines": 20,
+      "group": "(root)",
+      "public_declarations": [
+        "AppConfig"
+      ],
+      "used_by": 2,
+      "uses": 0
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "package": "com.elementsofmathematics.app",
+      "lines": 118,
+      "group": "(root)",
+      "public_declarations": [
+        "MainActivity",
+        "Routes"
+      ],
+      "used_by": 0,
+      "uses": 7
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/data/LocalStore.kt",
+      "package": "com.elementsofmathematics.app.data",
+      "lines": 67,
+      "group": "data",
+      "public_declarations": [
+        "HighlightStroke",
+        "LocalStore",
+        "PdfMode"
+      ],
+      "used_by": 3,
+      "uses": 0
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "package": "com.elementsofmathematics.app.data",
+      "lines": 70,
+      "group": "data",
+      "public_declarations": [
+        "AppSettings",
+        "Banner",
+        "ContentItem",
+        "DEFAULT_SECTIONS",
+        "ICON_YOUTUBE",
+        "MoreApp",
+        "SECTION_ICONS",
+        "Section",
+        "SectionType"
+      ],
+      "used_by": 9,
+      "uses": 1
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/data/PdfCache.kt",
+      "package": "com.elementsofmathematics.app.data",
+      "lines": 86,
+      "group": "data",
+      "public_declarations": [
+        "PdfCache"
+      ],
+      "used_by": 1,
+      "uses": 2
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "package": "com.elementsofmathematics.app.data",
+      "lines": 241,
+      "group": "data",
+      "public_declarations": [
+        "Repository"
+      ],
+      "used_by": 6,
+      "uses": 2
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "package": "com.elementsofmathematics.app.ui",
+      "lines": 71,
+      "group": "ui",
+      "public_declarations": [
+        "MainViewModel"
+      ],
+      "used_by": 5,
+      "uses": 2
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "package": "com.elementsofmathematics.app.ui.admin",
+      "lines": 439,
+      "group": "ui/admin",
+      "public_declarations": [
+        "AdminLoginDialog",
+        "AppSettingsDialog",
+        "ChangePasswordDialog",
+        "ConfirmDialog",
+        "ItemEditorDialog",
+        "SectionEditorDialog",
+        "addLabel"
+      ],
+      "used_by": 3,
+      "uses": 5
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "package": "com.elementsofmathematics.app.ui.admin",
+      "lines": 272,
+      "group": "ui/admin",
+      "public_declarations": [
+        "BannerManagerDialog"
+      ],
+      "used_by": 1,
+      "uses": 5
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "package": "com.elementsofmathematics.app.ui.common",
+      "lines": 135,
+      "group": "ui/common",
+      "public_declarations": [
+        "InnerTopBar",
+        "NumberBubble",
+        "SectionIcon",
+        "StatusBarIcons",
+        "YouTubeLogo"
+      ],
+      "used_by": 6,
+      "uses": 2
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/home/BannerCarousel.kt",
+      "package": "com.elementsofmathematics.app.ui.home",
+      "lines": 144,
+      "group": "ui/home",
+      "public_declarations": [
+        "BannerCarousel"
+      ],
+      "used_by": 1,
+      "uses": 3
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "package": "com.elementsofmathematics.app.ui.home",
+      "lines": 520,
+      "group": "ui/home",
+      "public_declarations": [
+        "AddCard",
+        "AdminItemMenu",
+        "HomeScreen"
+      ],
+      "used_by": 2,
+      "uses": 10
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfDocument.kt",
+      "package": "com.elementsofmathematics.app.ui.pdf",
+      "lines": 80,
+      "group": "ui/pdf",
+      "public_declarations": [
+        "PdfDocument"
+      ],
+      "used_by": 1,
+      "uses": 0
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "package": "com.elementsofmathematics.app.ui.pdf",
+      "lines": 601,
+      "group": "ui/pdf",
+      "public_declarations": [
+        "PdfViewerScreen"
+      ],
+      "used_by": 1,
+      "uses": 4
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "package": "com.elementsofmathematics.app.ui.section",
+      "lines": 419,
+      "group": "ui/section",
+      "public_declarations": [
+        "SectionScreen"
+      ],
+      "used_by": 1,
+      "uses": 10
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "package": "com.elementsofmathematics.app.ui.theme",
+      "lines": 41,
+      "group": "ui/theme",
+      "public_declarations": [
+        "AppTheme",
+        "BubbleGradients",
+        "DoneGreen",
+        "DownloadOrange",
+        "Purple",
+        "PurpleDark",
+        "PurpleLight",
+        "ScreenBg",
+        "YouTubeRed"
+      ],
+      "used_by": 8,
+      "uses": 0
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "package": "com.elementsofmathematics.app.ui.video",
+      "lines": 280,
+      "group": "ui/video",
+      "public_declarations": [
+        "VideoPlayerScreen"
+      ],
+      "used_by": 1,
+      "uses": 5
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "package": "com.elementsofmathematics.app.util",
+      "lines": 58,
+      "group": "util",
+      "public_declarations": [
+        "Links"
+      ],
+      "used_by": 5,
+      "uses": 0
+    },
+    {
+      "path": "app/src/main/java/com/elementsofmathematics/app/util/YouTube.kt",
+      "package": "com.elementsofmathematics.app.util",
+      "lines": 22,
+      "group": "util",
+      "public_declarations": [
+        "YouTube"
+      ],
+      "used_by": 3,
+      "uses": 0
+    }
+  ],
+  "edges": [
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/App.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/LocalStore.kt",
+      "symbols": [
+        "LocalStore"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "symbols": [
+        "MainViewModel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "symbols": [
+        "HomeScreen"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "symbols": [
+        "PdfViewerScreen"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "symbols": [
+        "SectionScreen"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "AppTheme"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/MainActivity.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "symbols": [
+        "VideoPlayerScreen"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/AppConfig.kt",
+      "symbols": [
+        "AppConfig"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/data/PdfCache.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "ContentItem"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/data/PdfCache.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "symbols": [
+        "Links"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/AppConfig.kt",
+      "symbols": [
+        "AppConfig"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "AppSettings",
+        "Banner",
+        "ContentItem",
+        "DEFAULT_SECTIONS",
+        "MoreApp",
+        "Section",
+        "SectionType"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "AppSettings",
+        "Banner",
+        "ContentItem",
+        "Section"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "AppSettings",
+        "ContentItem",
+        "MoreApp",
+        "SECTION_ICONS",
+        "Section",
+        "SectionType"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "SectionIcon"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "Purple"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/YouTube.kt",
+      "symbols": [
+        "YouTube"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "AppSettings",
+        "Banner"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "symbols": [
+        "MainViewModel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "symbols": [
+        "ConfirmDialog"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "InnerTopBar"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "ICON_YOUTUBE"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "BubbleGradients",
+        "PurpleLight",
+        "YouTubeRed"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/BannerCarousel.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "Banner"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/BannerCarousel.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "Purple"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/BannerCarousel.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "symbols": [
+        "Links"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/LocalStore.kt",
+      "symbols": [
+        "LocalStore",
+        "PdfMode"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "Section"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "symbols": [
+        "MainViewModel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "symbols": [
+        "AdminLoginDialog",
+        "AppSettingsDialog",
+        "ChangePasswordDialog",
+        "ConfirmDialog",
+        "SectionEditorDialog"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/admin/BannerManagerDialog.kt",
+      "symbols": [
+        "BannerManagerDialog"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "SectionIcon",
+        "StatusBarIcons"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/home/BannerCarousel.kt",
+      "symbols": [
+        "BannerCarousel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "Purple"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "symbols": [
+        "Links"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/LocalStore.kt",
+      "symbols": [
+        "HighlightStroke",
+        "LocalStore",
+        "PdfMode"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "StatusBarIcons"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfDocument.kt",
+      "symbols": [
+        "PdfDocument"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/pdf/PdfViewerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "Purple"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Models.kt",
+      "symbols": [
+        "ContentItem",
+        "SectionType"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/PdfCache.kt",
+      "symbols": [
+        "PdfCache"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/data/Repository.kt",
+      "symbols": [
+        "Repository"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "symbols": [
+        "MainViewModel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/admin/AdminDialogs.kt",
+      "symbols": [
+        "ConfirmDialog",
+        "ItemEditorDialog",
+        "addLabel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "InnerTopBar",
+        "NumberBubble",
+        "StatusBarIcons",
+        "YouTubeLogo"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/home/HomeScreen.kt",
+      "symbols": [
+        "AdminItemMenu"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "DoneGreen",
+        "DownloadOrange",
+        "Purple"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "symbols": [
+        "Links"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/section/SectionScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/YouTube.kt",
+      "symbols": [
+        "YouTube"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/MainViewModel.kt",
+      "symbols": [
+        "MainViewModel"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/common/Common.kt",
+      "symbols": [
+        "InnerTopBar",
+        "StatusBarIcons",
+        "YouTubeLogo"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/ui/theme/Theme.kt",
+      "symbols": [
+        "YouTubeRed"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/Links.kt",
+      "symbols": [
+        "Links"
+      ]
+    },
+    {
+      "from": "app/src/main/java/com/elementsofmathematics/app/ui/video/VideoPlayerScreen.kt",
+      "to": "app/src/main/java/com/elementsofmathematics/app/util/YouTube.kt",
+      "symbols": [
+        "YouTube"
+      ]
+    }
+  ]
+}
