@@ -156,6 +156,17 @@ test('supabase: requests carry the key in headers only, and never put data in th
   }
 });
 
+test('supabase: the newer sb_secret_ keys are sent in the apikey header only', async () => {
+  const fake = fakeSupabase();
+  const store = createSupabaseStore({ url: 'https://example.supabase.co', key: 'sb_secret_abc123', fetchImpl: fake.fetchImpl });
+  await store.ping();
+  await store.countProfiles();
+  for (const c of fake.calls) {
+    assert.equal(c.headers.apikey, 'sb_secret_abc123');
+    assert.equal(c.headers.authorization, undefined);
+  }
+});
+
 test('supabase: a failed request surfaces a clear error', async () => {
   const store = createSupabaseStore({ url: 'https://example.supabase.co', key: 'k', fetchImpl: async () => new Response('{"message":"bad key"}', { status: 401 }) });
   await assert.rejects(() => store.ping(), /Supabase GET \/scholarships failed \(401\)/);

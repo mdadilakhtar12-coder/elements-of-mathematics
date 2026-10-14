@@ -43,13 +43,15 @@ export function fromSupabaseRow(row) {
 
 export function createSupabaseStore({ url, key, fetchImpl = fetch, timeoutMs = 15000 }) {
   const base = `${url.replace(/\/+$/, '')}/rest/v1`;
+  // Supabase has two key styles. The legacy service_role key is a JWT and goes in both headers.
+  // The newer secret keys (sb_secret_...) are not JWTs and go in the apikey header only.
+  const authHeaders = key.startsWith('sb_') ? { apikey: key } : { apikey: key, Authorization: `Bearer ${key}` };
 
   async function call(method, path, { body, prefer } = {}) {
     const res = await fetchImpl(`${base}${path}`, {
       method,
       headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
+        ...authHeaders,
         'Content-Type': 'application/json',
         ...(prefer ? { Prefer: prefer } : {}),
       },
@@ -138,7 +140,7 @@ export function createSupabaseStore({ url, key, fetchImpl = fetch, timeoutMs = 1
     async countProfiles() {
       const res = await fetchImpl(`${base}/student_profiles?select=id`, {
         method: 'HEAD',
-        headers: { apikey: key, Authorization: `Bearer ${key}`, Prefer: 'count=exact' },
+        headers: { ...authHeaders, Prefer: 'count=exact' },
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) throw new Error(`Supabase count failed (${res.status})`);
