@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers ----
+    function signedIn() { return request.auth != null; }
+    // The owner/admin login. Keep this email in sync with AppConfig.ADMIN_EMAIL.
+    function isOwner() { return signedIn() && request.auth.token.email == 'admin@aspire.app'; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && me().active == true; }
+    function role() { return me().role; }
+    function isAdmin() { return isOwner() || (active() && role() == 'admin'); }
+    function can(p) {
+      return isOwner() || (active() && (role() == 'admin' || (role() == 'subadmin' && p in me().perms)));
+    }
+    function isTeacher() { return active() && role() == 'teacher'; }
+    function isStaffOrTeacher() { return isOwner() || (active() && role() in ['admin', 'subadmin', 'teacher']); }
+
+    // ---- users ----
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaffOrTeacher());
+      // Admin creates everyone. Sub-admins with the "users" permission can only create students/teachers.
+      allow create: if isAdmin()
+                    || (can('users') && request.resource.data.role in ['student', 'teacher']);
+      allow update: if isAdmin()
+                    || (can('users') && resource.data.role in ['student', 'teacher']
+                        && request.resource.data.role in ['student', 'teacher'])
+                    || (can('batches') && resource.data.role == 'student');
+      allow delete: if isAdmin()
+                    || (can('users') && resource.data.role in ['student', 'teacher']);
+    }
+
+    // Passwords set by the admin (so the admin can look them up / reset them).
+    match /credentials/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin()
+                      || (can('users') && resource.data.role in ['student', 'teacher']));
+      allow write: if signedIn() && (request.auth.uid == uid || isAdmin()
+                      || (can('users') && request.resource.data.role in ['student', 'teacher']));
+    }
+
+    match /batches/{id} {
+      allow read: if signedIn();
+      allow write: if can('batches');
+    }
+
+    match /classes/{id} {
+      allow read: if signedIn();
+      allow write: if can('schedule') || can('attendance')
+                   || (isTeacher() && resource != null && resource.data.teacherId == request.auth.uid
+                       && request.resource.data.teacherId == request.auth.uid);
+    }
+
+    match /attendance/{id} {
+      allow read: if signedIn();
+      allow write: if can('attendance') || isTeacher();
+    }
+
+    match /exams/{id} {
+      allow read: if signedIn();
+      allow write: if can('exams') || isTeacher();
+    }
+
+    match /marks/{id} {
+      allow read: if signedIn() && (isStaffOrTeacher() || resource.data.studentId == request.auth.uid);
+      allow write: if can('exams') || isTeacher();
+    }
+
+    match /fees/{id} {
+      allow read: if signedIn() && (can('fees') || resource.data.studentId == request.auth.uid);
+      allow write: if can('fees');
+    }
+
+    match /homework/{id} {
+      allow read: if signedIn();
+      allow write: if can('notices') || isTeacher();
+    }
+
+    match /notices/{id} {
+      allow read: if signedIn();
+      allow write: if can('notices') || isTeacher();
+    }
+  }
+}

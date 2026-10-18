@@ -1,0 +1,15 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Letter A -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L72,80 L63,80 L59.5,69 L48.5,69 L45,80 L36,80 Z M54,42 L51,60 L57,60 Z"
+        android:fillType="evenOdd" />
+    <!-- Star / spark -->
+    <path
+        android:fillColor="#FFC107"
+        android:pathData="M76,26 L78,32 L84,34 L78,36 L76,42 L74,36 L68,34 L74,32 Z" />
+</vector>
