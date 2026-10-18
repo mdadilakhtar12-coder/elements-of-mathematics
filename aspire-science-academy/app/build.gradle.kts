@@ -18,12 +18,26 @@ android {
         applicationId = "com.aspirescience.academy"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = "1." + (System.getenv("VERSION_CODE") ?: "1")
+    }
+
+    // One fixed signing key, so every new APK can be installed over the old one (in-app update).
+    signingConfigs {
+        create("aspire") {
+            storeFile = file("aspire.keystore")
+            storePassword = "aspire123"
+            keyAlias = "aspire"
+            keyPassword = "aspire123"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("aspire")
+        }
         release {
+            signingConfig = signingConfigs.getByName("aspire")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

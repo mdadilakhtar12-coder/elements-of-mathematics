@@ -77,11 +77,30 @@ private fun FirebaseMissing() {
 @Composable
 private fun Root() {
     val vm: AppViewModel = viewModel()
+    UpdateDialog(vm)
     when {
         vm.booting -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         vm.me == null -> LoginScreen(vm)
         else -> AppHost(vm)
     }
+}
+
+@Composable
+private fun UpdateDialog(vm: AppViewModel) {
+    if (vm.update == null) return
+    val downloading = vm.updateProgress >= 0
+    AlertDialog(
+        onDismissRequest = { if (!downloading) vm.update = null },
+        title = { Text("Update available") },
+        text = {
+            Text(
+                if (downloading) "Downloading... " + vm.updateProgress + "%"
+                else "A new version of Aspire Science Academy is ready. Update now?"
+            )
+        },
+        confirmButton = { TextButton(onClick = { vm.startUpdate() }, enabled = !downloading) { Text("Update") } },
+        dismissButton = { if (!downloading) TextButton(onClick = { vm.update = null }) { Text("Later") } }
+    )
 }
 
 @Composable

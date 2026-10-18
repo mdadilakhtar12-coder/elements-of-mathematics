@@ -17,7 +17,9 @@ import com.aspirescience.academy.data.Homework
 import com.aspirescience.academy.data.Notice
 import com.aspirescience.academy.data.Repo
 import com.aspirescience.academy.data.Role
+import com.aspirescience.academy.data.Updater
 import com.aspirescience.academy.data.UserProfile
+import com.aspirescience.academy.BuildConfig
 import com.aspirescience.academy.util.D
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +56,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
     var loginError by mutableStateOf<String?>(null)
     var banner by mutableStateOf<String?>(null)
+    var update by mutableStateOf<Updater.Info?>(null)
+    var updateProgress by mutableIntStateOf(-1)
 
     var users by mutableStateOf<List<UserProfile>>(emptyList())
     var batches by mutableStateOf<List<Batch>>(emptyList())
@@ -67,8 +71,42 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private var listenScope: CoroutineScope? = null
 
+    /** Looks for a newer APK. Quiet on start-up, gives feedback when the user asks. */
+    fun checkUpdate(manual: Boolean) {
+        viewModelScope.launch {
+            val info = Updater.check()
+            if (info != null && info.build > BuildConfig.VERSION_CODE) {
+                update = info
+            } else if (manual) {
+                toast(if (info == null) "Could not check for updates" else "You have the latest version")
+            }
+        }
+    }
+
+    fun startUpdate() {
+        val info = update ?: return
+        val ctx = getApplication<Application>()
+        if (!Updater.canInstall(ctx)) {
+            toast("Allow installing from this app, then tap Update again")
+            return
+        }
+        viewModelScope.launch {
+            updateProgress = 0
+            try {
+                val apk = Updater.download(ctx, info.url) { updateProgress = it }
+                updateProgress = -1
+                update = null
+                Updater.install(ctx, apk)
+            } catch (e: Exception) {
+                updateProgress = -1
+                toast("Download failed. Check your internet and try again.")
+            }
+        }
+    }
+
     init {
         Repo.onError = { msg -> banner = msg }
+        checkUpdate(false)
         viewModelScope.launch {
             try {
                 if (Repo.ready) {

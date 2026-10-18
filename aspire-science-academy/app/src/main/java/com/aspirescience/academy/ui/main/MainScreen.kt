@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.sp
 import com.aspirescience.academy.AppConfig
+import com.aspirescience.academy.BuildConfig
 import com.aspirescience.academy.data.Perm
 import com.aspirescience.academy.data.Role
 import com.aspirescience.academy.ui.AppViewModel
@@ -101,6 +103,11 @@ fun MainScreen(vm: AppViewModel) {
                         text = { Text("Change password") },
                         leadingIcon = { Icon(Icons.Filled.Lock, null) },
                         onClick = { menu = false; vm.go(Screen.ChangePassword) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Check for updates (v" + BuildConfig.VERSION_NAME + ")") },
+                        leadingIcon = { Icon(Icons.Filled.Download, null) },
+                        onClick = { menu = false; vm.checkUpdate(true) }
                     )
                     DropdownMenuItem(
                         text = { Text("Log out") },

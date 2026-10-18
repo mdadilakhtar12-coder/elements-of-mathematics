@@ -37,6 +37,8 @@ jobs:
         run: echo "$GSJ" | base64 --decode > app/google-services.json
 
       - name: Build debug APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
         run: |
           set -o pipefail
           chmod +x gradlew
@@ -62,4 +64,4 @@ jobs:
           gh release delete aspire-latest --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
           gh release create aspire-latest Aspire-Science-Academy.apk --repo "$GITHUB_REPOSITORY" \
             --title "Aspire Science Academy (latest APK)" \
-            --notes "Latest build from commit $GITHUB_SHA" --prerelease --target "$GITHUB_SHA"
+            --notes "Latest build from commit $GITHUB_SHA. build:${{ github.run_number }}" --prerelease --target "$GITHUB_SHA"

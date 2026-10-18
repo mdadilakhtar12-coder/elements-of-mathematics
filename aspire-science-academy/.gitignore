@@ -10,3 +10,4 @@ build/
 .kotlin/
 *.jks
 *.keystore
+!app/aspire.keystore
