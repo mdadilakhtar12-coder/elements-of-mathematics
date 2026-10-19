@@ -256,7 +256,7 @@ object Demo {
         fun entry(type: String, month: String, day: Int, cat: String, note: String, amt: Long) {
             ln++
             val date = month + "-" + day.toString().padStart(2, '0')
-            ledger.add(LedgerEntry(PREFIX + "l" + ln, type, date, month, cat, note, amt, "Admin", now - ln * 1000L))
+            ledger.add(LedgerEntry(PREFIX + "l" + ln, type, date, month, cat, note, amt, createdBy = "Admin", createdAt = now - ln * 1000L))
         }
         val lm0 = D.thisMonth()
         for (m in listOf(D.shiftMonth(lm0, -2), D.shiftMonth(lm0, -1), lm0)) {
