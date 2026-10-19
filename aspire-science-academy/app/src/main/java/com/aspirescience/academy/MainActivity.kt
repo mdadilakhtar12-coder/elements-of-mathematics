@@ -136,6 +136,7 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.HomeworkAdd -> HomeworkAddScreen(vm)
         is Screen.Leaderboard -> LeaderboardScreen(vm)
         is Screen.Demo -> com.aspirescience.academy.ui.main.DemoScreen(vm)
+        is Screen.MessageTexts -> com.aspirescience.academy.ui.main.MessageTextsScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
     }
     if (vm.busy) {

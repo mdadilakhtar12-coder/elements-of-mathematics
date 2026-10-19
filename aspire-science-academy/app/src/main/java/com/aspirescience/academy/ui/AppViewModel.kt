@@ -48,6 +48,7 @@ sealed class Screen {
     data object HomeworkAdd : Screen()
     data object Leaderboard : Screen()
     data object Demo : Screen()
+    data object MessageTexts : Screen()
     data object ChangePassword : Screen()
 }
 
@@ -178,6 +179,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch { Repo.homework().collect { homework = it } }
         scope.launch { Repo.exams().collect { exams = it } }
         scope.launch { Repo.leaderboards().collect { leaderboards = it } }
+        scope.launch { Repo.messageTemplates().collect { com.aspirescience.academy.util.Messages.overrides = it } }
         if (p.role != Role.STUDENT) {
             scope.launch { Repo.users().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
         }
@@ -412,6 +414,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteClasses(ids: List<String>) = op(ids.size.toString() + " classes deleted") {
         Repo.deleteAll("classes", ids)
+    }
+
+    fun saveMessageTexts(texts: Map<String, String>, onDone: () -> Unit) = op("Message texts saved", onDone) {
+        Repo.saveTemplates(texts)
+        com.aspirescience.academy.util.Messages.overrides = texts
     }
 
     // ---------- demo data ----------

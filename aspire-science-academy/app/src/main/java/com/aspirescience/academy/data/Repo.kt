@@ -109,6 +109,23 @@ object Repo {
     fun feesByStudent(studentId: String): Flow<List<Fee>> =
         db.collection("fees").whereEqualTo("studentId", studentId).models()
 
+    /** Admin-edited message texts (settings/messages). Errors are ignored: the built-in texts are used instead. */
+    fun messageTemplates(): Flow<Map<String, String>> = callbackFlow {
+        val reg = db.collection("settings").document("messages").addSnapshotListener { s, e ->
+            if (e != null) return@addSnapshotListener
+            if (s != null && s.exists()) {
+                val m = HashMap<String, String>()
+                s.data?.forEach { (k, v) -> if (v is String) m[k] = v }
+                trySend(m)
+            }
+        }
+        awaitClose { reg.remove() }
+    }
+
+    suspend fun saveTemplates(m: Map<String, String>) {
+        db.collection("settings").document("messages").set(m).await()
+    }
+
     fun leaderboards(): Flow<List<Leaderboard>> = db.collection("leaderboards").models()
 
     // ---------- one-time reads ----------

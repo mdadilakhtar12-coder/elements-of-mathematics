@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Lock
@@ -135,6 +136,7 @@ fun AdminHome(vm: AppViewModel) {
     if (vm.can(Perm.NOTICES)) {
         acts.add(Act("Announcements", Icons.Filled.Campaign) { vm.go(Screen.Notices) })
         acts.add(Act("Homework", Icons.Filled.Description) { vm.go(Screen.HomeworkList) })
+        acts.add(Act("Message texts", Icons.Filled.Edit) { vm.go(Screen.MessageTexts) })
     }
     acts.add(Act("Leaderboard", Icons.Filled.EmojiEvents) { vm.go(Screen.Leaderboard) })
     if (me.role == Role.ADMIN) acts.add(Act("Backup", Icons.Filled.Download) { vm.backup() })
