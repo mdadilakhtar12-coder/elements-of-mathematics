@@ -67,6 +67,22 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
                 }
             }
         }
+        if (last > 0L && me.role != Role.ADMIN && me.role != Role.SUBADMIN) {
+            for (m in Repo.materialsSince(last)) {
+                if (m.createdBy == me.id || m.batchId !in myBatchIds) continue
+                Notifier.show(ctx, m.id.hashCode(), "New study material: " + m.title, m.batchName)
+            }
+            if (me.role == Role.TEACHER) {
+                for (d in Repo.doubtsSince(last)) {
+                    if (d.batchId !in myBatchIds) continue
+                    Notifier.show(ctx, d.id.hashCode(), "New doubt from " + d.studentName, d.question)
+                }
+            } else {
+                for (d in Repo.doubtsOnceOf(me.id)) {
+                    if (d.answeredAt > last) Notifier.show(ctx, d.id.hashCode(), "Your doubt was answered", d.answer)
+                }
+            }
+        }
         prefs.edit().putLong("last", now).apply()
 
         val tomorrow = LocalDate.now().plusDays(1).toString()

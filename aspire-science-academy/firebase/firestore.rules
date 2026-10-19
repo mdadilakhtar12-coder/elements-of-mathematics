@@ -65,6 +65,35 @@ service cloud.firestore {
       allow write: if can('exams') || isTeacher();
     }
 
+    // Teacher pay marked as paid.
+    match /salaryPaid/{id} {
+      allow read: if signedIn() && (can('fees') || resource.data.teacherId == request.auth.uid);
+      allow write: if can('fees');
+    }
+
+    // Photos of expense bills.
+    match /bills/{id} {
+      allow read, write: if can('fees');
+    }
+
+    // Study material links, per batch.
+    match /materials/{id} {
+      allow read: if signedIn();
+      allow write: if can('notices') || isTeacher();
+    }
+
+    // Student doubts and the teacher's answers.
+    match /doubts/{id} {
+      allow read: if signedIn() && (resource.data.studentId == request.auth.uid || isStaffOrTeacher());
+      allow create: if signedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isStaffOrTeacher();
+      allow delete: if signedIn() && (resource.data.studentId == request.auth.uid || isStaffOrTeacher());
+    }
+
+    match /doubtPhotos/{id} {
+      allow read, create, delete: if signedIn();
+    }
+
     // Income and expenses of the institute.
     match /ledger/{id} {
       allow read, write: if can('fees');

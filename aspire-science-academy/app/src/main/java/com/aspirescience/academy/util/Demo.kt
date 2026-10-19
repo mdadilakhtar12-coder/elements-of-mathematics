@@ -6,7 +6,9 @@ import com.aspirescience.academy.data.CS
 import com.aspirescience.academy.data.ClassSession
 import com.aspirescience.academy.data.Exam
 import com.aspirescience.academy.data.Fee
+import com.aspirescience.academy.data.Doubt
 import com.aspirescience.academy.data.Homework
+import com.aspirescience.academy.data.StudyMaterial
 import com.aspirescience.academy.data.LedgerEntry
 import com.aspirescience.academy.data.Paper
 import com.aspirescience.academy.data.Mark
@@ -295,6 +297,25 @@ object Demo {
         }
         Repo.putAll("fees", fees)
 
+        // ---- study material and doubts
+        progress("Creating study material and doubts")
+        val b0 = batches[0]
+        val mats = listOf(
+            StudyMaterial("demo_m1", b0.id, b0.name, "Physics", "Kinematics notes", "Short notes of the chapter with solved examples.", "https://www.khanacademy.org/science/physics", "Notes", teachers[0].id, teachers[0].name, now - 9 * 3600_000L),
+            StudyMaterial("demo_m2", b0.id, b0.name, "Chemistry", "Periodic table video", "Watch before the next class.", "https://www.youtube.com/results?search_query=periodic+table+class+11", "Video", teachers[1].id, teachers[1].name, now - 8 * 3600_000L),
+            StudyMaterial("demo_m3", b0.id, b0.name, "Maths", "Practice paper 1", "Solve in 90 minutes.", "https://www.ncert.nic.in", "Practice paper", teachers[2].id, teachers[2].name, now - 7 * 3600_000L),
+            StudyMaterial("demo_m4", batches[2].id, batches[2].name, "Biology", "Cell division diagrams", "Diagrams for revision.", "https://www.khanacademy.org/science/biology", "Notes", teachers[3].id, teachers[3].name, now - 6 * 3600_000L),
+            StudyMaterial("demo_m5", batches[4].id, batches[4].name, "English", "Letter writing formats", "Formal and informal letter formats.", "https://www.ncert.nic.in", "PDF", teachers[4].id, teachers[4].name, now - 5 * 3600_000L)
+        )
+        Repo.putAll("materials", mats)
+        val kids0 = students.filter { b0.id in it.batchIds }
+        val doubts = listOf(
+            Doubt("demo_d1", kids0[0].id, kids0[0].name, b0.id, b0.name, "Physics", "Sir, how do we find the displacement when the acceleration is not constant?", false, "Use integration of the velocity function. We will also do an example in the next class.", teachers[0].name, now - 20 * 3600_000L, "answered", now - 30 * 3600_000L),
+            Doubt("demo_d2", kids0[1].id, kids0[1].name, b0.id, b0.name, "Chemistry", "What is the difference between electron affinity and electronegativity?", false, "", "", 0, "open", now - 4 * 3600_000L),
+            Doubt("demo_d3", kids0[2].id, kids0[2].name, b0.id, b0.name, "Maths", "Please explain question 7 of exercise 4.2 again.", false, "", "", 0, "open", now - 2 * 3600_000L)
+        )
+        Repo.putAll("doubts", doubts)
+
         // ---- announcements and homework
         progress("Creating announcements and homework")
         val notices = listOf(
@@ -319,7 +340,7 @@ object Demo {
     }
 
     suspend fun remove(users: List<UserProfile>, progress: (String) -> Unit): String {
-        for (col in listOf("attendance", "marks", "fees", "ledger", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
+        for (col in listOf("attendance", "marks", "fees", "ledger", "doubts", "materials", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
             progress("Removing demo $col")
             Repo.deleteAll(col, Repo.idsWithPrefix(col, PREFIX))
         }

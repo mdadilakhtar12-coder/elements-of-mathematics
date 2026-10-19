@@ -245,6 +245,51 @@ data class LedgerEntry(
     var category: String = "",
     var note: String = "",
     var amount: Long = 0,
+    var hasBill: Boolean = false,
     var createdBy: String = "",
+    var createdAt: Long = 0
+) : HasId
+
+/** Marks that a teacher's pay for a month has been paid (id = month_teacherId). */
+data class SalaryPaid(
+    override var id: String = "",
+    var teacherId: String = "",
+    var teacherName: String = "",
+    var month: String = "",
+    var amount: Long = 0,
+    var date: String = "",
+    var mode: String = "Cash",
+    var note: String = "",
+    var paidBy: String = "",
+    var createdAt: Long = 0
+) : HasId
+
+data class StudyMaterial(
+    override var id: String = "",
+    var batchId: String = "",
+    var batchName: String = "",
+    var subject: String = "",
+    var title: String = "",
+    var description: String = "",
+    var link: String = "",
+    var type: String = "Notes",
+    var createdBy: String = "",
+    var createdByName: String = "",
+    var createdAt: Long = 0
+) : HasId
+
+data class Doubt(
+    override var id: String = "",
+    var studentId: String = "",
+    var studentName: String = "",
+    var batchId: String = "",
+    var batchName: String = "",
+    var subject: String = "",
+    var question: String = "",
+    var hasPhoto: Boolean = false,
+    var answer: String = "",
+    var answeredBy: String = "",
+    var answeredAt: Long = 0,
+    var status: String = "open", // "open" or "answered"
     var createdAt: Long = 0
 ) : HasId

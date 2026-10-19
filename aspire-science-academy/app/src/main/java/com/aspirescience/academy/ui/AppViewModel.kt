@@ -49,6 +49,11 @@ sealed class Screen {
     data object Leaderboard : Screen()
     data object Demo : Screen()
     data object MessageTexts : Screen()
+    data object Materials : Screen()
+    data object MaterialAdd : Screen()
+    data object Doubts : Screen()
+    data object DoubtAsk : Screen()
+    data class DoubtDetail(val id: String) : Screen()
     data object Accounts : Screen()
     data object LedgerAdd : Screen()
     data object ChangePassword : Screen()
@@ -73,6 +78,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var notices by mutableStateOf<List<Notice>>(emptyList())
     var homework by mutableStateOf<List<Homework>>(emptyList())
     var leaderboards by mutableStateOf<List<com.aspirescience.academy.data.Leaderboard>>(emptyList())
+    var materials by mutableStateOf<List<com.aspirescience.academy.data.StudyMaterial>>(emptyList())
+    var doubts by mutableStateOf<List<com.aspirescience.academy.data.Doubt>>(emptyList())
 
     val stack = mutableStateListOf<Screen>()
     var tab by mutableIntStateOf(0)
@@ -181,6 +188,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch { Repo.homework().collect { homework = it } }
         scope.launch { Repo.exams().collect { exams = it } }
         scope.launch { Repo.leaderboards().collect { leaderboards = it } }
+        scope.launch { Repo.materials().collect { materials = it } }
+        scope.launch {
+            val flow = if (p.role == Role.STUDENT) Repo.doubtsOfStudent(p.id) else Repo.doubtsAll()
+            flow.collect { doubts = it }
+        }
         scope.launch { Repo.messageTemplates().collect { com.aspirescience.academy.util.Messages.overrides = it } }
         if (p.role != Role.STUDENT) {
             scope.launch { Repo.users().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
@@ -221,6 +233,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         notices = emptyList()
         homework = emptyList()
         leaderboards = emptyList()
+        materials = emptyList()
+        doubts = emptyList()
         banner = null
         stack.clear()
     }

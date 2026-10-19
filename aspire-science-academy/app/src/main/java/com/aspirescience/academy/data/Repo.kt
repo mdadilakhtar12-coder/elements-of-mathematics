@@ -132,12 +132,38 @@ object Repo {
     fun feesByDate(from: String, to: String): Flow<List<Fee>> =
         db.collection("fees").whereGreaterThanOrEqualTo("date", from).whereLessThanOrEqualTo("date", to).models()
 
+    fun salaryPaidByMonth(month: String): Flow<List<SalaryPaid>> =
+        db.collection("salaryPaid").whereEqualTo("month", month).models()
+
+    fun salaryPaidByTeacher(uid: String): Flow<List<SalaryPaid>> =
+        db.collection("salaryPaid").whereEqualTo("teacherId", uid).models()
+
+    fun materials(): Flow<List<StudyMaterial>> =
+        db.collection("materials").orderBy("createdAt", Query.Direction.DESCENDING).limit(300).models()
+
+    fun doubtsAll(): Flow<List<Doubt>> =
+        db.collection("doubts").orderBy("createdAt", Query.Direction.DESCENDING).limit(300).models()
+
+    fun doubtsOfStudent(uid: String): Flow<List<Doubt>> =
+        db.collection("doubts").whereEqualTo("studentId", uid).models()
+
     fun leaderboards(): Flow<List<Leaderboard>> = db.collection("leaderboards").models()
 
     // ---------- one-time reads ----------
 
     private suspend inline fun <reified T : HasId> Query.once(): List<T> =
         get().await().documents.mapNotNull { d -> d.toObject(T::class.java)?.also { m -> m.id = d.id } }
+
+    suspend fun materialsSince(ms: Long): List<StudyMaterial> = db.collection("materials").whereGreaterThan("createdAt", ms).once()
+    suspend fun doubtsSince(ms: Long): List<Doubt> = db.collection("doubts").whereGreaterThan("createdAt", ms).once()
+    suspend fun doubtsOnceOf(studentId: String): List<Doubt> = db.collection("doubts").whereEqualTo("studentId", studentId).once()
+
+    /** Small photos (bills, doubts) are kept as compressed text in their own documents. */
+    suspend fun getPhoto(col: String, id: String): String? = db.collection(col).document(id).get().await().getString("data")
+
+    suspend fun putPhoto(col: String, id: String, data: String) {
+        db.collection(col).document(id).set(mapOf("data" to data)).await()
+    }
 
     suspend fun batchesOnce(): List<Batch> = db.collection("batches").once()
     suspend fun noticesSince(ms: Long): List<Notice> = db.collection("notices").whereGreaterThan("createdAt", ms).once()

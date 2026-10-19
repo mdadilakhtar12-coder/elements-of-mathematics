@@ -69,6 +69,7 @@ import com.aspirescience.academy.ui.notice.NoticeCard
 import com.aspirescience.academy.ui.notice.visibleHomework
 import com.aspirescience.academy.ui.notice.visibleNotices
 import com.aspirescience.academy.ui.schedule.ClassCard
+import com.aspirescience.academy.ui.study.visibleDoubts
 import com.aspirescience.academy.ui.schedule.TeacherReportContent
 import com.aspirescience.academy.ui.theme.Blue
 import com.aspirescience.academy.ui.theme.Green
@@ -134,6 +135,8 @@ fun AdminHome(vm: AppViewModel) {
         acts.add(Act("Approvals", Icons.Filled.FactCheck, pending) { vm.go(Screen.Approvals) })
         acts.add(Act("Teacher report", Icons.Filled.BarChart) { vm.go(Screen.TeacherReport) })
     }
+    acts.add(Act("Study material", Icons.Filled.Description) { vm.go(Screen.Materials) })
+    acts.add(Act("Doubts", Icons.Filled.Campaign, vm.doubts.count { it.status != "answered" }) { vm.go(Screen.Doubts) })
     if (vm.can(Perm.FEES)) acts.add(Act("Accounts", Icons.Filled.AccountBalanceWallet) { vm.go(Screen.Accounts) })
     if (vm.can(Perm.NOTICES)) {
         acts.add(Act("Announcements", Icons.Filled.Campaign) { vm.go(Screen.Notices) })
@@ -198,6 +201,13 @@ fun TeacherHome(vm: AppViewModel) {
         if (upcoming.isNotEmpty()) {
             item { SectionTitle("Upcoming") }
             items(upcoming) { ClassCard(vm, it, showDate = true) }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val openDoubts = visibleDoubts(vm).count { it.status != "answered" }
+                OutlinedButton(onClick = { vm.go(Screen.Doubts) }, modifier = Modifier.weight(1f)) { Text("Doubts ($openDoubts)") }
+                OutlinedButton(onClick = { vm.go(Screen.Materials) }, modifier = Modifier.weight(1f)) { Text("Study material") }
+            }
         }
         item { OutlinedButton(onClick = { vm.go(Screen.Leaderboard) }, modifier = Modifier.fillMaxWidth()) { Text("Leaderboard") } }
         item { SectionTitle("My batches") }
@@ -265,6 +275,12 @@ fun StudentHome(vm: AppViewModel) {
             }
         }
         item { FeeDueBanner(me, fees) }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { vm.go(Screen.Doubts) }, modifier = Modifier.weight(1f)) { Text("Ask a doubt") }
+                OutlinedButton(onClick = { vm.go(Screen.Materials) }, modifier = Modifier.weight(1f)) { Text("Study material") }
+            }
+        }
         item { OutlinedButton(onClick = { vm.go(Screen.Leaderboard) }, modifier = Modifier.fillMaxWidth()) { Text("Leaderboard") } }
         item { SectionTitle("Today & tomorrow") }
         val soon = mine.filter { it.date == today || it.date == tomorrow }

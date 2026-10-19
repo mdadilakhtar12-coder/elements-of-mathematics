@@ -527,6 +527,11 @@ fun TeacherReportContent(vm: AppViewModel, onlyId: String?) {
     val list by remember(month) { Repo.classesBetween(D.monthStart(month), D.monthEnd(month)) }
         .collectAsState(initial = emptyList())
     val teachers = if (onlyId != null) listOfNotNull(vm.user(onlyId) ?: vm.me) else vm.teachers
+    val paid by remember(month, onlyId) {
+        if (onlyId != null && (onlyId == vm.me?.id || vm.can(Perm.FEES))) Repo.salaryPaidByTeacher(onlyId)
+        else if (onlyId == null && vm.can(Perm.FEES)) Repo.salaryPaidByMonth(month)
+        else kotlinx.coroutines.flow.emptyFlow<List<com.aspirescience.academy.data.SalaryPaid>>()
+    }.collectAsState(initial = emptyList())
     val today = D.today()
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -549,11 +554,16 @@ fun TeacherReportContent(vm: AppViewModel, onlyId: String?) {
                     CountCell("Not taken", notTaken, Red)
                     CountCell("Cancelled", cancelled, Grey)
                 }
-                if (t.classRate > 0) {
+                val earned = done * t.classRate + t.salary
+                if (earned > 0) {
+                    val rec = paid.firstOrNull { it.teacherId == t.id && it.month == month }
                     Text(
-                        "Earned this month: " + D.rs(done * t.classRate) + "  (" + D.rs(t.classRate) + " per class)",
+                        "Pay this month: " + D.rs(earned) + (if (t.classRate > 0) "  (" + done + " x " + D.rs(t.classRate) + (if (t.salary > 0) " + " + D.rs(t.salary) + " salary" else "") + ")" else ""),
                         fontWeight = FontWeight.SemiBold, color = Green, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)
                     )
+                    Box(Modifier.padding(top = 4.dp)) {
+                        if (rec != null) Pill("Paid on " + D.shortDate(rec.date), Green) else Pill("Not paid yet", Orange)
+                    }
                 }
             }
         }

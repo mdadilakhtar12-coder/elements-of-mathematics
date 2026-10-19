@@ -42,6 +42,12 @@ import com.aspirescience.academy.AppConfig
 import com.aspirescience.academy.data.CS
 import com.aspirescience.academy.data.LedgerEntry
 import com.aspirescience.academy.data.Repo
+import com.aspirescience.academy.data.SalaryPaid
+import com.aspirescience.academy.util.AccountsReport
+import com.aspirescience.academy.util.Share
+import com.aspirescience.academy.ui.common.Pill
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Receipt
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.Screen
 import com.aspirescience.academy.ui.common.AppCard
@@ -63,7 +69,7 @@ import com.aspirescience.academy.ui.theme.Orange
 import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
 
-private class PayLine(val name: String, val classes: Int, val rate: Long, val salary: Long) {
+private class PayLine(val teacherId: String, val name: String, val classes: Int, val rate: Long, val salary: Long) {
     val amount: Long get() = classes * rate + salary
 }
 
@@ -84,6 +90,10 @@ fun AccountsScreen(vm: AppViewModel) {
     var month by rememberSaveable { mutableStateOf(D.thisMonth()) }
     var toDelete by remember { mutableStateOf<LedgerEntry?>(null) }
     var showPay by remember { mutableStateOf(false) }
+    var payDialog by remember { mutableStateOf<PayLine?>(null) }
+    var billOf by remember { mutableStateOf<LedgerEntry?>(null) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val paidList by remember(month) { Repo.salaryPaidByMonth(month) }.collectAsState(initial = emptyList())
     val from = D.monthStart(D.shiftMonth(month, -5))
     val to = D.monthEnd(month)
     val fees by remember(month) { Repo.feesByDate(from, to) }.collectAsState(initial = emptyList())
@@ -96,7 +106,7 @@ fun AccountsScreen(vm: AppViewModel) {
         val entries = ledger.filter { it.date.startsWith(m) }
         val done = classes.filter { it.date.startsWith(m) && it.status == CS.APPROVED }
         val pay = vm.teachers.filter { it.active || done.any { c -> c.teacherId == it.id } }.map { t ->
-            PayLine(t.name, done.count { it.teacherId == t.id }, t.classRate, t.salary)
+            PayLine(t.id, t.name, done.count { it.teacherId == t.id }, t.classRate, t.salary)
         }.filter { it.amount > 0 }
         return Month(
             feeIncome, entries.filter { it.type == "income" }.sumOf { it.amount },
@@ -120,6 +130,25 @@ fun AccountsScreen(vm: AppViewModel) {
 
     Page(
         "Accounts", vm::back,
+        actions = {
+            TextButton(onClick = {
+                val data = AccountsReport.Data(
+                    month, cur.income, cur.feeIncome, incomeGroups, cur.expense, cur.teacherPay,
+                    cur.pay.map { p ->
+                        AccountsReport.PayRow(
+                            p.name,
+                            p.classes.toString() + " classes x " + D.rs(p.rate) + (if (p.salary > 0) " + " + D.rs(p.salary) + " salary" else ""),
+                            p.amount, paidList.any { it.teacherId == p.teacherId }
+                        )
+                    },
+                    expenseGroups, expected, received, monthEntries, trend
+                )
+                vm.op {
+                    val f = AccountsReport.create(ctx, data)
+                    Share.file(ctx, f, "application/pdf", "Share accounts report")
+                }
+            }) { Text("PDF") }
+        },
         fab = { FloatingActionButton(onClick = { vm.go(Screen.LedgerAdd) }) { Icon(Icons.Filled.Add, "Add entry") } }
     ) {
         LazyColumn(
@@ -182,11 +211,16 @@ fun AccountsScreen(vm: AppViewModel) {
             }
             item { SectionTitle("Money out") }
             item {
+                val paidTotal = cur.pay.filter { p -> paidList.any { it.teacherId == p.teacherId } }.sumOf { it.amount }
                 AppCard(onClick = { showPay = !showPay }) {
                     Row(Modifier.fillMaxWidth()) {
                         Column(Modifier.weight(1f)) {
                             Text("Teacher pay (automatic)")
-                            Text("Approved classes x rate + fixed salary. Tap for details.", color = Grey, fontSize = 11.sp)
+                            Text(
+                                "Paid " + D.rs(paidTotal) + "  -  Left to pay " + D.rs((cur.teacherPay - paidTotal).coerceAtLeast(0)),
+                                color = Grey, fontSize = 11.sp
+                            )
+                            Text("Approved classes x rate + fixed salary. Tap for each teacher.", color = Grey, fontSize = 11.sp)
                         }
                         Text(D.rs(cur.teacherPay), fontWeight = FontWeight.SemiBold, color = Red)
                     }
@@ -195,7 +229,11 @@ fun AccountsScreen(vm: AppViewModel) {
                             Text("No teacher pay yet. Set a pay per class or a fixed salary on the teacher's profile.", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                         cur.pay.forEach { p ->
-                            Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            val rec = paidList.firstOrNull { it.teacherId == p.teacherId }
+                            Row(
+                                Modifier.fillMaxWidth().clickable { payDialog = p }.padding(top = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.name, fontSize = 14.sp)
                                     Text(
@@ -203,7 +241,8 @@ fun AccountsScreen(vm: AppViewModel) {
                                         color = Grey, fontSize = 11.sp
                                     )
                                 }
-                                Text(D.rs(p.amount), fontSize = 14.sp)
+                                Text(D.rs(p.amount), fontSize = 14.sp, modifier = Modifier.padding(end = 8.dp))
+                                Pill(if (rec != null) "Paid" else "Not paid", if (rec != null) Green else Orange)
                             }
                         }
                     }
@@ -252,6 +291,9 @@ fun AccountsScreen(vm: AppViewModel) {
                                 (if (e.type == "income") "+" else "-") + D.rs(e.amount),
                                 fontWeight = FontWeight.Bold, color = if (e.type == "income") Green else Red
                             )
+                            if (e.hasBill) {
+                                IconButton(onClick = { billOf = e }) { Icon(Icons.Filled.Receipt, "Bill photo", tint = Indigo) }
+                            }
                             IconButton(onClick = { toDelete = e }) { Icon(Icons.Filled.Delete, "Delete", tint = Grey) }
                         }
                     }
@@ -259,11 +301,74 @@ fun AccountsScreen(vm: AppViewModel) {
             }
         }
     }
+    val pd = payDialog
+    if (pd != null) {
+        val rec = paidList.firstOrNull { it.teacherId == pd.teacherId }
+        var amt by remember(pd.teacherId, month) { mutableStateOf((rec?.amount ?: pd.amount).toString()) }
+        var date by remember(pd.teacherId, month) { mutableStateOf(rec?.date ?: D.today()) }
+        var mode by remember(pd.teacherId, month) { mutableStateOf(rec?.mode ?: AppConfig.PAY_MODES[0]) }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { payDialog = null },
+            title = { Text(pd.name + " - " + D.monthLabel(month)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("To pay: " + D.rs(pd.amount), fontWeight = FontWeight.SemiBold)
+                    if (rec != null) {
+                        Text("Paid " + D.rs(rec.amount) + " on " + D.pretty(rec.date) + " (" + rec.mode + ")", color = Green, fontSize = 13.sp)
+                    } else {
+                        Field("Amount paid (Rs)", amt, { amt = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
+                        DateField("Paid on", date, { date = it })
+                        DropdownField("Mode", mode, AppConfig.PAY_MODES, { mode = AppConfig.PAY_MODES[it] })
+                    }
+                }
+            },
+            confirmButton = {
+                if (rec == null) {
+                    TextButton(onClick = {
+                        val a2 = amt.toLongOrNull() ?: 0L
+                        if (a2 <= 0L) {
+                            vm.toast("Enter the amount")
+                        } else {
+                            payDialog = null
+                            val sp = SalaryPaid(
+                                id = month + "_" + pd.teacherId, teacherId = pd.teacherId, teacherName = pd.name, month = month,
+                                amount = a2, date = date, mode = mode, paidBy = vm.me?.name.orEmpty(), createdAt = System.currentTimeMillis()
+                            )
+                            vm.op("Marked as paid") { Repo.put("salaryPaid", sp) }
+                        }
+                    }) { Text("Mark as paid") }
+                } else {
+                    TextButton(onClick = {
+                        payDialog = null
+                        vm.op("Marked as not paid") { Repo.delete("salaryPaid", rec.id) }
+                    }) { Text("Undo", color = Red) }
+                }
+            },
+            dismissButton = { TextButton(onClick = { payDialog = null }) { Text("Close") } }
+        )
+    }
+    val bill = billOf
+    if (bill != null) {
+        val photo by androidx.compose.runtime.produceState<String?>(null, bill.id) {
+            value = try { Repo.getPhoto("bills", bill.id) } catch (e: Exception) { "" }
+        }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { billOf = null },
+            title = { Text(bill.category + " " + D.rs(bill.amount)) },
+            text = {
+                val ph = photo
+                if (ph == null) Text("Loading...")
+                else if (ph.isEmpty()) Text("The photo could not be loaded.")
+                else com.aspirescience.academy.ui.common.PhotoView(ph)
+            },
+            confirmButton = { TextButton(onClick = { billOf = null }) { Text("Close") } }
+        )
+    }
     val del = toDelete
     if (del != null) {
         ConfirmDialog(
             "Delete entry?", del.category + " " + D.rs(del.amount), "Delete",
-            { vm.op("Deleted") { Repo.delete("ledger", del.id) } }, { toDelete = null }
+            { vm.op("Deleted") { Repo.delete("ledger", del.id); if (del.hasBill) Repo.delete("bills", del.id) } }, { toDelete = null }
         )
     }
 }
@@ -277,6 +382,7 @@ fun LedgerAddScreen(vm: AppViewModel) {
     var amount by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(D.today()) }
     var note by remember { mutableStateOf("") }
+    var photo by remember { mutableStateOf<String?>(null) }
     val used by remember { Repo.ledgerRange(D.daysAgo(400), D.today()) }.collectAsState(initial = emptyList())
     val base = if (seg == 0) AppConfig.INCOME_CATEGORIES else AppConfig.EXPENSE_CATEGORIES
     val options = (base + used.filter { it.type == type }.map { it.category }).distinct()
@@ -295,6 +401,10 @@ fun LedgerAddScreen(vm: AppViewModel) {
             Field("Amount (Rs)", amount, { amount = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
             DateField("Date", date, { date = it })
             Field("Note (optional)", note, { note = it })
+            if (seg == 1) {
+                Text("Bill photo (optional)", fontWeight = FontWeight.SemiBold)
+                com.aspirescience.academy.ui.common.PhotoPicker(photo) { photo = it }
+            }
             PrimaryButton("Save", onClick = {
                 val cat = if (category == addNew) newCategory.trim() else category
                 val amt = amount.toLongOrNull() ?: 0L
@@ -305,9 +415,14 @@ fun LedgerAddScreen(vm: AppViewModel) {
                 } else {
                     val e = LedgerEntry(
                         type = type, date = date, month = date.take(7), category = cat, note = note.trim(),
-                        amount = amt, createdBy = vm.me?.name.orEmpty(), createdAt = System.currentTimeMillis()
+                        amount = amt, hasBill = photo != null && seg == 1, createdBy = vm.me?.name.orEmpty(),
+                        createdAt = System.currentTimeMillis()
                     )
-                    vm.op("Saved", { vm.back() }) { Repo.put("ledger", e) }
+                    val pic = if (seg == 1) photo else null
+                    vm.op("Saved", { vm.back() }) {
+                        val saved = Repo.put("ledger", e)
+                        if (pic != null) Repo.putPhoto("bills", saved.id, pic)
+                    }
                 }
             }, busy = vm.busy)
         }
