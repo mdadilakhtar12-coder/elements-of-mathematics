@@ -40,6 +40,7 @@ import com.aspirescience.academy.data.CS
 import com.aspirescience.academy.data.Perm
 import com.aspirescience.academy.data.Repo
 import com.aspirescience.academy.data.Role
+import com.aspirescience.academy.data.SubjectPlan
 import com.aspirescience.academy.data.WeeklySlot
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.Screen
@@ -73,10 +74,16 @@ fun BatchesTab(vm: AppViewModel) {
             AppCard(onClick = { vm.go(Screen.BatchDetail(b.id)) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(b.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f))
-                    if (b.weekly.isEmpty()) Pill("No timetable", com.aspirescience.academy.ui.theme.Orange)
+                    if (b.plans().all { it.weekly.isEmpty() }) Pill("No timetable", com.aspirescience.academy.ui.theme.Orange)
                 }
                 Text(vm.studentsOf(b.id).size.toString() + " students", color = Grey, fontSize = 13.sp)
-                Text(b.teacherName.ifBlank { "No teacher assigned" }, color = Indigo, fontSize = 13.sp)
+                b.plans().forEach {
+                    Text(
+                        it.subject + " - " + it.teacherName.ifBlank { "no teacher" },
+                        color = Indigo, fontSize = 13.sp
+                    )
+                }
+                if (b.plans().isEmpty()) Text("No subjects added yet", color = Grey, fontSize = 13.sp)
             }
         }
         FloatingActionButton(
@@ -90,56 +97,99 @@ fun BatchesTab(vm: AppViewModel) {
 fun BatchEditScreen(vm: AppViewModel, batchId: String) {
     val existing = vm.batch(batchId)
     var standard by remember { mutableStateOf(existing?.standard.orEmpty()) }
-    var subject by remember { mutableStateOf(existing?.subject.orEmpty()) }
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var nameTouched by remember { mutableStateOf(existing != null) }
-    var teacherId by remember { mutableStateOf(existing?.teacherId.orEmpty()) }
-    var slots by remember { mutableStateOf(existing?.weekly ?: emptyList()) }
+    var plans by remember { mutableStateOf(existing?.plans() ?: listOf(SubjectPlan())) }
 
-    fun suggest(st: String, su: String) {
-        if (!nameTouched && st.isNotBlank() && su.isNotBlank()) name = su + " - " + st
+    fun update(i: Int, f: (SubjectPlan) -> SubjectPlan) {
+        plans = plans.mapIndexed { j, p -> if (j == i) f(p) else p }
     }
 
     Page(if (existing == null) "Create Batch" else "Edit Batch", vm::back) {
         FormColumn {
-            DropdownField("Standard", standard, AppConfig.STANDARDS, { standard = AppConfig.STANDARDS[it]; suggest(standard, subject) })
-            DropdownField("Subject", subject, AppConfig.SUBJECTS, { subject = AppConfig.SUBJECTS[it]; suggest(standard, subject) })
-            Field("Batch name", name, { name = it; nameTouched = true })
-            PickerField(
-                "Teacher", vm.user(teacherId)?.name.orEmpty(),
-                vm.teachers.filter { it.active }.map { it.id to it.name }, { teacherId = it }
+            DropdownField("Standard", standard, AppConfig.STANDARDS, {
+                standard = AppConfig.STANDARDS[it]
+                if (!nameTouched) name = standard
+            })
+            Field("Batch name (e.g. 11th Science - Group A)", name, { name = it; nameTouched = true })
+            SectionTitle("Subjects and teachers")
+            Text(
+                "Add every subject of this batch. Each subject has its own teacher and its own weekly class days.",
+                color = Grey, fontSize = 13.sp
             )
-            SectionTitle("Weekly timetable")
-            Text("Class days and times that repeat every week. You can generate the actual classes after saving.", color = Grey, fontSize = 13.sp)
-            slots.forEachIndexed { i, sl ->
+            plans.forEachIndexed { i, plan ->
                 AppCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         DropdownField(
-                            "Day", D.dayName(sl.day), D.DAYS,
-                            { d -> slots = slots.mapIndexed { j, x -> if (j == i) x.copy(day = d + 1) else x } },
+                            "Subject", plan.subject, AppConfig.SUBJECTS,
+                            { k -> update(i) { p -> p.copy(subject = AppConfig.SUBJECTS[k]) } },
                             Modifier.weight(1f)
                         )
-                        IconButton(onClick = { slots = slots.filterIndexed { j, _ -> j != i } }) { Icon(Icons.Filled.Close, "Remove") }
+                        if (plans.size > 1) {
+                            IconButton(onClick = { plans = plans.filterIndexed { j, _ -> j != i } }) {
+                                Icon(Icons.Filled.Close, "Remove subject")
+                            }
+                        }
                     }
-                    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        TimeField("Start", sl.start, { t -> slots = slots.mapIndexed { j, x -> if (j == i) x.copy(start = t) else x } }, Modifier.weight(1f))
-                        TimeField("End", sl.end, { t -> slots = slots.mapIndexed { j, x -> if (j == i) x.copy(end = t) else x } }, Modifier.weight(1f))
+                    Box(Modifier.padding(top = 8.dp)) {
+                        PickerField(
+                            "Teacher", vm.user(plan.teacherId)?.name.orEmpty(),
+                            vm.teachers.filter { it.active }.map { it.id to it.name },
+                            { id -> update(i) { p -> p.copy(teacherId = id, teacherName = vm.user(id)?.name.orEmpty()) } }
+                        )
+                    }
+                    Text("Weekly class days", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+                    plan.weekly.forEachIndexed { k, sl ->
+                        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            DropdownField(
+                                "Day", D.dayName(sl.day), D.DAYS,
+                                { d -> update(i) { p -> p.copy(weekly = p.weekly.mapIndexed { m, x -> if (m == k) x.copy(day = d + 1) else x }) } },
+                                Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { update(i) { p -> p.copy(weekly = p.weekly.filterIndexed { m, _ -> m != k }) } }) {
+                                Icon(Icons.Filled.Close, "Remove day")
+                            }
+                        }
+                        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            TimeField(
+                                "Start", sl.start,
+                                { t -> update(i) { p -> p.copy(weekly = p.weekly.mapIndexed { m, x -> if (m == k) x.copy(start = t) else x }) } },
+                                Modifier.weight(1f)
+                            )
+                            TimeField(
+                                "End", sl.end,
+                                { t -> update(i) { p -> p.copy(weekly = p.weekly.mapIndexed { m, x -> if (m == k) x.copy(end = t) else x }) } },
+                                Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    OutlinedButton(
+                        onClick = { update(i) { p -> p.copy(weekly = p.weekly + WeeklySlot()) } },
+                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                    ) {
+                        Icon(Icons.Filled.Add, null)
+                        Text(" Add class day")
                     }
                 }
             }
-            OutlinedButton(onClick = { slots = slots + WeeklySlot() }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(onClick = { plans = plans + SubjectPlan() }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, null)
-                Text(" Add class day")
+                Text(" Add another subject")
             }
             PrimaryButton("Save", onClick = {
-                if (standard.isBlank() || subject.isBlank() || name.isBlank()) {
-                    vm.toast("Select standard, subject and a batch name")
-                } else if (slots.any { it.start >= it.end }) {
+                if (standard.isBlank() || name.isBlank()) {
+                    vm.toast("Select the standard and enter a batch name")
+                } else if (plans.any { it.subject.isBlank() }) {
+                    vm.toast("Choose a subject for every entry")
+                } else if (plans.map { it.subject }.toSet().size != plans.size) {
+                    vm.toast("Each subject can be added only once")
+                } else if (plans.any { p -> p.weekly.any { it.start >= it.end } }) {
                     vm.toast("End time must be after start time")
                 } else {
                     val b = (existing ?: Batch()).copy(
-                        name = name.trim(), standard = standard, subject = subject, teacherId = teacherId,
-                        teacherName = vm.user(teacherId)?.name.orEmpty(), weekly = slots
+                        name = name.trim(), standard = standard,
+                        subjects = plans.map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
+                        subject = "", teacherId = "", teacherName = "", weekly = emptyList()
                     )
                     vm.op("Saved", { if (existing == null) vm.replace(Screen.BatchDetail(b.id)) else vm.back() }) {
                         Repo.put("batches", b)
@@ -182,16 +232,21 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
             item {
                 AppCard {
                     InfoRow("Standard", b.standard)
-                    InfoRow("Subject", b.subject)
-                    InfoRow("Teacher", b.teacherName.ifBlank { "Not assigned" })
-                    if (b.weekly.isEmpty()) {
-                        InfoRow("Timetable", "Not set")
+                    if (b.plans().isEmpty()) Text("No subjects added yet. Tap the pencil to add.", color = Grey, fontSize = 13.sp)
+                }
+            }
+            items(b.plans()) { p ->
+                AppCard {
+                    Text(p.subject, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Text(p.teacherName.ifBlank { "No teacher assigned" }, color = Indigo, fontSize = 13.sp)
+                    if (p.weekly.isEmpty()) {
+                        Text("No class days set", color = Grey, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
                     } else {
-                        b.weekly.sortedBy { it.day }.forEach { InfoRow(D.dayName(it.day), D.range(it.start, it.end)) }
+                        p.weekly.sortedBy { it.day }.forEach { InfoRow(D.dayName(it.day), D.range(it.start, it.end)) }
                     }
                 }
             }
-            if (canSchedule && b.weekly.isNotEmpty()) {
+            if (canSchedule && b.plans().any { it.weekly.isNotEmpty() }) {
                 item { OutlinedButton(onClick = { generate = true }, modifier = Modifier.fillMaxWidth()) { Text("Create classes from timetable") } }
             }
             if (upcoming.isNotEmpty()) {

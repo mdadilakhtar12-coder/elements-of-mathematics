@@ -264,7 +264,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         get() {
             val u = me ?: return emptyList()
             return when (u.role) {
-                Role.TEACHER -> batches.filter { it.teacherId == u.id }
+                Role.TEACHER -> batches.filter { it.hasTeacher(u.id) }
                 Role.STUDENT -> batches.filter { it.id in u.batchIds }
                 else -> batches
             }
@@ -348,17 +348,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val list = ArrayList<ClassSession>()
             var d = from
             while (!d.isAfter(to)) {
-                for (s in b.weekly) {
-                    if (s.day != d.dayOfWeek.value) continue
-                    val id = b.id + "_" + d.toString() + "_" + s.start.replace(":", "")
-                    if (id in existing) continue
-                    list.add(
-                        ClassSession(
-                            id = id, batchId = b.id, batchName = b.name, subject = b.subject,
-                            teacherId = b.teacherId, teacherName = b.teacherName,
-                            date = d.toString(), start = s.start, end = s.end
+                for (plan in b.plans()) {
+                    for (s in plan.weekly) {
+                        if (s.day != d.dayOfWeek.value) continue
+                        val id = b.id + "_" + plan.subject.filter { it.isLetterOrDigit() } + "_" + d.toString() + "_" + s.start.replace(":", "")
+                        if (id in existing) continue
+                        list.add(
+                            ClassSession(
+                                id = id, batchId = b.id, batchName = b.name, subject = plan.subject,
+                                teacherId = plan.teacherId, teacherName = plan.teacherName,
+                                date = d.toString(), start = s.start, end = s.end
+                            )
                         )
-                    )
+                    }
                 }
                 d = d.plusDays(1)
             }

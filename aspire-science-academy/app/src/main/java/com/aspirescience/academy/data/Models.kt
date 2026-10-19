@@ -84,15 +84,33 @@ data class WeeklySlot(
     var end: String = "17:00"
 )
 
-data class Batch(
-    override var id: String = "",
-    var name: String = "",
-    var standard: String = "",
+/** One subject of a batch: who teaches it and on which weekdays. */
+data class SubjectPlan(
     var subject: String = "",
     var teacherId: String = "",
     var teacherName: String = "",
     var weekly: List<WeeklySlot> = emptyList()
-) : HasId
+)
+
+data class Batch(
+    override var id: String = "",
+    var name: String = "",
+    var standard: String = "",
+    var subjects: List<SubjectPlan> = emptyList(),
+    // Old single-subject fields, only read for batches saved by the first version of the app.
+    var subject: String = "",
+    var teacherId: String = "",
+    var teacherName: String = "",
+    var weekly: List<WeeklySlot> = emptyList()
+) : HasId {
+    fun plans(): List<SubjectPlan> = when {
+        subjects.isNotEmpty() -> subjects
+        subject.isNotBlank() || weekly.isNotEmpty() -> listOf(SubjectPlan(subject, teacherId, teacherName, weekly))
+        else -> emptyList()
+    }
+
+    fun hasTeacher(uid: String): Boolean = plans().any { it.teacherId == uid }
+}
 
 data class ClassSession(
     override var id: String = "",

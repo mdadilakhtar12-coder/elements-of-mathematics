@@ -292,7 +292,7 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
                                 }
                                 if (u.role == Role.TEACHER) {
                                     InfoRow("Subjects", u.subjects)
-                                    InfoRow("Batches", vm.batches.filter { it.teacherId == u.id }.joinToString(", ") { it.name })
+                                    InfoRow("Batches", vm.batches.filter { it.hasTeacher(u.id) }.joinToString(", ") { it.name })
                                 }
                                 if (u.role == Role.SUBADMIN) {
                                     InfoRow("Can manage", u.perms.joinToString(", ") { Perm.label(it) })

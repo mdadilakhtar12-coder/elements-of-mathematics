@@ -127,16 +127,17 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
     var date by remember { mutableStateOf(existing?.date ?: D.today()) }
     var maxMarks by remember { mutableStateOf((existing?.maxMarks ?: 100L).toString()) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: AppConfig.SUBJECTS
 
     Page(if (existing == null) "Create Exam" else "Edit Exam", vm::back) {
         FormColumn {
             Field("Exam name (e.g. Monthly Test - Oct)", name, { name = it })
             PickerField(
                 "Batch", vm.batch(batchId)?.name.orEmpty(), vm.myBatches.map { it.id to it.name },
-                { batchId = it; if (subject.isBlank()) subject = vm.batch(it)?.subject.orEmpty() },
+                { batchId = it; subject = vm.batch(it)?.plans()?.firstOrNull()?.subject.orEmpty() },
                 enabled = existing == null
             )
-            DropdownField("Subject", subject, AppConfig.SUBJECTS, { subject = AppConfig.SUBJECTS[it] })
+            DropdownField("Subject", subject, subjectOptions, { subject = subjectOptions[it] })
             DateField("Exam date", date, { date = it })
             Field("Maximum marks", maxMarks, { maxMarks = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
             PrimaryButton("Save", onClick = {
@@ -149,7 +150,7 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
                 } else {
                     val e = (existing ?: Exam()).copy(
                         name = name.trim(), batchId = b.id, batchName = b.name,
-                        subject = subject.ifBlank { b.subject }, date = date, maxMarks = mm
+                        subject = subject.ifBlank { b.plans().firstOrNull()?.subject.orEmpty() }, date = date, maxMarks = mm
                     )
                     vm.op("Saved", { if (existing == null) vm.replace(Screen.ExamDetail(e.id)) else vm.back() }) {
                         Repo.put("exams", e)

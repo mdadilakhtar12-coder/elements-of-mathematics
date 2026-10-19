@@ -47,7 +47,7 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
 
         val myBatchIds: Set<String> = when (me.role) {
             Role.STUDENT -> me.batchIds.toSet()
-            Role.TEACHER -> Repo.batchesOnce().filter { it.teacherId == me.id }.map { it.id }.toSet()
+            Role.TEACHER -> Repo.batchesOnce().filter { it.hasTeacher(me.id) }.map { it.id }.toSet()
             else -> emptySet()
         }
         val staff = me.role == Role.ADMIN || me.role == Role.SUBADMIN

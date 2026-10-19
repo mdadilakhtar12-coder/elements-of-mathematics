@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aspirescience.academy.AppConfig
 import com.aspirescience.academy.data.Attendance
 import com.aspirescience.academy.data.CS
 import com.aspirescience.academy.data.ClassSession
@@ -63,6 +64,7 @@ import com.aspirescience.academy.ui.Screen
 import com.aspirescience.academy.ui.common.AppCard
 import com.aspirescience.academy.ui.common.DangerTextButton
 import com.aspirescience.academy.ui.common.DateField
+import com.aspirescience.academy.ui.common.DropdownField
 import com.aspirescience.academy.ui.common.EmptyState
 import com.aspirescience.academy.ui.common.Field
 import com.aspirescience.academy.ui.common.FormColumn
@@ -101,12 +103,14 @@ fun statusColor(s: String): Color = when (s) {
 fun statusLabel(vm: AppViewModel, s: String): String =
     if (vm.role == Role.STUDENT && s == CS.TAKEN) "Completed" else CS.label(s)
 
+fun classTitle(c: ClassSession): String = if (c.subject.isBlank()) c.batchName else c.subject + " - " + c.batchName
+
 @Composable
 fun ClassCard(vm: AppViewModel, c: ClassSession, showDate: Boolean = false) {
     AppCard(onClick = { vm.go(Screen.ClassDetail(c.id)) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(c.batchName, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(classTitle(c), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 val whenText = (if (showDate) D.shortDate(c.date) + ", " else "") + D.range(c.start, c.end)
                 Text(whenText, color = Grey, fontSize = 13.sp)
                 if (vm.role != Role.TEACHER && c.teacherName.isNotBlank()) {
@@ -235,7 +239,7 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
     val ctx = LocalContext.current
 
     Page(
-        c.batchName, vm::back,
+        classTitle(c), vm::back,
         actions = {
             if (canSchedule) {
                 IconButton(onClick = { vm.go(Screen.ClassEdit(classId = c.id)) }) { Icon(Icons.Filled.Edit, "Edit") }
@@ -402,7 +406,9 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
     var date by remember { mutableStateOf(existing?.date ?: s.date.ifBlank { D.today() }) }
     var start by remember { mutableStateOf(existing?.start ?: "16:00") }
     var end by remember { mutableStateOf(existing?.end ?: "17:00") }
-    var teacherId by remember { mutableStateOf(existing?.teacherId ?: vm.batch(s.batchId)?.teacherId.orEmpty()) }
+    var subject by remember { mutableStateOf(existing?.subject ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.subject.orEmpty()) }
+    var teacherId by remember { mutableStateOf(existing?.teacherId ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.teacherId.orEmpty()) }
+    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: AppConfig.SUBJECTS
     var topic by remember { mutableStateOf(existing?.topic.orEmpty()) }
     var note by remember { mutableStateOf(existing?.note.orEmpty()) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -413,9 +419,21 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
                 "Batch", vm.batch(batchId)?.name.orEmpty(), vm.batches.map { it.id to it.name },
                 {
                     batchId = it
-                    if (existing == null) teacherId = vm.batch(it)?.teacherId.orEmpty()
+                    if (existing == null) {
+                        val first = vm.batch(it)?.plans()?.firstOrNull()
+                        subject = first?.subject.orEmpty()
+                        teacherId = first?.teacherId.orEmpty()
+                    }
                 },
                 enabled = existing == null
+            )
+            DropdownField(
+                "Subject", subject, subjectOptions,
+                {
+                    subject = subjectOptions[it]
+                    val plan = vm.batch(batchId)?.plans()?.firstOrNull { p -> p.subject == subject }
+                    if (plan != null && plan.teacherId.isNotBlank()) teacherId = plan.teacherId
+                }
             )
             DateField("Date", date, { date = it })
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -436,7 +454,7 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
                     vm.toast("End time must be after start time")
                 } else {
                     val c = (existing ?: ClassSession()).copy(
-                        batchId = b.id, batchName = b.name, subject = b.subject, teacherId = teacherId,
+                        batchId = b.id, batchName = b.name, subject = subject, teacherId = teacherId,
                         teacherName = vm.user(teacherId)?.name.orEmpty(), date = date, start = start, end = end,
                         topic = topic.trim(), note = note.trim()
                     )
@@ -475,7 +493,7 @@ fun ApprovalsScreen(vm: AppViewModel) {
     ) {
         ListColumn(pending, "No classes waiting for approval") { c ->
             AppCard(onClick = { vm.go(Screen.ClassDetail(c.id)) }) {
-                Text(c.batchName, fontWeight = FontWeight.Bold)
+                Text(classTitle(c), fontWeight = FontWeight.Bold)
                 Text(D.pretty(c.date) + " · " + D.range(c.start, c.end), color = Grey, fontSize = 13.sp)
                 Text("Teacher: " + c.teacherName, color = Grey, fontSize = 13.sp)
                 Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
