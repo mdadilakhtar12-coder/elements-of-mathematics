@@ -31,6 +31,8 @@ import com.aspirescience.academy.ui.common.AppCard
 import com.aspirescience.academy.ui.common.Pill
 import com.aspirescience.academy.ui.common.SectionTitle
 import com.aspirescience.academy.ui.common.StatTile
+import com.aspirescience.academy.ui.common.TrendChart
+import com.aspirescience.academy.ui.common.BarChart
 import com.aspirescience.academy.ui.theme.Green
 import com.aspirescience.academy.ui.theme.Grey
 import com.aspirescience.academy.ui.theme.Indigo
@@ -61,6 +63,20 @@ fun AttendanceContent(vm: AppViewModel, studentId: String) {
             }
         }
         if (att.isEmpty()) item { Text("No attendance recorded yet", color = Grey) }
+        if (groups.size >= 2) {
+            item {
+                AppCard {
+                    Text("Month-wise attendance", fontWeight = FontWeight.Bold)
+                    Column(Modifier.padding(top = 8.dp)) {
+                        BarChart(
+                            groups.entries.toList().reversed().takeLast(6).map { (m, l) ->
+                                D.monthLabel(m).take(3) to (l.count { it.status != "A" } * 100 / l.size)
+                            }
+                        ) { if (it >= 75) Green else if (it >= 50) Orange else Red }
+                    }
+                }
+            }
+        }
         groups.forEach { (month, list) ->
             item { SectionTitle(D.monthLabel(month)) }
             items(list) { a ->
@@ -96,6 +112,43 @@ fun ResultsContent(vm: AppViewModel, studentId: String) {
             }
         }
         if (sorted.isEmpty()) item { Text("No results yet", color = Grey) }
+        if (scored.size >= 2) {
+            item {
+                AppCard {
+                    Text("Progress", fontWeight = FontWeight.Bold)
+                    Text("Percentage in your last exams", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    TrendChart(scored.sortedBy { it.date }.takeLast(8).map { D.shortDate(it.date) to it.marks * 100.0 / it.maxMarks })
+                }
+            }
+        }
+        if (scored.isNotEmpty()) {
+            item {
+                AppCard {
+                    Text("Subject-wise average", fontWeight = FontWeight.Bold)
+                    scored.groupBy { it.subject.ifBlank { "Other" } }.forEach { (subject, list) ->
+                        val avg = list.sumOf { it.marks * 100.0 / it.maxMarks } / list.size
+                        Row(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                            Text(subject, modifier = Modifier.weight(1f), fontSize = 13.sp)
+                            Text(Math.round(avg).toString() + "%", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        }
+                        LinearProgressIndicator(
+                            progress = { (avg / 100.0).toFloat().coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(6.dp),
+                            color = if (avg >= 60) Indigo else if (avg >= 40) Orange else Red,
+                            trackColor = Color(0xFFE5E7EB)
+                        )
+                    }
+                }
+            }
+        }
+        val profile = vm.me?.takeIf { it.id == studentId } ?: vm.user(studentId)
+        if (profile != null) {
+            item {
+                androidx.compose.material3.OutlinedButton(onClick = { vm.reportCard(profile) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Share report card (PDF)")
+                }
+            }
+        }
         items(sorted) { m ->
             val exam = vm.exam(m.examId)
             val pct = if (m.maxMarks > 0) (m.marks * 100.0 / m.maxMarks) else 0.0

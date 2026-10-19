@@ -85,6 +85,8 @@ import com.aspirescience.academy.ui.theme.Indigo
 import com.aspirescience.academy.ui.theme.Orange
 import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
+import com.aspirescience.academy.util.Messages
+import com.aspirescience.academy.util.Messenger
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -230,6 +232,7 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
         (canApprove || (isOwn && c.status != CS.APPROVED)) &&
         (c.date <= D.today() || canApprove)
     val isStudent = me.role == Role.STUDENT
+    val ctx = LocalContext.current
 
     Page(
         c.batchName, vm::back,
@@ -334,6 +337,11 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
                             Column(Modifier.weight(1f)) {
                                 Text(s.name, fontWeight = FontWeight.SemiBold)
                                 if (s.rollNo.isNotBlank()) Text("Roll " + s.rollNo, color = Grey, fontSize = 12.sp)
+                                if (st == "A") {
+                                    TextButton(onClick = {
+                                        Messenger.whatsapp(ctx, s.parentMobile.ifBlank { s.mobile }, Messages.absent(s.name, c.date, c.subject))
+                                    }) { Text("Message parent", fontSize = 12.sp) }
+                                }
                             }
                             if (canTake) {
                                 StatusToggle(st) { marks[s.id] = it }
@@ -516,6 +524,12 @@ fun TeacherReportContent(vm: AppViewModel, onlyId: String?) {
                     CountCell("Pending", pending, Orange)
                     CountCell("Not taken", notTaken, Red)
                     CountCell("Cancelled", cancelled, Grey)
+                }
+                if (t.classRate > 0) {
+                    Text(
+                        "Earned this month: " + D.rs(done * t.classRate) + "  (" + D.rs(t.classRate) + " per class)",
+                        fontWeight = FontWeight.SemiBold, color = Green, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
         }

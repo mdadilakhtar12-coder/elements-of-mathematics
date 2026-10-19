@@ -74,6 +74,7 @@ data class UserProfile(
     var parentMobile: String = "",
     var monthlyFee: Long = 0,
     var subjects: String = "",
+    var classRate: Long = 0, // teacher pay per completed class (Rs)
     var createdAt: Long = 0
 ) : HasId
 
@@ -184,4 +185,18 @@ data class Notice(
     var batchName: String = "",
     var createdByName: String = "",
     var createdAt: Long = 0
+) : HasId
+
+data class LbEntry(
+    var studentId: String = "",
+    var name: String = "",
+    var pct: Double = 0.0,
+    var exams: Int = 0
+)
+
+data class Leaderboard(
+    override var id: String = "", // batch id
+    var batchName: String = "",
+    var entries: List<LbEntry> = emptyList(),
+    var updatedAt: Long = 0
 ) : HasId

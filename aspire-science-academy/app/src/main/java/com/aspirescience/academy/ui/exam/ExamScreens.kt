@@ -76,6 +76,8 @@ import com.aspirescience.academy.ui.theme.Grey
 import com.aspirescience.academy.ui.theme.Indigo
 import com.aspirescience.academy.ui.theme.Orange
 import com.aspirescience.academy.util.D
+import com.aspirescience.academy.util.Messages
+import com.aspirescience.academy.util.Messenger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -163,6 +165,7 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
                 val marks = Repo.marksOnce(existing.id)
                 marks.forEach { Repo.delete("marks", it) }
                 Repo.delete("exams", existing.id)
+                Repo.rebuildLeaderboard(existing.batchId, existing.batchName)
             }
         }) { confirmDelete = false }
     }
@@ -318,6 +321,12 @@ fun ExamDetailScreen(vm: AppViewModel, examId: String) {
                                 (if (s.rollNo.isNotBlank()) "Roll " + s.rollNo else "") + (if (rank > 0) "  ·  Rank $rank" else ""),
                                 color = Grey, fontSize = 12.sp
                             )
+                            val got = saved.firstOrNull { it.studentId == s.id && !it.absent }
+                            if (canEdit && got != null) {
+                                androidx.compose.material3.TextButton(onClick = {
+                                    Messenger.whatsapp(ctx, s.parentMobile.ifBlank { s.mobile }, Messages.result(s.name, exam.name, fmtMarks(got.marks), exam.maxMarks))
+                                }) { Text("Send result to parent", fontSize = 12.sp) }
+                            }
                         }
                         if (canEdit) {
                             val ab = t.equals("AB", ignoreCase = true)
@@ -381,6 +390,7 @@ fun ExamDetailScreen(vm: AppViewModel, examId: String) {
                                         appeared = scores.size.toLong()
                                     )
                                 )
+                                Repo.rebuildLeaderboard(exam.batchId, exam.batchName)
                             }
                         }
                     }, busy = vm.busy)

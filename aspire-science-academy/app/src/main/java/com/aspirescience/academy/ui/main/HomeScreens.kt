@@ -22,6 +22,8 @@ import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -50,6 +52,11 @@ import com.aspirescience.academy.data.Role
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.Screen
 import com.aspirescience.academy.ui.common.AppCard
+import com.aspirescience.academy.ui.fees.FeeDueBanner
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.platform.LocalContext
+import com.aspirescience.academy.util.Messages
+import com.aspirescience.academy.util.Messenger
 import com.aspirescience.academy.ui.common.InfoRow
 import com.aspirescience.academy.ui.common.Pill
 import com.aspirescience.academy.ui.common.PrimaryButton
@@ -129,6 +136,8 @@ fun AdminHome(vm: AppViewModel) {
         acts.add(Act("Announcements", Icons.Filled.Campaign) { vm.go(Screen.Notices) })
         acts.add(Act("Homework", Icons.Filled.Description) { vm.go(Screen.HomeworkList) })
     }
+    acts.add(Act("Leaderboard", Icons.Filled.EmojiEvents) { vm.go(Screen.Leaderboard) })
+    if (me.role == Role.ADMIN) acts.add(Act("Backup", Icons.Filled.Download) { vm.backup() })
     acts.add(Act("Password", Icons.Filled.Lock) { vm.go(Screen.ChangePassword) })
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,6 +158,7 @@ fun AdminHome(vm: AppViewModel) {
                 )
             }
         }
+        if (vm.can(Perm.FEES)) item { FeeDuesCard(vm) }
         item { SectionTitle("Manage") }
         item { ActionGrid(acts) }
         item { SectionTitle("Today's classes") }
@@ -184,6 +194,7 @@ fun TeacherHome(vm: AppViewModel) {
             item { SectionTitle("Upcoming") }
             items(upcoming) { ClassCard(vm, it, showDate = true) }
         }
+        item { OutlinedButton(onClick = { vm.go(Screen.Leaderboard) }, modifier = Modifier.fillMaxWidth()) { Text("Leaderboard") } }
         item { SectionTitle("My batches") }
         if (vm.myBatches.isEmpty()) item { Text("No batches assigned yet", color = Grey) }
         items(vm.myBatches) { b ->
@@ -238,6 +249,7 @@ fun StudentHome(vm: AppViewModel) {
     val att by remember(me.id) { Repo.attendanceByStudent(me.id) }.collectAsState(initial = emptyList())
     val present = att.count { it.status != "A" }
     val pct = if (att.isEmpty()) 0 else present * 100 / att.size
+    val fees by remember(me.id) { Repo.feesByStudent(me.id) }.collectAsState(initial = emptyList())
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Greeting(me.name, vm.myBatches.joinToString(", ") { it.name }.ifBlank { "Student" }) }
@@ -247,6 +259,8 @@ fun StudentHome(vm: AppViewModel) {
                 StatTile("Classes this week", coming.size.toString(), Indigo, Modifier.weight(1f))
             }
         }
+        item { FeeDueBanner(me, fees) }
+        item { OutlinedButton(onClick = { vm.go(Screen.Leaderboard) }, modifier = Modifier.fillMaxWidth()) { Text("Leaderboard") } }
         item { SectionTitle("Today & tomorrow") }
         val soon = mine.filter { it.date == today || it.date == tomorrow }
         if (soon.isEmpty()) item { Text("No classes today or tomorrow", color = Grey) }
@@ -269,5 +283,30 @@ fun StudentHome(vm: AppViewModel) {
             }
             items(notices) { n -> NoticeCard(n, false, {}) }
         }
+    }
+}
+
+/** Admin home card: who still owes this month's fee, with a WhatsApp reminder per student. */
+@Composable
+private fun FeeDuesCard(vm: AppViewModel) {
+    val ctx = LocalContext.current
+    val month = D.thisMonth()
+    val fees by remember { Repo.feesByMonth(month) }.collectAsState(initial = emptyList())
+    val due = vm.students.filter { it.active && it.monthlyFee > 0 && (it.createdAt <= 0L || D.monthOfMillis(it.createdAt) <= month) }
+        .map { s -> s to (s.monthlyFee - fees.filter { f -> f.studentId == s.id }.sumOf { f -> f.amount }) }
+        .filter { it.second > 0 }
+    if (due.isEmpty()) return
+    AppCard {
+        Text("Fees pending (" + due.size + ") - " + D.rs(due.sumOf { it.second }), fontWeight = FontWeight.Bold, color = Red)
+        due.take(3).forEach { (s, amt) ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(s.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                    Text("Due " + D.rs(amt), color = Grey, fontSize = 12.sp)
+                }
+                TextButton(onClick = { Messenger.whatsapp(ctx, s.parentMobile.ifBlank { s.mobile }, Messages.feeDue(s.name, month, amt)) }) { Text("Remind") }
+            }
+        }
+        if (due.size > 3) Text("See everyone in the Fees tab", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }

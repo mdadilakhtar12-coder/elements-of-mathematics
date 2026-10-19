@@ -41,6 +41,7 @@ import com.aspirescience.academy.ui.people.PeopleScreen
 import com.aspirescience.academy.ui.people.UserDetailScreen
 import com.aspirescience.academy.ui.people.UserEditScreen
 import com.aspirescience.academy.ui.schedule.ApprovalsScreen
+import com.aspirescience.academy.ui.student.LeaderboardScreen
 import com.aspirescience.academy.ui.schedule.ClassDetailScreen
 import com.aspirescience.academy.ui.schedule.ClassEditScreen
 import com.aspirescience.academy.ui.schedule.TeacherReportScreen
@@ -50,6 +51,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
         setContent {
             AspireTheme {
                 if (Repo.ready) Root() else FirebaseMissing()
@@ -126,6 +132,7 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.NoticeAdd -> NoticeAddScreen(vm)
         is Screen.HomeworkList -> HomeworkListScreen(vm)
         is Screen.HomeworkAdd -> HomeworkAddScreen(vm)
+        is Screen.Leaderboard -> LeaderboardScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
     }
 

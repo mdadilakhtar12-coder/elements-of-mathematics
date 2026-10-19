@@ -109,6 +109,42 @@ object Repo {
     fun feesByStudent(studentId: String): Flow<List<Fee>> =
         db.collection("fees").whereEqualTo("studentId", studentId).models()
 
+    fun leaderboards(): Flow<List<Leaderboard>> = db.collection("leaderboards").models()
+
+    // ---------- one-time reads ----------
+
+    private suspend inline fun <reified T : HasId> Query.once(): List<T> =
+        get().await().documents.mapNotNull { d -> d.toObject(T::class.java)?.also { m -> m.id = d.id } }
+
+    suspend fun batchesOnce(): List<Batch> = db.collection("batches").once()
+    suspend fun noticesSince(ms: Long): List<Notice> = db.collection("notices").whereGreaterThan("createdAt", ms).once()
+    suspend fun homeworkSince(ms: Long): List<Homework> = db.collection("homework").whereGreaterThan("createdAt", ms).once()
+    suspend fun classesRange(from: String, to: String): List<ClassSession> =
+        db.collection("classes").whereGreaterThanOrEqualTo("date", from).whereLessThanOrEqualTo("date", to).once()
+
+    suspend fun classesByStatus(status: String): List<ClassSession> =
+        db.collection("classes").whereEqualTo("status", status).once()
+
+    suspend fun attendanceOf(studentId: String): List<Attendance> =
+        db.collection("attendance").whereEqualTo("studentId", studentId).once()
+
+    suspend fun marksOf(studentId: String): List<Mark> = db.collection("marks").whereEqualTo("studentId", studentId).once()
+    suspend fun marksOfBatch(batchId: String): List<Mark> = db.collection("marks").whereEqualTo("batchId", batchId).once()
+    suspend fun feesOf(studentId: String): List<Fee> = db.collection("fees").whereEqualTo("studentId", studentId).once()
+
+    /** Every document of a collection as plain maps (used by the backup). */
+    suspend fun dump(col: String): List<Map<String, Any?>> =
+        db.collection(col).get().await().documents.map { d -> (d.data ?: emptyMap()) + ("id" to d.id) }
+
+    /** Recomputes the ranking of a batch from all saved exam marks. */
+    suspend fun rebuildLeaderboard(batchId: String, batchName: String) {
+        val marks = marksOfBatch(batchId).filter { !it.absent && it.maxMarks > 0 }
+        val entries = marks.groupBy { it.studentId }.map { (sid, ms) ->
+            LbEntry(sid, ms.first().studentName, ms.sumOf { it.marks * 100.0 / it.maxMarks } / ms.size, ms.size)
+        }.sortedByDescending { it.pct }.take(100)
+        put("leaderboards", Leaderboard(batchId, batchName, entries, System.currentTimeMillis()))
+    }
+
     // ---------- writes ----------
 
     suspend fun <T : HasId> put(col: String, item: T): T {

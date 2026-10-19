@@ -64,6 +64,9 @@ import com.aspirescience.academy.ui.theme.Indigo
 import com.aspirescience.academy.ui.theme.Orange
 import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
+import com.aspirescience.academy.util.Messages
+import com.aspirescience.academy.util.Messenger
+import androidx.compose.material3.TextButton
 
 fun shareReceipt(ctx: Context, f: Fee) {
     val text = AppConfig.APP_NAME + "\nFee Receipt\n\n" +
@@ -127,6 +130,9 @@ fun FeesTab(vm: AppViewModel) {
                                     Text(p.first.name, fontWeight = FontWeight.SemiBold)
                                     Text("Due " + D.rs(p.second) + " of " + D.rs(p.first.monthlyFee), color = Red, fontSize = 13.sp)
                                 }
+                                TextButton(onClick = {
+                                    Messenger.whatsapp(ctx, p.first.parentMobile.ifBlank { p.first.mobile }, Messages.feeDue(p.first.name, month, p.second))
+                                }) { Text("Remind") }
                                 OutlinedButton(onClick = { vm.go(Screen.FeeAdd(p.first.id, month, p.second)) }) { Text("Collect") }
                             }
                         }
@@ -221,6 +227,7 @@ fun StudentFeesContent(vm: AppViewModel, student: UserProfile, adminView: Boolea
         contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 32.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item { FeeDueBanner(student, fees) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile("Monthly fee", if (student.monthlyFee > 0) D.rs(student.monthlyFee) else "-", Indigo, Modifier.weight(1f))
@@ -256,6 +263,19 @@ fun StudentFeesContent(vm: AppViewModel, student: UserProfile, adminView: Boolea
                     IconButton(onClick = { shareReceipt(ctx, f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
                 }
             }
+        }
+    }
+}
+
+/** Red reminder card shown to the student when this month's fee is still unpaid close to the due day. */
+@Composable
+fun FeeDueBanner(student: UserProfile, fees: List<Fee>) {
+    val month = D.thisMonth()
+    val due = student.monthlyFee - fees.filter { it.month == month }.sumOf { it.amount }
+    if (student.monthlyFee > 0 && due > 0 && java.time.LocalDate.now().dayOfMonth >= AppConfig.FEE_DUE_DAY - 3) {
+        AppCard {
+            Text("Fees due: " + D.rs(due), color = Red, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Text(D.monthLabel(month) + " fees should be paid by day " + AppConfig.FEE_DUE_DAY + " of the month.", color = Grey, fontSize = 13.sp)
         }
     }
 }

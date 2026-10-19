@@ -70,6 +70,12 @@ service cloud.firestore {
       allow write: if can('fees');
     }
 
+    // Class rankings, rebuilt whenever exam marks are saved.
+    match /leaderboards/{id} {
+      allow read: if signedIn();
+      allow write: if can('exams') || isTeacher();
+    }
+
     match /homework/{id} {
       allow read: if signedIn();
       allow write: if can('notices') || isTeacher();

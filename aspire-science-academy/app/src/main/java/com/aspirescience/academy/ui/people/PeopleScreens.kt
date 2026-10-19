@@ -69,6 +69,8 @@ import com.aspirescience.academy.ui.theme.Green
 import com.aspirescience.academy.ui.theme.Grey
 import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
+import com.aspirescience.academy.util.Messages
+import com.aspirescience.academy.util.Messenger
 
 private fun roleTitle(role: String) = when (role) {
     Role.STUDENT -> "Students"
@@ -138,6 +140,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
     var fee by remember { mutableStateOf(if ((existing?.monthlyFee ?: 0L) > 0L) existing?.monthlyFee.toString() else "") }
     var parent by remember { mutableStateOf(existing?.parentMobile.orEmpty()) }
     var subjects by remember { mutableStateOf(existing?.subjects.orEmpty()) }
+    var rate by remember { mutableStateOf(if ((existing?.classRate ?: 0L) > 0L) existing?.classRate.toString() else "") }
     var batchIds by remember { mutableStateOf(existing?.batchIds ?: emptyList()) }
     var perms by remember { mutableStateOf(existing?.perms ?: emptyList()) }
     var pickBatches by remember { mutableStateOf(false) }
@@ -167,6 +170,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
             }
             if (role == Role.TEACHER) {
                 Field("Subjects taught", subjects, { subjects = it })
+                Field("Pay per class (Rs, optional)", rate, { rate = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
             }
             if (role == Role.SUBADMIN) {
                 SectionTitle("What can this sub-admin do?")
@@ -191,6 +195,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
                         mobile = if (role == Role.SUBADMIN) "" else loginId.trim(),
                         rollNo = roll.trim(), standard = standard, parentMobile = parent.trim(),
                         monthlyFee = fee.toLongOrNull() ?: 0L, subjects = subjects.trim(),
+                        classRate = rate.toLongOrNull() ?: 0L,
                         batchIds = batchIds, perms = perms
                     )
                     vm.saveUser(draft, password, isNew) { if (isNew) vm.replace(Screen.UserDetail(draft.id)) else vm.back() }
@@ -215,6 +220,7 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
         return
     }
     val canManage = u.role != Role.SUBADMIN && vm.can(Perm.USERS) || (u.role == Role.SUBADMIN && me.role == Role.ADMIN)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
     var seg by remember { mutableStateOf(0) }
     var confirmDelete by remember { mutableStateOf(false) }
     var resetDialog by remember { mutableStateOf(false) }
@@ -298,6 +304,15 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     if (u.role == Role.STUDENT && vm.can(Perm.FEES)) {
                                         PrimaryButton("Collect fee", onClick = { vm.go(Screen.FeeAdd(u.id)) })
+                                    }
+                                    if (u.role == Role.STUDENT) {
+                                        OutlinedButton(
+                                            onClick = { Messenger.whatsapp(ctx, u.parentMobile.ifBlank { u.mobile }, Messages.general(u.name)) },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) { Text("Message parent on WhatsApp") }
+                                        OutlinedButton(onClick = { vm.reportCard(u) }, modifier = Modifier.fillMaxWidth()) {
+                                            Text("Share report card (PDF)")
+                                        }
                                     }
                                     OutlinedButton(onClick = { resetDialog = true }, modifier = Modifier.fillMaxWidth()) { Text("Reset password") }
                                     OutlinedButton(

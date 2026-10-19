@@ -46,6 +46,7 @@ sealed class Screen {
     data object NoticeAdd : Screen()
     data object HomeworkList : Screen()
     data object HomeworkAdd : Screen()
+    data object Leaderboard : Screen()
     data object ChangePassword : Screen()
 }
 
@@ -65,6 +66,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var exams by mutableStateOf<List<Exam>>(emptyList())
     var notices by mutableStateOf<List<Notice>>(emptyList())
     var homework by mutableStateOf<List<Homework>>(emptyList())
+    var leaderboards by mutableStateOf<List<com.aspirescience.academy.data.Leaderboard>>(emptyList())
 
     val stack = mutableStateListOf<Screen>()
     var tab by mutableIntStateOf(0)
@@ -172,6 +174,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch { Repo.notices().collect { notices = it } }
         scope.launch { Repo.homework().collect { homework = it } }
         scope.launch { Repo.exams().collect { exams = it } }
+        scope.launch { Repo.leaderboards().collect { leaderboards = it } }
         if (p.role != Role.STUDENT) {
             scope.launch { Repo.users().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
         }
@@ -210,6 +213,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         exams = emptyList()
         notices = emptyList()
         homework = emptyList()
+        leaderboards = emptyList()
         banner = null
         stack.clear()
     }
@@ -316,6 +320,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         op("Password changed", onDone) {
             Repo.changeOwnPassword(me ?: error("Not logged in"), current, newPassword)
         }
+
+    // ---------- exports ----------
+
+    fun backup() = op("Backup ready") {
+        val f = com.aspirescience.academy.util.Backup.create(getApplication())
+        com.aspirescience.academy.util.Share.file(getApplication(), f, "application/zip", "Save backup")
+    }
+
+    fun reportCard(u: UserProfile) = op {
+        val names = batches.filter { it.id in u.batchIds }.joinToString(", ") { it.name }
+        val f = com.aspirescience.academy.util.ReportCard.create(getApplication(), u, names)
+        com.aspirescience.academy.util.Share.file(getApplication(), f, "application/pdf", "Share report card")
+    }
 
     // ---------- batches & timetable ----------
 
