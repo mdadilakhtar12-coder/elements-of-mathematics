@@ -47,6 +47,7 @@ sealed class Screen {
     data object HomeworkList : Screen()
     data object HomeworkAdd : Screen()
     data object Leaderboard : Screen()
+    data object Demo : Screen()
     data object ChangePassword : Screen()
 }
 
@@ -58,6 +59,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var loginError by mutableStateOf<String?>(null)
     var banner by mutableStateOf<String?>(null)
     var notice by mutableStateOf<String?>(null)
+    var progress by mutableStateOf<String?>(null)
     var update by mutableStateOf<Updater.Info?>(null)
     var updateProgress by mutableIntStateOf(-1)
 
@@ -410,6 +412,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteClasses(ids: List<String>) = op(ids.size.toString() + " classes deleted") {
         Repo.deleteAll("classes", ids)
+    }
+
+    // ---------- demo data ----------
+
+    fun loadDemo() = op {
+        try {
+            notice = com.aspirescience.academy.util.Demo.load { progress = it }
+        } finally {
+            progress = null
+        }
+    }
+
+    fun removeDemo() = op {
+        val list = users.filter { it.demo }
+        try {
+            notice = com.aspirescience.academy.util.Demo.remove(list) { progress = it }
+        } finally {
+            progress = null
+        }
     }
 
     // ---------- exports ----------

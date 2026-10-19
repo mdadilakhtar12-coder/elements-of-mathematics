@@ -169,6 +169,13 @@ object Repo {
     suspend fun marksOnce(examId: String): List<String> =
         db.collection("marks").whereEqualTo("examId", examId).get().await().documents.map { it.id }
 
+    /** Ids of documents whose id starts with [prefix]. */
+    suspend fun idsWithPrefix(col: String, prefix: String): List<String> =
+        db.collection(col)
+            .whereGreaterThanOrEqualTo(com.google.firebase.firestore.FieldPath.documentId(), prefix)
+            .whereLessThan(com.google.firebase.firestore.FieldPath.documentId(), prefix + "\uf8ff")
+            .get().await().documents.map { it.id }
+
     suspend fun deleteAll(col: String, ids: List<String>) {
         for (chunk in ids.chunked(400)) {
             val wb = db.batch()

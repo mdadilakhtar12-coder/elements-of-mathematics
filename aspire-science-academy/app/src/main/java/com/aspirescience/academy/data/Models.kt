@@ -75,6 +75,7 @@ data class UserProfile(
     var monthlyFee: Long = 0,
     var subjects: String = "",
     var classRate: Long = 0, // teacher pay per completed class (Rs)
+    var demo: Boolean = false, // created by "Demo data"
     var createdAt: Long = 0
 ) : HasId
 

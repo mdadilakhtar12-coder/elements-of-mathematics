@@ -135,11 +135,22 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.HomeworkList -> HomeworkListScreen(vm)
         is Screen.HomeworkAdd -> HomeworkAddScreen(vm)
         is Screen.Leaderboard -> LeaderboardScreen(vm)
+        is Screen.Demo -> com.aspirescience.academy.ui.main.DemoScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
     }
     if (vm.busy) {
         androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
     }
+    }
+
+    val working = vm.progress
+    if (working != null) {
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text("Please wait") },
+            text = { Text(working + "\n\nThis can take a minute. Keep the app open.") },
+            confirmButton = {}
+        )
     }
 
     val report = vm.notice

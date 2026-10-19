@@ -138,6 +138,7 @@ fun AdminHome(vm: AppViewModel) {
     }
     acts.add(Act("Leaderboard", Icons.Filled.EmojiEvents) { vm.go(Screen.Leaderboard) })
     if (me.role == Role.ADMIN) acts.add(Act("Backup", Icons.Filled.Download) { vm.backup() })
+    if (me.role == Role.ADMIN) acts.add(Act("Demo data", Icons.Filled.School) { vm.go(Screen.Demo) })
     acts.add(Act("Password", Icons.Filled.Lock) { vm.go(Screen.ChangePassword) })
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(12.dp)) {
