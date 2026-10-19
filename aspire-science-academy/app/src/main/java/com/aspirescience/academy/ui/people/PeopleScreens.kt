@@ -82,6 +82,7 @@ private fun roleTitle(role: String) = when (role) {
 fun PeopleScreen(vm: AppViewModel, role: String) {
     var q by remember { mutableStateOf("") }
     var batchFilter by remember { mutableStateOf("") }
+    var importDialog by remember { mutableStateOf(false) }
     val base = when (role) {
         Role.STUDENT -> vm.students
         Role.TEACHER -> vm.teachers
@@ -93,6 +94,11 @@ fun PeopleScreen(vm: AppViewModel, role: String) {
     }
     Page(
         roleTitle(role) + " (" + base.size + ")", vm::back,
+        actions = {
+            if (role == Role.STUDENT) {
+                TextButton(onClick = { importDialog = true }) { Text("Import") }
+            }
+        },
         fab = { FloatingActionButton(onClick = { vm.go(Screen.UserEdit(role)) }) { Icon(Icons.Filled.Add, "Add") } }
     ) {
         Column(Modifier.fillMaxSize()) {
@@ -126,6 +132,63 @@ fun PeopleScreen(vm: AppViewModel, role: String) {
             }
         }
     }
+    if (importDialog) StudentImportDialog(vm, "") { importDialog = false }
+}
+
+@Composable
+fun StudentImportDialog(vm: AppViewModel, batchId: String, onDismiss: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            onDismiss()
+            vm.op {
+                val rows = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    com.aspirescience.academy.data.Tables.read(ctx, uri)
+                }
+                vm.importStudents(rows, batchId)
+            }
+        }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Import students") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Choose an Excel (.xlsx) or CSV file. The first row must have headings:", fontSize = 13.sp)
+                Text("Name, Mobile, Password (optional), Roll No, Parent Mobile, Monthly Fee, Standard", fontWeight = FontWeight.Medium, fontSize = 13.sp)
+                Text(
+                    "Name and Mobile are required. If Password is empty, the mobile number becomes the password. " +
+                        "Students who already exist are not created again" +
+                        (if (batchId.isNotBlank()) ", they are just added to this batch." else "."),
+                    color = Grey, fontSize = 12.sp
+                )
+                TextButton(onClick = {
+                    val dir = java.io.File(ctx.cacheDir, "reports")
+                    dir.mkdirs()
+                    val f = java.io.File(dir, "students-sample.csv")
+                    f.writeText(
+                        "Name,Mobile,Password,Roll No,Parent Mobile,Monthly Fee,Standard\n" +
+                            "Aman Shaikh,9876543210,,1,9876500000,1500,11th Science\n" +
+                            "Riya Patel,9123456780,,2,9123400000,1500,11th Science\n"
+                    )
+                    com.aspirescience.academy.util.Share.file(ctx, f, "text/csv", "Sample file")
+                }) { Text("Get a sample file") }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                picker.launch(
+                    arrayOf(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        "text/csv", "text/comma-separated-values", "text/plain", "application/octet-stream"
+                    )
+                )
+            }) { Text("Choose file") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable
@@ -136,12 +199,12 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
     var loginId by remember { mutableStateOf(existing?.loginId.orEmpty()) }
     var password by remember { mutableStateOf("") }
     var roll by remember { mutableStateOf(existing?.rollNo.orEmpty()) }
-    var standard by remember { mutableStateOf(existing?.standard.orEmpty()) }
+    var standard by remember { mutableStateOf(existing?.standard ?: vm.batch(s.batchId)?.standard.orEmpty()) }
     var fee by remember { mutableStateOf(if ((existing?.monthlyFee ?: 0L) > 0L) existing?.monthlyFee.toString() else "") }
     var parent by remember { mutableStateOf(existing?.parentMobile.orEmpty()) }
     var subjects by remember { mutableStateOf(existing?.subjects.orEmpty()) }
     var rate by remember { mutableStateOf(if ((existing?.classRate ?: 0L) > 0L) existing?.classRate.toString() else "") }
-    var batchIds by remember { mutableStateOf(existing?.batchIds ?: emptyList()) }
+    var batchIds by remember { mutableStateOf(existing?.batchIds ?: (if (s.batchId.isBlank()) emptyList() else listOf(s.batchId))) }
     var perms by remember { mutableStateOf(existing?.perms ?: emptyList()) }
     var pickBatches by remember { mutableStateOf(false) }
     val isNew = existing == null
@@ -198,7 +261,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
                         classRate = rate.toLongOrNull() ?: 0L,
                         batchIds = batchIds, perms = perms
                     )
-                    vm.saveUser(draft, password, isNew) { if (isNew) vm.replace(Screen.UserDetail(draft.id)) else vm.back() }
+                    vm.saveUser(draft, password, isNew) { if (isNew && s.batchId.isBlank()) vm.replace(Screen.UserDetail(draft.id)) else vm.back() }
                 }
             }, busy = vm.busy)
         }

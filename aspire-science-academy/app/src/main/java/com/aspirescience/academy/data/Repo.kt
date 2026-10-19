@@ -169,6 +169,14 @@ object Repo {
     suspend fun marksOnce(examId: String): List<String> =
         db.collection("marks").whereEqualTo("examId", examId).get().await().documents.map { it.id }
 
+    suspend fun deleteAll(col: String, ids: List<String>) {
+        for (chunk in ids.chunked(400)) {
+            val wb = db.batch()
+            for (id in chunk) wb.delete(db.collection(col).document(id))
+            wb.commit().await()
+        }
+    }
+
     suspend fun delete(col: String, id: String) {
         db.collection(col).document(id).delete().await()
     }

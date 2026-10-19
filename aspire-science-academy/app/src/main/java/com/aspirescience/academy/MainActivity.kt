@@ -114,6 +114,7 @@ private fun AppHost(vm: AppViewModel) {
     BackHandler(enabled = vm.stack.size > 1) { vm.back() }
     BackHandler(enabled = vm.stack.size <= 1 && vm.tab != 0) { vm.tab = 0 }
 
+    Box(Modifier.fillMaxSize()) {
     when (val s = vm.current) {
         is Screen.Main -> MainScreen(vm)
         is Screen.People -> PeopleScreen(vm, s.role)
@@ -134,6 +135,20 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.HomeworkAdd -> HomeworkAddScreen(vm)
         is Screen.Leaderboard -> LeaderboardScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
+    }
+    if (vm.busy) {
+        androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
+    }
+    }
+
+    val report = vm.notice
+    if (report != null) {
+        AlertDialog(
+            onDismissRequest = { vm.notice = null },
+            title = { Text("Import finished") },
+            text = { Text(report) },
+            confirmButton = { TextButton(onClick = { vm.notice = null }) { Text("OK") } }
+        )
     }
 
     val msg = vm.banner

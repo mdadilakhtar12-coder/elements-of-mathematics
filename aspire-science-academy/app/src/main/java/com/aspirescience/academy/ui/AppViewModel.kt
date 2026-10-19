@@ -31,7 +31,7 @@ import java.time.LocalDate
 sealed class Screen {
     data object Main : Screen()
     data class People(val role: String) : Screen()
-    data class UserEdit(val role: String, val userId: String = "") : Screen()
+    data class UserEdit(val role: String, val userId: String = "", val batchId: String = "") : Screen()
     data class UserDetail(val userId: String) : Screen()
     data class BatchEdit(val batchId: String = "") : Screen()
     data class BatchDetail(val batchId: String) : Screen()
@@ -57,6 +57,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
     var loginError by mutableStateOf<String?>(null)
     var banner by mutableStateOf<String?>(null)
+    var notice by mutableStateOf<String?>(null)
     var update by mutableStateOf<Updater.Info?>(null)
     var updateProgress by mutableIntStateOf(-1)
 
@@ -320,6 +321,96 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         op("Password changed", onDone) {
             Repo.changeOwnPassword(me ?: error("Not logged in"), current, newPassword)
         }
+
+    // ---------- bulk student import ----------
+
+    /** Creates students from spreadsheet rows (Name, Mobile, Password, Roll No, Parent Mobile, Fee, Standard). */
+    suspend fun importStudents(rows: List<List<String>>, batchId: String) {
+        if (rows.isEmpty()) error("The file is empty")
+        val header = rows[0].map { it.lowercase() }
+        fun idx(vararg keys: String) = header.indexOfFirst { h -> keys.any { h.contains(it) } }
+        var cName = idx("name")
+        var cMobile = idx("mobile", "phone", "contact", "login")
+        val cPass = idx("pass")
+        val cRoll = idx("roll")
+        val cParent = idx("parent")
+        val cFee = idx("fee")
+        val cStd = idx("standard", "class")
+        val hasHeader = cName >= 0 || cMobile >= 0
+        val data: List<List<String>>
+        if (hasHeader) {
+            data = rows.drop(1)
+        } else {
+            data = rows
+            cName = 0
+            cMobile = 1
+        }
+        val batch = batch(batchId)
+        var added = 0
+        var linked = 0
+        var skipped = 0
+        val failed = ArrayList<String>()
+        val seen = HashSet<String>()
+        var n = if (hasHeader) 1 else 0
+        for (r in data) {
+            n++
+            fun cell(i: Int) = if (i >= 0) r.getOrNull(i).orEmpty().trim() else ""
+            val name = cell(cName)
+            var mobile = cell(cMobile).removeSuffix(".0").filter { it.isDigit() }
+            if (mobile.length > 10) mobile = mobile.takeLast(10)
+            if (name.isEmpty() && mobile.isEmpty()) continue
+            if (name.isEmpty() || mobile.length < 5) {
+                failed.add("Row $n: name or mobile missing")
+                continue
+            }
+            if (!seen.add(mobile)) {
+                skipped++
+                continue
+            }
+            try {
+                val existing = users.firstOrNull { it.loginId.equals(mobile, ignoreCase = true) }
+                if (existing != null) {
+                    if (existing.role != Role.STUDENT) {
+                        failed.add("Row $n ($name): this ID belongs to a " + Role.label(existing.role))
+                    } else if (batchId.isNotBlank() && batchId !in existing.batchIds) {
+                        Repo.update("users", existing.id, mapOf("batchIds" to existing.batchIds + batchId))
+                        linked++
+                    } else {
+                        skipped++
+                    }
+                    continue
+                }
+                val pw = cell(cPass).let { if (it.length >= 6) it else mobile }
+                if (pw.length < 6) {
+                    failed.add("Row $n ($name): password needs at least 6 characters")
+                    continue
+                }
+                val uid = Repo.createAuthUser(mobile, pw)
+                val p = UserProfile(
+                    id = uid, role = Role.STUDENT, name = name, loginId = mobile, mobile = mobile,
+                    rollNo = cell(cRoll).removeSuffix(".0"),
+                    standard = cell(cStd).ifBlank { batch?.standard.orEmpty() },
+                    parentMobile = cell(cParent).removeSuffix(".0").filter { it.isDigit() },
+                    monthlyFee = cell(cFee).removeSuffix(".0").filter { it.isDigit() }.toLongOrNull() ?: 0L,
+                    batchIds = if (batchId.isBlank()) emptyList() else listOf(batchId),
+                    createdAt = System.currentTimeMillis()
+                )
+                Repo.put("users", p)
+                Repo.setPassword(uid, mobile, Role.STUDENT, pw)
+                added++
+            } catch (e: Exception) {
+                failed.add("Row $n ($name): " + Repo.friendly(e))
+            }
+        }
+        notice = "New students added: $added\n" +
+            (if (linked > 0) "Existing students added to this batch: $linked\n" else "") +
+            (if (skipped > 0) "Already present, skipped: $skipped\n" else "") +
+            (if (failed.isNotEmpty()) "Failed: " + failed.size + "\n" + failed.take(6).joinToString("\n") else "")
+    }
+
+    fun deleteClasses(ids: List<String>) = op(ids.size.toString() + " classes deleted") {
+        Repo.deleteAll("classes", ids)
+    }
 
     // ---------- exports ----------
 

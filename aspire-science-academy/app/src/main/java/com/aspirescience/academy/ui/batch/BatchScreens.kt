@@ -62,6 +62,7 @@ import com.aspirescience.academy.ui.common.PrimaryButton
 import com.aspirescience.academy.ui.common.SectionTitle
 import com.aspirescience.academy.ui.common.TimeField
 import com.aspirescience.academy.ui.schedule.ClassCard
+import com.aspirescience.academy.ui.people.StudentImportDialog
 import com.aspirescience.academy.ui.theme.Grey
 import com.aspirescience.academy.ui.theme.Indigo
 import com.aspirescience.academy.util.D
@@ -99,7 +100,7 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
     var standard by remember { mutableStateOf(existing?.standard.orEmpty()) }
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var nameTouched by remember { mutableStateOf(existing != null) }
-    var plans by remember { mutableStateOf(existing?.plans() ?: listOf(SubjectPlan())) }
+    var plans by remember { mutableStateOf(existing?.plans() ?: emptyList()) }
 
     fun update(i: Int, f: (SubjectPlan) -> SubjectPlan) {
         plans = plans.mapIndexed { j, p -> if (j == i) f(p) else p }
@@ -111,30 +112,28 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                 standard = AppConfig.STANDARDS[it]
                 if (!nameTouched) name = standard
             })
-            Field("Batch name (e.g. 11th Science - Group A)", name, { name = it; nameTouched = true })
-            SectionTitle("Subjects and teachers")
+            Field("Batch name (e.g. 11th Science - Group A)", name, { name = it; nameTouched = true }, placeholder = "Leave empty to use the standard")
+            SectionTitle("Subjects and teachers (optional)")
             Text(
-                "Add every subject of this batch. Each subject has its own teacher and its own weekly class days.",
+                "You can skip this and save with just the standard. Add subjects only if you want a timetable; the subject and teacher of every entry are optional.",
                 color = Grey, fontSize = 13.sp
             )
             plans.forEachIndexed { i, plan ->
                 AppCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         DropdownField(
-                            "Subject", plan.subject, AppConfig.SUBJECTS,
+                            "Subject (optional)", plan.subject, AppConfig.SUBJECTS,
                             { k -> update(i) { p -> p.copy(subject = AppConfig.SUBJECTS[k]) } },
                             Modifier.weight(1f)
                         )
-                        if (plans.size > 1) {
-                            IconButton(onClick = { plans = plans.filterIndexed { j, _ -> j != i } }) {
-                                Icon(Icons.Filled.Close, "Remove subject")
-                            }
+                        IconButton(onClick = { plans = plans.filterIndexed { j, _ -> j != i } }) {
+                            Icon(Icons.Filled.Close, "Remove subject")
                         }
                     }
                     Box(Modifier.padding(top = 8.dp)) {
                         PickerField(
-                            "Teacher", vm.user(plan.teacherId)?.name.orEmpty(),
-                            vm.teachers.filter { it.active }.map { it.id to it.name },
+                            "Teacher (optional)", vm.user(plan.teacherId)?.name.orEmpty(),
+                            listOf("" to "No teacher") + vm.teachers.filter { it.active }.map { it.id to it.name },
                             { id -> update(i) { p -> p.copy(teacherId = id, teacherName = vm.user(id)?.name.orEmpty()) } }
                         )
                     }
@@ -174,21 +173,19 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
             }
             OutlinedButton(onClick = { plans = plans + SubjectPlan() }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, null)
-                Text(" Add another subject")
+                Text(if (plans.isEmpty()) " Add a subject with teacher and timetable" else " Add another subject")
             }
             PrimaryButton("Save", onClick = {
-                if (standard.isBlank() || name.isBlank()) {
-                    vm.toast("Select the standard and enter a batch name")
-                } else if (plans.any { it.subject.isBlank() }) {
-                    vm.toast("Choose a subject for every entry")
-                } else if (plans.map { it.subject }.toSet().size != plans.size) {
-                    vm.toast("Each subject can be added only once")
+                if (standard.isBlank()) {
+                    vm.toast("Select the standard")
                 } else if (plans.any { p -> p.weekly.any { it.start >= it.end } }) {
                     vm.toast("End time must be after start time")
                 } else {
                     val b = (existing ?: Batch()).copy(
-                        name = name.trim(), standard = standard,
-                        subjects = plans.map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
+                        name = name.trim().ifBlank { standard }, standard = standard,
+                        subjects = plans
+                            .filter { it.subject.isNotBlank() || it.teacherId.isNotBlank() || it.weekly.isNotEmpty() }
+                            .map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
                         subject = "", teacherId = "", teacherName = "", weekly = emptyList()
                     )
                     vm.op("Saved", { if (existing == null) vm.replace(Screen.BatchDetail(b.id)) else vm.back() }) {
@@ -211,8 +208,11 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
     val canSchedule = vm.can(Perm.SCHEDULE)
     val canUsers = vm.can(Perm.USERS) || vm.can(Perm.BATCHES)
     val students = vm.studentsOf(b.id)
-    val upcoming = vm.classes.filter { it.batchId == b.id && it.date >= D.today() }
-        .sortedWith(compareBy({ it.date }, { it.start })).take(6)
+    val allUpcoming = vm.classes.filter { it.batchId == b.id && it.date >= D.today() }
+        .sortedWith(compareBy({ it.date }, { it.start }))
+    val upcoming = allUpcoming.take(30)
+    var confirmClear by remember { mutableStateOf(false) }
+    var importDialog by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var addStudents by remember { mutableStateOf(false) }
     var generate by remember { mutableStateOf(false) }
@@ -246,17 +246,42 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
                     }
                 }
             }
-            if (canSchedule && b.plans().any { it.weekly.isNotEmpty() }) {
-                item { OutlinedButton(onClick = { generate = true }, modifier = Modifier.fillMaxWidth()) { Text("Create classes from timetable") } }
+            if (canSchedule) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { vm.go(Screen.ClassEdit(batchId = b.id)) }, modifier = Modifier.weight(1f)
+                        ) { Text("Add a class") }
+                        if (b.plans().any { it.weekly.isNotEmpty() }) {
+                            OutlinedButton(onClick = { generate = true }, modifier = Modifier.weight(1f)) { Text("From timetable") }
+                        }
+                    }
+                }
             }
             if (upcoming.isNotEmpty()) {
-                item { SectionTitle("Upcoming classes") }
+                item {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        SectionTitle("Upcoming classes (" + allUpcoming.size + ")", Modifier.weight(1f))
+                        if (canSchedule) TextButton(onClick = { confirmClear = true }) { Text("Clear all", color = com.aspirescience.academy.ui.theme.Red) }
+                    }
+                }
+                item { Text("Tap a class to edit, change the teacher or time, or cancel it.", color = Grey, fontSize = 12.sp) }
                 items(upcoming) { ClassCard(vm, it, showDate = true) }
             }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SectionTitle("Students (" + students.size + ")", Modifier.weight(1f))
                     if (canUsers) TextButton(onClick = { addStudents = true }) { Text("Add / remove") }
+                }
+            }
+            if (vm.can(Perm.USERS)) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { vm.go(Screen.UserEdit(Role.STUDENT, batchId = b.id)) }, modifier = Modifier.weight(1f)
+                        ) { Text("New student") }
+                        OutlinedButton(onClick = { importDialog = true }, modifier = Modifier.weight(1f)) { Text("Import Excel / CSV") }
+                    }
                 }
             }
             if (students.isEmpty()) item { Text("No students in this batch yet", color = Grey) }
@@ -277,6 +302,15 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
             { vm.deleteBatch(b) { vm.back() } }, { confirmDelete = false }
         )
     }
+    if (confirmClear) {
+        ConfirmDialog(
+            "Remove upcoming classes?",
+            "All " + allUpcoming.size + " upcoming classes of this batch will be deleted, including edited ones. Past classes stay.",
+            "Delete",
+            { vm.deleteClasses(allUpcoming.map { it.id }) }, { confirmClear = false }
+        )
+    }
+    if (importDialog) StudentImportDialog(vm, b.id) { importDialog = false }
     if (addStudents) {
         MultiPickDialog(
             "Students in " + b.name,
