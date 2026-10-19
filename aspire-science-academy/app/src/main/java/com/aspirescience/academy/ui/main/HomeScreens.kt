@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
@@ -133,6 +134,7 @@ fun AdminHome(vm: AppViewModel) {
         acts.add(Act("Approvals", Icons.Filled.FactCheck, pending) { vm.go(Screen.Approvals) })
         acts.add(Act("Teacher report", Icons.Filled.BarChart) { vm.go(Screen.TeacherReport) })
     }
+    if (vm.can(Perm.FEES)) acts.add(Act("Accounts", Icons.Filled.AccountBalanceWallet) { vm.go(Screen.Accounts) })
     if (vm.can(Perm.NOTICES)) {
         acts.add(Act("Announcements", Icons.Filled.Campaign) { vm.go(Screen.Notices) })
         acts.add(Act("Homework", Icons.Filled.Description) { vm.go(Screen.HomeworkList) })

@@ -49,6 +49,8 @@ sealed class Screen {
     data object Leaderboard : Screen()
     data object Demo : Screen()
     data object MessageTexts : Screen()
+    data object Accounts : Screen()
+    data object LedgerAdd : Screen()
     data object ChangePassword : Screen()
 }
 

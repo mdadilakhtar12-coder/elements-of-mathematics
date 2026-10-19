@@ -81,3 +81,26 @@ fun BarChart(bars: List<Pair<String, Int>>, color: (Int) -> Color) {
         }
     }
 }
+
+/** Money in (green) and money out (red) for several months side by side. */
+@Composable
+fun MoneyBars(items: List<Triple<String, Long, Long>>) {
+    val top = (items.maxOfOrNull { maxOf(it.second, it.third) } ?: 1L).coerceAtLeast(1L)
+    Row(Modifier.fillMaxWidth().height(140.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        items.forEach { (label, income, expense) ->
+            Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight((income.toFloat() / top).coerceIn(0.02f, 1f))
+                            .background(Color(0xFF16A34A), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                    )
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight((expense.toFloat() / top).coerceIn(0.02f, 1f))
+                            .background(Color(0xFFDC2626), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                    )
+                }
+                Text(label, fontSize = 10.sp, color = Grey)
+            }
+        }
+    }
+}

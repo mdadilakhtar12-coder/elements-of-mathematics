@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.aspirescience.academy.AppConfig
 import com.aspirescience.academy.data.Repo
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.common.AppCard
@@ -97,27 +98,34 @@ fun AttendanceContent(vm: AppViewModel, studentId: String) {
     }
 }
 
+private fun pctOf(ms: List<com.aspirescience.academy.data.Mark>): Double? {
+    val ok = ms.filter { !it.absent && it.maxMarks > 0 }
+    val mx = ok.sumOf { it.maxMarks }
+    return if (mx > 0) ok.sumOf { it.marks } * 100.0 / mx else null
+}
+
 @Composable
 fun ResultsContent(vm: AppViewModel, studentId: String) {
     val marks by remember(studentId) { Repo.marksByStudent(studentId) }.collectAsState(initial = emptyList())
-    val sorted = marks.sortedByDescending { it.date }
+    val exams = marks.groupBy { it.examId }.values.sortedByDescending { it.first().date }
+    val pcts = exams.mapNotNull { pctOf(it) }
+    val overall = if (pcts.isEmpty()) 0 else pcts.average().toInt()
     val scored = marks.filter { !it.absent && it.maxMarks > 0 }
-    val overall = if (scored.isEmpty()) 0 else (scored.sumOf { it.marks * 100.0 / it.maxMarks } / scored.size).toInt()
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                StatTile("Overall average", if (scored.isEmpty()) "-" else "$overall%", Indigo, Modifier.weight(1f))
-                StatTile("Exams", marks.size.toString(), Green, Modifier.weight(1f))
+                StatTile("Overall average", if (pcts.isEmpty()) "-" else "$overall%", Indigo, Modifier.weight(1f))
+                StatTile("Exams", exams.size.toString(), Green, Modifier.weight(1f))
             }
         }
-        if (sorted.isEmpty()) item { Text("No results yet", color = Grey) }
-        if (scored.size >= 2) {
+        if (exams.isEmpty()) item { Text("No results yet", color = Grey) }
+        if (pcts.size >= 2) {
             item {
                 AppCard {
                     Text("Progress", fontWeight = FontWeight.Bold)
-                    Text("Percentage in your last exams", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
-                    TrendChart(scored.sortedBy { it.date }.takeLast(8).map { D.shortDate(it.date) to it.marks * 100.0 / it.maxMarks })
+                    Text("Total percentage in your last exams", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    TrendChart(exams.reversed().takeLast(8).mapNotNull { g -> pctOf(g)?.let { D.shortDate(g.first().date) to it } })
                 }
             }
         }
@@ -125,8 +133,8 @@ fun ResultsContent(vm: AppViewModel, studentId: String) {
             item {
                 AppCard {
                     Text("Subject-wise average", fontWeight = FontWeight.Bold)
-                    scored.groupBy { it.subject.ifBlank { "Other" } }.forEach { (subject, list) ->
-                        val avg = list.sumOf { it.marks * 100.0 / it.maxMarks } / list.size
+                    scored.groupBy { AppConfig.groupOf(it.subject.ifBlank { "Other" }) }.forEach { (subject, list) ->
+                        val avg = list.sumOf { it.marks } * 100.0 / list.sumOf { it.maxMarks }
                         Row(Modifier.fillMaxWidth().padding(top = 10.dp)) {
                             Text(subject, modifier = Modifier.weight(1f), fontSize = 13.sp)
                             Text(Math.round(avg).toString() + "%", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
@@ -149,25 +157,26 @@ fun ResultsContent(vm: AppViewModel, studentId: String) {
                 }
             }
         }
-        items(sorted) { m ->
-            val exam = vm.exam(m.examId)
-            val pct = if (m.maxMarks > 0) (m.marks * 100.0 / m.maxMarks) else 0.0
+        items(exams) { g ->
+            val first = g.first()
+            val exam = vm.exam(first.examId)
+            val ok = g.filter { !it.absent && it.maxMarks > 0 }
+            val obtained = ok.sumOf { it.marks }
+            val max = ok.sumOf { it.maxMarks }
+            val pct = pctOf(g)
             AppCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(m.examName, fontWeight = FontWeight.Bold)
-                        Text(m.subject + " · " + D.shortDate(m.date), color = Grey, fontSize = 13.sp)
+                        Text(first.examName, fontWeight = FontWeight.Bold)
+                        Text(D.shortDate(first.date) + (if (g.size > 1) " - " + g.size + " papers" else ""), color = Grey, fontSize = 13.sp)
                     }
-                    if (m.absent) {
+                    if (pct == null) {
                         Pill("Absent", Red)
                     } else {
-                        Text(
-                            fmtMarks(m.marks) + " / " + m.maxMarks, fontWeight = FontWeight.Bold, fontSize = 18.sp,
-                            color = if (pct >= 40) Indigo else Red
-                        )
+                        Text(fmtMarks(obtained) + " / " + max, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = if (pct >= 40) Indigo else Red)
                     }
                 }
-                if (!m.absent) {
+                if (pct != null) {
                     LinearProgressIndicator(
                         progress = { (pct / 100.0).toFloat().coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(6.dp),
@@ -175,10 +184,30 @@ fun ResultsContent(vm: AppViewModel, studentId: String) {
                         trackColor = Color(0xFFE5E7EB)
                     )
                     Text(
-                        "%.0f%%".format(pct) +
-                            (if (exam != null && exam.appeared > 0) "   ·   Class avg " + fmtMarks(Math.round(exam.average * 10) / 10.0) + "   ·   Highest " + fmtMarks(exam.highest) else ""),
+                        Math.round(pct).toString() + "%" +
+                            (if (exam != null && exam.appeared > 0) "   -   Class avg " + Math.round(exam.avgPct()) + "%   -   Highest " + Math.round(exam.highestPct()) + "%" else ""),
                         color = Grey, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
                     )
+                }
+                // subject lines, Botany + Zoology shown together as Biology
+                g.sortedBy { it.subject }.groupBy { AppConfig.groupOf(it.subject) }.forEach { (group, list) ->
+                    if (list.size > 1) {
+                        val o = list.filter { !it.absent }.sumOf { it.marks }
+                        val m = list.filter { !it.absent }.sumOf { it.maxMarks }
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            Text(group, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Text(fmtMarks(o) + " / " + m, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                        }
+                    }
+                    list.forEach { mk ->
+                        Row(Modifier.fillMaxWidth().padding(top = if (list.size > 1) 2.dp else 8.dp, start = if (list.size > 1) 14.dp else 0.dp)) {
+                            Text(mk.subject, color = if (list.size > 1) Grey else Color.Unspecified, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                            Text(
+                                if (mk.absent) "Absent" else fmtMarks(mk.marks) + " / " + mk.maxMarks,
+                                color = if (list.size > 1) Grey else Color.Unspecified, fontSize = 13.sp
+                            )
+                        }
+                    }
                 }
             }
         }

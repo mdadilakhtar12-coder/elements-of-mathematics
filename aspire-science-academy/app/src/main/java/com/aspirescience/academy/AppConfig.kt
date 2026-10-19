@@ -20,8 +20,18 @@ object AppConfig {
         "11th Science", "11th Commerce", "12th Science", "12th Commerce"
     )
     val SUBJECTS = listOf(
-        "Maths", "Physics", "Chemistry", "Biology", "Science", "English", "Hindi",
+        "Maths", "Physics", "Chemistry", "Biology", "Botany", "Zoology", "IT", "Science", "English", "Hindi",
         "Gujarati", "Sanskrit", "Social Science", "Computer", "Accountancy", "Economics"
     )
+    /** Papers that add up to one subject in results (Botany + Zoology = Biology). */
+    private val SUBJECT_GROUPS = mapOf("Botany" to "Biology", "Zoology" to "Biology")
+    fun groupOf(subject: String): String = SUBJECT_GROUPS[subject] ?: subject
+
+    val EXPENSE_CATEGORIES = listOf(
+        "Room rent", "Electricity", "Internet", "Advertisement", "Marketing", "Stationery (pen, pencil, chalk)",
+        "Infrastructure", "Furniture", "Maintenance", "Other staff pay", "Other"
+    )
+    val INCOME_CATEGORIES = listOf("Admission fee", "Books and material", "Test series fee", "Other income")
+
     val PAY_MODES = listOf("Cash", "UPI", "Bank Transfer", "Cheque", "Other")
 }

@@ -65,6 +65,11 @@ service cloud.firestore {
       allow write: if can('exams') || isTeacher();
     }
 
+    // Income and expenses of the institute.
+    match /ledger/{id} {
+      allow read, write: if can('fees');
+    }
+
     match /fees/{id} {
       allow read: if signedIn() && (can('fees') || resource.data.studentId == request.auth.uid);
       allow write: if can('fees');

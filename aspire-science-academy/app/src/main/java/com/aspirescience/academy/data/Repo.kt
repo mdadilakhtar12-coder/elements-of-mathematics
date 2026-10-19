@@ -126,6 +126,12 @@ object Repo {
         db.collection("settings").document("messages").set(m).await()
     }
 
+    fun ledgerRange(from: String, to: String): Flow<List<LedgerEntry>> =
+        db.collection("ledger").whereGreaterThanOrEqualTo("date", from).whereLessThanOrEqualTo("date", to).models()
+
+    fun feesByDate(from: String, to: String): Flow<List<Fee>> =
+        db.collection("fees").whereGreaterThanOrEqualTo("date", from).whereLessThanOrEqualTo("date", to).models()
+
     fun leaderboards(): Flow<List<Leaderboard>> = db.collection("leaderboards").models()
 
     // ---------- one-time reads ----------
@@ -157,7 +163,11 @@ object Repo {
     suspend fun rebuildLeaderboard(batchId: String, batchName: String) {
         val marks = marksOfBatch(batchId).filter { !it.absent && it.maxMarks > 0 }
         val entries = marks.groupBy { it.studentId }.map { (sid, ms) ->
-            LbEntry(sid, ms.first().studentName, ms.sumOf { it.marks * 100.0 / it.maxMarks } / ms.size, ms.size)
+            // one percentage per exam (all its papers together), then the average over exams
+            val perExam = ms.groupBy { it.examId }.values.map { g ->
+                g.sumOf { it.marks } * 100.0 / g.sumOf { it.maxMarks.toDouble() }
+            }
+            LbEntry(sid, ms.first().studentName, perExam.average(), perExam.size)
         }.sortedByDescending { it.pct }.take(100)
         put("leaderboards", Leaderboard(batchId, batchName, entries, System.currentTimeMillis()))
     }

@@ -203,6 +203,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
     var fee by remember { mutableStateOf(if ((existing?.monthlyFee ?: 0L) > 0L) existing?.monthlyFee.toString() else "") }
     var parent by remember { mutableStateOf(existing?.parentMobile.orEmpty()) }
     var subjects by remember { mutableStateOf(existing?.subjects.orEmpty()) }
+    var salary by remember { mutableStateOf(if ((existing?.salary ?: 0L) > 0L) existing?.salary.toString() else "") }
     var rate by remember { mutableStateOf(if ((existing?.classRate ?: 0L) > 0L) existing?.classRate.toString() else "") }
     var batchIds by remember { mutableStateOf(existing?.batchIds ?: (if (s.batchId.isBlank()) emptyList() else listOf(s.batchId))) }
     var perms by remember { mutableStateOf(existing?.perms ?: emptyList()) }
@@ -234,6 +235,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
             if (role == Role.TEACHER) {
                 Field("Subjects taught", subjects, { subjects = it })
                 Field("Pay per class (Rs, optional)", rate, { rate = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
+                Field("Fixed monthly salary (Rs, optional)", salary, { salary = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
             }
             if (role == Role.SUBADMIN) {
                 SectionTitle("What can this sub-admin do?")
@@ -258,7 +260,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
                         mobile = if (role == Role.SUBADMIN) "" else loginId.trim(),
                         rollNo = roll.trim(), standard = standard, parentMobile = parent.trim(),
                         monthlyFee = fee.toLongOrNull() ?: 0L, subjects = subjects.trim(),
-                        classRate = rate.toLongOrNull() ?: 0L,
+                        classRate = rate.toLongOrNull() ?: 0L, salary = salary.toLongOrNull() ?: 0L,
                         batchIds = batchIds, perms = perms
                     )
                     vm.saveUser(draft, password, isNew) { if (isNew && s.batchId.isBlank()) vm.replace(Screen.UserDetail(draft.id)) else vm.back() }

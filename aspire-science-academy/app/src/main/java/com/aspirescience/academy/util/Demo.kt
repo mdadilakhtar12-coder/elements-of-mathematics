@@ -7,6 +7,8 @@ import com.aspirescience.academy.data.ClassSession
 import com.aspirescience.academy.data.Exam
 import com.aspirescience.academy.data.Fee
 import com.aspirescience.academy.data.Homework
+import com.aspirescience.academy.data.LedgerEntry
+import com.aspirescience.academy.data.Paper
 import com.aspirescience.academy.data.Mark
 import com.aspirescience.academy.data.Notice
 import com.aspirescience.academy.data.Repo
@@ -186,39 +188,56 @@ object Demo {
         Repo.putAll("classes", classes)
         Repo.putAll("attendance", attendance)
 
-        // ---- exams, marks, leaderboards
+        // ---- exams (several papers each), marks, leaderboards
         var examNo = 0
         for (b in batches) {
             val kids = students.filter { b.id in it.batchIds }
             val plans = b.plans()
-            val defs = listOf(Triple("Unit Test 1", -25, 50L), Triple("Monthly Test", -6, 100L), Triple("Unit Test 3", 5, 50L))
-            defs.forEachIndexed { ei, def ->
+            val defs = listOf(Triple("Unit Test 1", -25, 30L), Triple("Monthly Test", -6, 50L), Triple("Unit Test 3", 5, 50L))
+            defs.forEach { def ->
                 examNo++
                 progress("Creating exams and marks " + examNo + " / " + (batches.size * defs.size))
+                val papers = ArrayList<Paper>()
+                for (p in plans) {
+                    if (p.subject == "Biology") {
+                        papers.add(Paper("Botany", def.third / 2))
+                        papers.add(Paper("Zoology", def.third / 2))
+                    } else {
+                        papers.add(Paper(p.subject, def.third))
+                    }
+                }
                 val ex = Exam(
                     id = PREFIX + "e" + examNo, name = def.first, batchId = b.id, batchName = b.name,
-                    subject = plans[ei % plans.size].subject, date = today.plusDays(def.second.toLong()).toString(),
-                    maxMarks = def.third
+                    subject = papers.joinToString(", ") { it.subject }, date = today.plusDays(def.second.toLong()).toString(),
+                    maxMarks = papers.sumOf { it.maxMarks }, papers = papers
                 )
                 if (def.second < 0) {
                     val marks = ArrayList<Mark>()
-                    val scores = ArrayList<Double>()
+                    val pcts = ArrayList<Double>()
                     for (s in kids) {
-                        val absent = rnd.nextInt(30) == 0
-                        val raw = def.third * ((ability[s.id] ?: 0.6) + (rnd.nextDouble() - 0.5) * 0.16)
-                        val v = Math.round(raw.coerceIn(0.0, def.third.toDouble()) * 2) / 2.0
-                        if (!absent) scores.add(v)
-                        marks.add(
-                            Mark(
-                                id = ex.id + "_" + s.id, examId = ex.id, examName = ex.name, subject = ex.subject,
-                                date = ex.date, maxMarks = ex.maxMarks, batchId = b.id, studentId = s.id,
-                                studentName = s.name, marks = if (absent) 0.0 else v, absent = absent
+                        var obtained = 0.0
+                        var maxSum = 0L
+                        for (p in papers) {
+                            val absent = rnd.nextInt(60) == 0
+                            val raw = p.maxMarks * ((ability[s.id] ?: 0.6) + (rnd.nextDouble() - 0.5) * 0.18)
+                            val v = Math.round(raw.coerceIn(0.0, p.maxMarks.toDouble()) * 2) / 2.0
+                            if (!absent) {
+                                obtained += v
+                                maxSum += p.maxMarks
+                            }
+                            marks.add(
+                                Mark(
+                                    id = ex.id + "_" + s.id + "_" + p.subject, examId = ex.id, examName = ex.name,
+                                    subject = p.subject, date = ex.date, maxMarks = p.maxMarks, batchId = b.id,
+                                    studentId = s.id, studentName = s.name, marks = if (absent) 0.0 else v, absent = absent
+                                )
                             )
-                        )
+                        }
+                        if (maxSum > 0) pcts.add(obtained * 100.0 / maxSum)
                     }
-                    ex.average = if (scores.isEmpty()) 0.0 else scores.sum() / scores.size
-                    ex.highest = scores.maxOrNull() ?: 0.0
-                    ex.appeared = scores.size.toLong()
+                    ex.average = if (pcts.isEmpty()) 0.0 else pcts.average()
+                    ex.highest = pcts.maxOrNull() ?: 0.0
+                    ex.appeared = pcts.size.toLong()
                     Repo.put("exams", ex)
                     Repo.putAll("marks", marks)
                 } else {
@@ -227,6 +246,29 @@ object Demo {
             }
             Repo.rebuildLeaderboard(b.id, b.name)
         }
+
+        // ---- accounts: other income and expenses of the last 3 months
+        progress("Creating accounts entries")
+        val ledger = ArrayList<LedgerEntry>()
+        var ln = 0
+        fun entry(type: String, month: String, day: Int, cat: String, note: String, amt: Long) {
+            ln++
+            val date = month + "-" + day.toString().padStart(2, '0')
+            ledger.add(LedgerEntry(PREFIX + "l" + ln, type, date, month, cat, note, amt, "Admin", now - ln * 1000L))
+        }
+        val lm0 = D.thisMonth()
+        for (m in listOf(D.shiftMonth(lm0, -2), D.shiftMonth(lm0, -1), lm0)) {
+            val cap = if (m == lm0) minOf(today.dayOfMonth, 28) else 28
+            entry("expense", m, 1, "Room rent", "Monthly rent", 25000)
+            entry("expense", m, minOf(5, cap), "Electricity", "", 3500L + rnd.nextInt(1500))
+            entry("expense", m, minOf(5, cap), "Internet", "Broadband", 1200)
+            entry("expense", m, minOf(8, cap), "Advertisement", "Pamphlets and banners", 6000L + rnd.nextInt(3000))
+            entry("expense", m, minOf(10, cap), "Stationery (pen, pencil, chalk)", "", 1800L + rnd.nextInt(1200))
+            entry("expense", m, minOf(12, cap), "Marketing", "Social media promotion", 4000L + rnd.nextInt(3000))
+        }
+        entry("income", D.shiftMonth(lm0, -1), 6, "Admission fee", "New admissions", 12000)
+        entry("income", lm0, 4, "Books and material", "Study material sale", 4500)
+        Repo.putAll("ledger", ledger)
 
         // ---- fees
         progress("Creating fee payments")
@@ -277,7 +319,7 @@ object Demo {
     }
 
     suspend fun remove(users: List<UserProfile>, progress: (String) -> Unit): String {
-        for (col in listOf("attendance", "marks", "fees", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
+        for (col in listOf("attendance", "marks", "fees", "ledger", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
             progress("Removing demo $col")
             Repo.deleteAll(col, Repo.idsWithPrefix(col, PREFIX))
         }

@@ -86,19 +86,35 @@ object ReportCard {
             y += 6f
             c.drawLine(40f, y, w - 40f, y, line)
             y += 14f
-            for (m in marks) {
-                need(20f)
-                val p = if (m.maxMarks > 0 && !m.absent) Math.round(m.marks * 100.0 / m.maxMarks).toString() + "%" else "-"
-                c.drawText(m.examName.take(30), 40f, y, ink)
-                c.drawText(m.subject.take(14), 230f, y, ink)
-                c.drawText(D.shortDate(m.date), 320f, y, ink)
-                c.drawText(if (m.absent) "Absent" else fmt(m.marks) + " / " + m.maxMarks, 400f, y, ink)
-                c.drawText(p, 480f, y, ink)
-                y += 18f
+            for (g in marks.groupBy { it.examId }.values) {
+                for (m in g) {
+                    need(20f)
+                    val p = if (m.maxMarks > 0 && !m.absent) Math.round(m.marks * 100.0 / m.maxMarks).toString() + "%" else "-"
+                    c.drawText(m.examName.take(30), 40f, y, ink)
+                    c.drawText(m.subject.take(14), 230f, y, ink)
+                    c.drawText(D.shortDate(m.date), 320f, y, ink)
+                    c.drawText(if (m.absent) "Absent" else fmt(m.marks) + " / " + m.maxMarks, 400f, y, ink)
+                    c.drawText(p, 480f, y, ink)
+                    y += 18f
+                }
+                val ok = g.filter { !it.absent && it.maxMarks > 0 }
+                if (g.size > 1 && ok.isNotEmpty()) {
+                    need(20f)
+                    val mx = ok.sumOf { it.maxMarks }
+                    val ob = ok.sumOf { it.marks }
+                    c.drawText("Total", 230f, y, bold)
+                    c.drawText(fmt(ob) + " / " + mx, 400f, y, bold)
+                    c.drawText(Math.round(ob * 100.0 / mx).toString() + "%", 480f, y, bold)
+                    y += 20f
+                }
             }
-            val scored = marks.filter { !it.absent && it.maxMarks > 0 }
-            if (scored.isNotEmpty()) {
-                val avg = scored.sumOf { it.marks * 100.0 / it.maxMarks } / scored.size
+            val perExam = marks.groupBy { it.examId }.values.mapNotNull { g ->
+                val ok = g.filter { !it.absent && it.maxMarks > 0 }
+                val mx = ok.sumOf { it.maxMarks }
+                if (mx > 0) ok.sumOf { it.marks } * 100.0 / mx else null
+            }
+            if (perExam.isNotEmpty()) {
+                val avg = perExam.average()
                 y += 6f
                 c.drawText("Overall average: " + Math.round(avg) + "%", 40f, y, bold)
                 y += 18f

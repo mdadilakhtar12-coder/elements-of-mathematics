@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -106,6 +107,9 @@ fun FeesTab(vm: AppViewModel) {
                     StatTile("Pending (" + due.size + ")", D.rs(dueTotal), if (dueTotal > 0) Red else Grey, Modifier.weight(1f))
                 }
                 Segmented(listOf("Payments (" + payments.size + ")", "Pending (" + due.size + ")"), seg, { seg = it })
+                OutlinedButton(onClick = { vm.go(Screen.Accounts) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Accounts: profit, loss and expenses")
+                }
             }
             Box(Modifier.weight(1f)) {
                 if (seg == 0) {

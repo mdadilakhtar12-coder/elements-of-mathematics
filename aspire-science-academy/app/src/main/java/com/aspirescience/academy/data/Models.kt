@@ -37,7 +37,7 @@ object Perm {
         SCHEDULE -> "Timetable"
         ATTENDANCE -> "Attendance & Approvals"
         EXAMS -> "Exams & Marks"
-        FEES -> "Fees"
+        FEES -> "Fees & Accounts"
         NOTICES -> "Announcements & Homework"
         else -> p
     }
@@ -75,6 +75,7 @@ data class UserProfile(
     var monthlyFee: Long = 0,
     var subjects: String = "",
     var classRate: Long = 0, // teacher pay per completed class (Rs)
+    var salary: Long = 0, // teacher fixed monthly salary (Rs), added to the per-class pay
     var demo: Boolean = false, // created by "Demo data"
     var createdAt: Long = 0
 ) : HasId
@@ -143,18 +144,33 @@ data class Attendance(
     var status: String = "P" // P = present, A = absent, L = late
 ) : HasId
 
+/** One paper (subject) of an exam with its own maximum marks. */
+data class Paper(
+    var subject: String = "",
+    var maxMarks: Long = 50
+)
+
 data class Exam(
     override var id: String = "",
     var name: String = "",
     var batchId: String = "",
     var batchName: String = "",
-    var subject: String = "",
+    var subject: String = "", // all paper names, for lists
     var date: String = "",
-    var maxMarks: Long = 100,
-    var average: Double = 0.0,
-    var highest: Double = 0.0,
-    var appeared: Long = 0
-) : HasId
+    var maxMarks: Long = 100, // total of all papers
+    var average: Double = 0.0, // average total percentage of the batch
+    var highest: Double = 0.0, // highest total percentage
+    var appeared: Long = 0,
+    var papers: List<Paper> = emptyList()
+) : HasId {
+    /** Papers of this exam. Exams saved by the first version have a single paper. */
+    fun paperList(): List<Paper> = if (papers.isNotEmpty()) papers else listOf(Paper(subject, maxMarks))
+
+    fun totalMax(): Long = paperList().sumOf { it.maxMarks }
+
+    fun avgPct(): Double = if (papers.isEmpty() && maxMarks > 0) average * 100.0 / maxMarks else average
+    fun highestPct(): Double = if (papers.isEmpty() && maxMarks > 0) highest * 100.0 / maxMarks else highest
+}
 
 data class Mark(
     override var id: String = "",
@@ -218,4 +234,17 @@ data class Leaderboard(
     var batchName: String = "",
     var entries: List<LbEntry> = emptyList(),
     var updatedAt: Long = 0
+) : HasId
+
+/** One income or expense entry of the institute (student fees are counted automatically). */
+data class LedgerEntry(
+    override var id: String = "",
+    var type: String = "expense", // "income" or "expense"
+    var date: String = "",
+    var month: String = "",
+    var category: String = "",
+    var note: String = "",
+    var amount: Long = 0,
+    var createdBy: String = "",
+    var createdAt: Long = 0
 ) : HasId
