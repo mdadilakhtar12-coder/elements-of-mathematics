@@ -120,6 +120,12 @@ fun ClassCard(vm: AppViewModel, c: ClassSession, showDate: Boolean = false) {
             Pill(statusLabel(vm, c.status), statusColor(c.status))
         }
         if (c.topic.isNotBlank()) Text("Topic: " + c.topic, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+        val me = vm.me
+        val canMark = me != null && (c.status == CS.SCHEDULED || c.status == CS.REJECTED) &&
+            (vm.can(Perm.ATTENDANCE) || (me.role == Role.TEACHER && c.teacherId == me.id && c.date <= D.today()))
+        if (canMark) {
+            Text("Tap to take attendance", color = Indigo, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        }
     }
 }
 
