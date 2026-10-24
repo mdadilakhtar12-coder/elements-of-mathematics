@@ -1,0 +1,24 @@
+{
+  "name": "aspire-academy-mcp",
+  "version": "1.0.0",
+  "description": "MCP server so Claude can run Aspire Science Academy (students, attendance, exams, fees, accounts)",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "aspire-academy-mcp": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test/logic.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "firebase-admin": "^14.5.0",
+    "zod": "^4.6.7"
+  }
+}

@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "aspire-science-academy/**"
+      - "!aspire-science-academy/mcp-server/**"
       - ".github/workflows/build-aspire-apk.yml"
   workflow_dispatch:
 
