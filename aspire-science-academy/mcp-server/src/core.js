@@ -1,7 +1,7 @@
 import { all, where, getDoc, col, setMany } from "./db.js";
 import {
   digits, last10, plansOf, examTotal, leaderboardEntries, shiftMonth, thisMonth, monthEnd,
-  DEFAULT_TEMPLATES, fillTemplate, whatsappLink, ACADEMY, rs, monthLabel,
+  DEFAULT_TEMPLATES, fillTemplate, whatsappLink, ACADEMY, rs, monthLabel, teacherPay,
 } from "./logic.js";
 import { z } from "zod";
 
@@ -140,16 +140,16 @@ export async function accountsFor(month) {
     .filter((u) => u.role === "teacher" && (u.active !== false || approved.some((c) => c.teacherId === u.id)))
     .map((t) => {
       const n = approved.filter((c) => c.teacherId === t.id).length;
-      const amount = n * (t.classRate || 0) + (t.salary || 0);
+      const pay = teacherPay(t, n);
       const rec = paid.find((p) => p.teacherId === t.id);
-      return { teacher: t.name, teacherId: t.id, classes: n, rate: t.classRate || 0, salary: t.salary || 0, amount, paid: !!rec, paidOn: rec?.date || null };
+      return { teacher: t.name, teacherId: t.id, type: pay.type, classes: n, rate: pay.rate, salary: pay.salary, amount: pay.amount, paid: !!rec, paidOn: rec?.date || null };
     })
     .filter((p) => p.amount > 0);
-  const teacherPay = payLines.reduce((a, p) => a + p.amount, 0);
+  const teacherPayTotal = payLines.reduce((a, p) => a + p.amount, 0);
   const otherIncome = income.reduce((a, e) => a + e.amount, 0);
   const manualExpense = expense.reduce((a, e) => a + e.amount, 0);
   const moneyIn = feeIncome + otherIncome;
-  const moneyOut = manualExpense + teacherPay;
+  const moneyOut = manualExpense + teacherPayTotal;
   const expected = students
     .filter((s) => s.active !== false && s.monthlyFee > 0 && !(s.createdAt > 0 && monthOf(s.createdAt) > month))
     .reduce((a, s) => a + s.monthlyFee, 0);
@@ -159,7 +159,7 @@ export async function accountsFor(month) {
     studentFees: { receivedThisMonthByDate: feeIncome, expectedForMonth: expected, receivedForMonth: received, stillToCollect: Math.max(0, expected - received) },
     otherIncome: group(income), otherIncomeTotal: otherIncome,
     expenses: group(expense), expensesTotal: manualExpense,
-    teacherPay: { total: teacherPay, paidSoFar: payLines.filter((p) => p.paid).reduce((a, p) => a + p.amount, 0), lines: payLines },
+    teacherPay: { total: teacherPayTotal, paidSoFar: payLines.filter((p) => p.paid).reduce((a, p) => a + p.amount, 0), lines: payLines },
     entries: [...ledger].sort((a, b) => (a.date < b.date ? 1 : -1)),
   };
 }

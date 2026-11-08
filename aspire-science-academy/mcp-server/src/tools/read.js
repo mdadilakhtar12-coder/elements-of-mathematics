@@ -5,7 +5,7 @@ import {
 } from "../core.js";
 import {
   today, addDays, thisMonth, shiftMonth, plansOf, papersOf, examTotal, rs, monthLabel, last10,
-  fillTemplate, whatsappLink, ACADEMY, DAY_NAMES,
+  fillTemplate, whatsappLink, ACADEMY, DAY_NAMES, teacherPay, isPermanent, leaveYear, LEAVE_QUOTA, LEAVE_YEAR_START_MONTH,
 } from "../logic.js";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
@@ -16,6 +16,14 @@ const brief = (u, batches) => ({
   batches: (u.batchIds || []).map((id) => batches.find((b) => b.id === id)?.name).filter(Boolean),
   monthlyFee: u.monthlyFee || 0, parentMobile: u.parentMobile || "", active: u.active !== false,
 });
+
+async function leaveBalance(teacherId) {
+  const year = leaveYear(today(), LEAVE_YEAR_START_MONTH);
+  const mine = (await where("leaves", "teacherId", "==", teacherId)).filter((l) => l.year === year);
+  const taken = mine.filter((l) => l.status === "approved").reduce((a, l) => a + l.days, 0);
+  const waiting = mine.filter((l) => l.status === "pending").reduce((a, l) => a + l.days, 0);
+  return { year, quota: LEAVE_QUOTA, taken, waiting, left: Math.max(0, LEAVE_QUOTA - taken) };
+}
 
 export function register(server) {
   def(server, "academy_overview",
@@ -84,7 +92,7 @@ export function register(server) {
     const [users, batches] = await Promise.all([all("users"), all("batches")]);
     return ok(users.filter((u) => u.role === "teacher").sort((a, b) => a.name.localeCompare(b.name)).map((t) => ({
       id: t.id, name: t.name, mobile: t.mobile || t.loginId, subjects: t.subjects || "", active: t.active !== false,
-      payPerClass: t.classRate || 0, fixedMonthlySalary: t.salary || 0,
+      type: isPermanent(t) ? "permanent" : "guest", payPerClass: t.classRate || 0, monthlySalary: t.salary || 0,
       teaches: batches.flatMap((b) => plansOf(b).filter((p) => p.teacherId === t.id).map((p) => `${p.subject || "-"} (${b.name})`)),
     })));
   });
@@ -103,7 +111,8 @@ export function register(server) {
         waitingApproval: classes.filter((c) => c.status === "taken").length,
         notTaken: classes.filter((c) => ["scheduled", "rejected"].includes(c.status) && c.date < today()).length,
         cancelled: classes.filter((c) => c.status === "cancelled").length,
-        pay: { amount: approved * (t.classRate || 0) + (t.salary || 0), perClass: t.classRate || 0, fixedSalary: t.salary || 0 },
+        pay: teacherPay(t, approved),
+        leave: isPermanent(t) ? await leaveBalance(t.id) : "guest teacher (no leave)",
         paid: rec ? { on: rec.date, amount: rec.amount, mode: rec.mode } : false,
       });
     });

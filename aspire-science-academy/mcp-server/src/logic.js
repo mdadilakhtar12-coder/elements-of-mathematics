@@ -137,12 +137,32 @@ export function leaderboardEntries(marks) {
   return entries.sort((a, b) => b.pct - a.pct).slice(0, 100);
 }
 
-/** Teacher pay for a month: approved classes x rate + fixed salary. */
+/** Permanent teachers get a monthly salary and casual leave; guest teachers are paid per approved class. */
+export function isPermanent(teacher) {
+  return teacher.teacherType ? teacher.teacherType === "permanent" : (teacher.salary || 0) > 0;
+}
+
+/** Teacher pay for a month, same rule as the app. */
 export function teacherPay(teacher, approvedClassCount) {
   const rate = teacher.classRate || 0;
   const salary = teacher.salary || 0;
-  return { classes: approvedClassCount, rate, salary, amount: approvedClassCount * rate + salary };
+  const permanent = isPermanent(teacher);
+  return { type: permanent ? "permanent" : "guest", classes: approvedClassCount, rate, salary, amount: permanent ? salary : approvedClassCount * rate };
 }
+
+export const LEAVE_QUOTA = 15;
+export const LEAVE_YEAR_START_MONTH = 1;
+export function leaveYear(iso, startMonth = LEAVE_YEAR_START_MONTH) {
+  const y = Number(iso.slice(0, 4));
+  const m = Number(iso.slice(5, 7));
+  if (startMonth <= 1) return String(y);
+  const s = m >= startMonth ? y : y - 1;
+  return `${s}-${String((s + 1) % 100).padStart(2, "0")}`;
+}
+export function daysBetween(from, to) {
+  return Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
+}
+export const DEFAULT_SUBJECTS = ["MIL", "English", "Physics", "Chemistry", "Mathematics", "Biology", "Botany", "Zoology", "IT"];
 
 export function fillTemplate(text, vars) {
   let out = text;

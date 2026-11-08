@@ -23,7 +23,7 @@ function profile(uid, p) {
     id: uid, role: p.role, name: p.name, loginId: p.loginId, mobile: p.mobile ?? p.loginId, active: true,
     perms: [], batchIds: p.batchIds || [], rollNo: p.rollNo || "", standard: p.standard || "",
     parentMobile: p.parentMobile || "", monthlyFee: p.monthlyFee || 0, subjects: p.subjects || "",
-    classRate: p.classRate || 0, salary: p.salary || 0, demo: false, createdAt: Date.now(),
+    classRate: p.classRate || 0, salary: p.salary || 0, teacherType: p.teacherType || "", demo: false, createdAt: Date.now(),
   };
 }
 
@@ -61,12 +61,16 @@ export function register(server) {
     }, { write: true });
 
   def(server, "create_teacher",
-    "Add a teacher. Mobile number is the login ID. classRate = pay per completed class (Rs), salary = fixed monthly salary (Rs), both optional.",
-    { name: z.string(), mobile: z.string(), password: z.string().optional(), subjects: z.string().optional(), classRate: z.number().optional(), salary: z.number().optional() },
+    "Add a teacher. Mobile number is the login ID. type = 'permanent' (monthly salary + 15 days casual leave a year) or 'guest' (paid per approved class). Give salary for permanent, classRate for guest.",
+    { name: z.string(), mobile: z.string(), password: z.string().optional(), subjects: z.string().optional(), type: z.enum(["permanent", "guest"]).optional(), classRate: z.number().optional(), salary: z.number().optional() },
     async (a) => {
       const users = await all("users");
-      const { doc, password } = await makeUser(users, { role: "teacher", name: a.name, mobile: a.mobile, subjects: a.subjects, classRate: a.classRate, salary: a.salary }, a.password);
-      return ok({ created: doc.name, loginId: doc.loginId, password });
+      const type = a.type || ((a.salary || 0) > 0 ? "permanent" : "guest");
+      const { doc, password } = await makeUser(users, {
+        role: "teacher", name: a.name, mobile: a.mobile, subjects: a.subjects, teacherType: type,
+        classRate: type === "guest" ? a.classRate : 0, salary: type === "permanent" ? a.salary : 0,
+      }, a.password);
+      return ok({ created: doc.name, type, loginId: doc.loginId, password });
     }, { write: true });
 
   def(server, "bulk_import_students",
@@ -106,7 +110,7 @@ export function register(server) {
     {
       user: z.string().describe("Name or mobile"),
       name: z.string().optional(), rollNo: z.string().optional(), standard: z.string().optional(), parentMobile: z.string().optional(),
-      monthlyFee: z.number().optional(), subjects: z.string().optional(), classRate: z.number().optional(), salary: z.number().optional(), active: z.boolean().optional(),
+      monthlyFee: z.number().optional(), subjects: z.string().optional(), classRate: z.number().optional(), salary: z.number().optional(), teacherType: z.enum(["permanent", "guest"]).optional(), active: z.boolean().optional(),
     },
     async ({ user, ...fields }) => {
       const u = findUser(await all("users"), user);

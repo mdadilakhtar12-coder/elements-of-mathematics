@@ -1,14 +1,16 @@
 import { z } from "zod";
 import { all, col, newId, getDoc } from "../db.js";
 import { def, ok, findBatch, adminName, confirmField, needConfirm, templates } from "../core.js";
-import { DEFAULT_TEMPLATES } from "../logic.js";
+import { DEFAULT_TEMPLATES, DEFAULT_SUBJECTS, isPermanent, leaveYear, daysBetween, LEAVE_QUOTA, LEAVE_YEAR_START_MONTH, today } from "../logic.js";
+import { findUser } from "../core.js";
+import { where } from "../db.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
 const KINDS = { notice: "notices", homework: "homework", material: "materials", doubt: "doubts" };
-const BACKUP = ["users", "batches", "classes", "attendance", "exams", "marks", "fees", "ledger", "salaryPaid", "homework", "notices", "materials", "doubts", "leaderboards", "settings"];
+const BACKUP = ["leaves", "users", "batches", "classes", "attendance", "exams", "marks", "fees", "ledger", "salaryPaid", "homework", "notices", "materials", "doubts", "leaderboards", "settings"];
 
 export function register(server) {
   def(server, "post_notice", "Post an announcement to everyone, or to one batch.", { title: z.string(), body: z.string(), batch: z.string().optional() }, async ({ title, body, batch }) => {
@@ -47,6 +49,45 @@ export function register(server) {
       await col(KINDS[kind]).doc(id).delete();
       return ok({ deleted: id });
     }, { write: true });
+
+  def(server, "list_leaves", "Leave requests of permanent teachers. Filter by status (pending / approved / rejected) or teacher.", { status: z.string().optional(), teacher: z.string().optional() }, async ({ status, teacher }) => {
+    let list = await all("leaves");
+    if (teacher) { const t = findUser(await all("users"), teacher, "teacher"); list = list.filter((l) => l.teacherId === t.id); }
+    if (status) list = list.filter((l) => l.status === status);
+    return ok(list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((l) => ({ id: l.id, teacher: l.teacherName, from: l.from, to: l.to, days: l.days, reason: l.reason, status: l.status, decidedBy: l.decidedBy || null })));
+  });
+
+  def(server, "decide_leave", "Approve or reject a teacher's leave request (get the id from list_leaves).", { leave_id: z.string(), action: z.enum(["approve", "reject"]) }, async ({ leave_id, action }) => {
+    const l = await getDoc("leaves", leave_id);
+    if (!l) throw new Error("Leave request not found.");
+    const affected = (await where("classes", "teacherId", "==", l.teacherId)).filter((c) => c.date >= l.from && c.date <= l.to && c.status !== "cancelled");
+    await col("leaves").doc(leave_id).update({ status: action === "approve" ? "approved" : "rejected", decidedBy: adminName(), decidedAt: Date.now() });
+    return ok({ teacher: l.teacherName, leave: `${l.from} to ${l.to}`, decision: action === "approve" ? "approved" : "rejected", classesInThoseDays: affected.length, note: affected.length ? "These classes may need a substitute teacher (use update_class)." : undefined });
+  }, { write: true });
+
+  def(server, "add_leave", "Record a leave for a permanent teacher on their behalf (default: already approved).",
+    { teacher: z.string(), from: date, to: date.optional(), reason: z.string().optional(), approved: z.boolean().optional() }, async ({ teacher, from, to, reason, approved }) => {
+      const t = findUser(await all("users"), teacher, "teacher");
+      if (!isPermanent(t)) throw new Error(`${t.name} is a guest teacher. Leave is only for permanent teachers.`);
+      const end = to || from;
+      const days = daysBetween(from, end);
+      if (days < 1) throw new Error("'to' is before 'from'.");
+      const id = newId("leaves");
+      const ok2 = approved !== false;
+      await col("leaves").doc(id).set({ id, teacherId: t.id, teacherName: t.name, from, to: end, days, reason: reason || "", status: ok2 ? "approved" : "pending", year: leaveYear(from, LEAVE_YEAR_START_MONTH), decidedBy: ok2 ? adminName() : "", decidedAt: ok2 ? Date.now() : 0, createdAt: Date.now() });
+      return ok({ recorded: `${t.name}: ${from} to ${end} (${days} days)`, status: ok2 ? "approved" : "pending" });
+    }, { write: true });
+
+  def(server, "get_subjects", "The list of subjects used in the app (batches, exams, classes).", {}, async () => {
+    const d = await getDoc("settings", "subjects");
+    return ok({ subjects: d?.list?.length ? d.list : DEFAULT_SUBJECTS, note: "Biology is made of Botany + Zoology papers." });
+  });
+
+  def(server, "set_subjects", "Replace the subject list used in the app.", { subjects: z.array(z.string()).min(1) }, async ({ subjects }) => {
+    const list = [...new Set(subjects.map((s) => s.trim()).filter(Boolean))];
+    await col("settings").doc("subjects").set({ list });
+    return ok({ subjects: list });
+  }, { write: true });
 
   def(server, "get_message_templates", "Show the WhatsApp message texts used for parents (absent, feeDue, result, general).", {}, async () => ok(await templates()));
 

@@ -128,7 +128,7 @@ export function register(server) {
     "Take attendance of a class (as admin: saved as approved). Give class_id, OR batch + date (+ subject if the batch has several classes that day). Students not listed get default_status (P present by default).",
     {
       class_id: z.string().optional(), batch: z.string().optional(), date: date.optional(), subject: z.string().optional(),
-      records: z.array(z.object({ student: z.string(), status: z.enum(["P", "A", "L"]) })).optional(),
+      records: z.array(z.object({ student: z.string(), status: z.enum(["P", "A", "L"]), late_time: z.string().optional().describe("when a late student came, e.g. 16:25 or 4:25 PM") })).optional(),
       default_status: z.enum(["P", "A", "L"]).optional(), approve: z.boolean().optional().describe("false = leave it waiting for approval"), topic: z.string().optional(),
     },
     async ({ class_id, batch, date: d, subject, records, default_status, approve, topic }) => {
@@ -147,10 +147,15 @@ export function register(server) {
       if (c.status === "cancelled") throw new Error("This class is cancelled.");
       const kids = studentsOfBatch(users, c.batchId);
       const set = new Map();
-      for (const r of records || []) set.set(findUser(kids, r.student, "student").id, r.status);
+      const late = new Map();
+      for (const r of records || []) {
+        const id = findUser(kids, r.student, "student").id;
+        set.set(id, r.status);
+        if (r.status === "L" && r.late_time) late.set(id, parseTime(r.late_time));
+      }
       const docs = kids.map((s) => ({
         id: `${c.id}_${s.id}`, classId: c.id, batchId: c.batchId, batchName: c.batchName, subject: c.subject,
-        studentId: s.id, studentName: s.name, date: c.date, status: set.get(s.id) || default_status || "P",
+        studentId: s.id, studentName: s.name, date: c.date, status: set.get(s.id) || default_status || "P", lateTime: late.get(s.id) || "",
       }));
       await setMany("attendance", docs);
       const approved = approve !== false;

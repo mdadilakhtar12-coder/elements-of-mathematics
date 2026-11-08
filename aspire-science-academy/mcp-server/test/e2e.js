@@ -26,8 +26,9 @@ const tools = (await client.listTools()).tools;
 console.log("tools:", tools.length);
 
 // setup
-await call("create_teacher", { name: "Rakesh Sharma", mobile: "9000000001", subjects: "Physics", classRate: 400 });
-await call("create_teacher", { name: "Neha Verma", mobile: "9000000002", subjects: "Chemistry", classRate: 300, salary: 5000 });
+await call("create_teacher", { name: "Rakesh Sharma", mobile: "9000000001", subjects: "Physics", type: "guest", classRate: 400 });
+const nv = await call("create_teacher", { name: "Neha Verma", mobile: "9000000002", subjects: "Chemistry", type: "permanent", salary: 5000 });
+check("permanent teacher", nv.type === "permanent", JSON.stringify(nv));
 const b = await call("create_batch", {
   standard: "11th Science", name: "11th Science - Group A",
   subjects: [
@@ -59,7 +60,7 @@ check("generating twice creates nothing new", gen2.classesCreated === 0, JSON.st
 // a past class to take attendance on
 const past = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
 const added = await call("add_class", { batch: "11th Science - Group A", date: past, start: "16:00", end: "17:00", subject: "Physics" });
-const att = await call("mark_attendance", { class_id: added.id, records: [{ student: "Riya Patel", status: "A" }, { student: "Sana Khan", status: "L" }] });
+const att = await call("mark_attendance", { class_id: added.id, records: [{ student: "Riya Patel", status: "A" }, { student: "Sana Khan", status: "L", late_time: "4:25 PM" }] });
 check("attendance counts", att.present === 2 && att.absent === 1 && att.late === 1, JSON.stringify(att));
 const rep = await call("get_attendance_report", { batch: "11th Science - Group A" });
 check("attendance report", rep.lowestFirst[0].name === "Riya Patel", JSON.stringify(rep).slice(0, 200));
@@ -97,8 +98,25 @@ await call("add_ledger_entry", { type: "expense", category: "Room rent", amount:
 await call("add_ledger_entry", { type: "income", category: "Admission fee", amount: 3000 });
 await call("mark_teacher_paid", { teacher: "Rakesh Sharma", amount: 400 });
 const acc = await call("accounts_summary", {});
-check("accounts add up", acc.moneyIn === 5200 && acc.expensesTotal === 25000 && acc.teacherPay.total >= 400, JSON.stringify({ in: acc.moneyIn, out: acc.moneyOut, tp: acc.teacherPay }));
+check("accounts add up", acc.moneyIn === 5200 && acc.expensesTotal === 25000, JSON.stringify({ in: acc.moneyIn, out: acc.moneyOut }));
+check("guest paid per class, permanent monthly salary", acc.teacherPay.lines.find((l) => l.teacher === "Rakesh Sharma")?.amount === 400 && acc.teacherPay.lines.find((l) => l.teacher === "Neha Verma")?.amount === 5000, JSON.stringify(acc.teacherPay.lines));
 check("teacher marked paid", acc.teacherPay.lines.find((l) => l.teacher === "Rakesh Sharma")?.paid === true);
+
+// leave and subjects
+const day1 = new Date().toISOString().slice(0, 10), day2 = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+await call("add_leave", { teacher: "Rakesh Sharma", from: day1 }, true); // guest teacher: no leave
+const lv = await call("add_leave", { teacher: "Neha Verma", from: day1, to: day2, reason: "Family function" });
+check("leave recorded as approved", lv.status === "approved", JSON.stringify(lv));
+const lp = await call("add_leave", { teacher: "Neha Verma", from: day2, approved: false });
+const pend = await call("list_leaves", { status: "pending" });
+check("one pending leave", pend.length === 1, JSON.stringify(pend));
+const dec = await call("decide_leave", { leave_id: pend[0].id, action: "approve" });
+const gt = await call("get_teacher", { teacher: "Neha Verma" });
+check("leave balance 15 - 3 = 12", gt.leave.taken === 3 && gt.leave.left === 12, JSON.stringify(gt.leave));
+const sj = await call("get_subjects");
+check("default subjects", sj.subjects.includes("MIL") && sj.subjects.includes("Zoology"), JSON.stringify(sj));
+await call("set_subjects", { subjects: ["MIL", "English", "Physics"] });
+check("subjects changed", (await call("get_subjects")).subjects.length === 3);
 
 // content and messages
 await call("post_notice", { title: "Holiday", body: "No class on Sunday" });
@@ -129,6 +147,9 @@ await call("delete_exam", { exam: "Unit Test 1", confirm: true });
 await call("get_student", { student: "Nobody Here" }, true);
 const bk = await call("export_backup", { folder: "/tmp/aspire-backup-test" });
 check("backup written", bk.counts?.users >= 4, JSON.stringify(bk).slice(0, 200));
+const fs = await import("node:fs");
+const attRows = JSON.parse(fs.readFileSync("/tmp/aspire-backup-test/attendance.json", "utf8"));
+check("late time saved as 16:25", attRows.some((a) => a.status === "L" && a.lateTime === "16:25"), JSON.stringify(attRows.filter((a) => a.status === "L")));
 
 await client.close();
 console.log(failures ? `\n${failures} FAILURES` : "\nALL OK");
