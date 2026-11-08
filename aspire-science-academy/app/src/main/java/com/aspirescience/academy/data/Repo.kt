@@ -147,6 +147,29 @@ object Repo {
     fun doubtsOfStudent(uid: String): Flow<List<Doubt>> =
         db.collection("doubts").whereEqualTo("studentId", uid).models()
 
+    fun leavesOfTeacher(uid: String): Flow<List<LeaveRequest>> =
+        db.collection("leaves").whereEqualTo("teacherId", uid).models()
+
+    fun leavesAll(): Flow<List<LeaveRequest>> =
+        db.collection("leaves").orderBy("createdAt", Query.Direction.DESCENDING).limit(300).models()
+
+    /** Subject list edited by the admin (settings/subjects). Empty when never edited. */
+    fun subjectSettings(): Flow<List<String>> = callbackFlow {
+        val reg = db.collection("settings").document("subjects").addSnapshotListener { s, e ->
+            if (e != null) return@addSnapshotListener
+            if (s != null && s.exists()) {
+                @Suppress("UNCHECKED_CAST")
+                val l = (s.get("list") as? List<Any?>)?.mapNotNull { it as? String }.orEmpty()
+                trySend(l)
+            }
+        }
+        awaitClose { reg.remove() }
+    }
+
+    suspend fun saveSubjects(list: List<String>) {
+        db.collection("settings").document("subjects").set(mapOf("list" to list)).await()
+    }
+
     fun leaderboards(): Flow<List<Leaderboard>> = db.collection("leaderboards").models()
 
     // ---------- one-time reads ----------
@@ -154,6 +177,8 @@ object Repo {
     private suspend inline fun <reified T : HasId> Query.once(): List<T> =
         get().await().documents.mapNotNull { d -> d.toObject(T::class.java)?.also { m -> m.id = d.id } }
 
+    suspend fun leavesOnceOf(uid: String): List<LeaveRequest> = db.collection("leaves").whereEqualTo("teacherId", uid).once()
+    suspend fun leavesPending(): List<LeaveRequest> = db.collection("leaves").whereEqualTo("status", "pending").once()
     suspend fun materialsSince(ms: Long): List<StudyMaterial> = db.collection("materials").whereGreaterThan("createdAt", ms).once()
     suspend fun doubtsSince(ms: Long): List<Doubt> = db.collection("doubts").whereGreaterThan("createdAt", ms).once()
     suspend fun doubtsOnceOf(studentId: String): List<Doubt> = db.collection("doubts").whereEqualTo("studentId", studentId).once()

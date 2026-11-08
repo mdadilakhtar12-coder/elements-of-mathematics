@@ -45,7 +45,10 @@ import com.aspirescience.academy.data.UserProfile
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.Screen
 import com.aspirescience.academy.ui.common.AppCard
+import com.aspirescience.academy.ui.common.ClickField
 import com.aspirescience.academy.ui.common.ConfirmDialog
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import com.aspirescience.academy.ui.common.DateField
 import com.aspirescience.academy.ui.common.DropdownField
 import com.aspirescience.academy.ui.common.Field
@@ -166,17 +169,14 @@ fun FeeAddScreen(vm: AppViewModel, s: Screen.FeeAdd) {
     var mode by remember { mutableStateOf(AppConfig.PAY_MODES[0]) }
     var date by remember { mutableStateOf(D.today()) }
     var note by remember { mutableStateOf("") }
+    var pickStudent by remember { mutableStateOf(false) }
     val months = (-8..2).map { D.shiftMonth(D.thisMonth(), it.toLong()) }
 
     Page("Collect Fee", vm::back) {
         FormColumn {
-            PickerField(
-                "Student", vm.user(studentId)?.name.orEmpty(),
-                vm.students.filter { it.active }.map { it.id to (it.name + if (it.standard.isBlank()) "" else " (" + it.standard + ")") },
-                {
-                    studentId = it
-                    if (amount.isBlank()) amount = vm.user(it)?.monthlyFee?.takeIf { f -> f > 0 }?.toString().orEmpty()
-                }
+            ClickField(
+                "Student", vm.user(studentId)?.name.orEmpty(), { pickStudent = true },
+                placeholder = "Tap to choose (filter by class or search by name)"
             )
             DropdownField("Fee for month", D.monthLabel(month), months.map { D.monthLabel(it) }, { month = months[it] })
             Field("Amount (Rs)", amount, { amount = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
@@ -201,6 +201,67 @@ fun FeeAddScreen(vm: AppViewModel, s: Screen.FeeAdd) {
             }, busy = vm.busy)
         }
     }
+    if (pickStudent) {
+        StudentPickerDialog(vm, { pickStudent = false }) { id ->
+            pickStudent = false
+            studentId = id
+            if (amount.isBlank()) amount = vm.user(id)?.monthlyFee?.takeIf { f -> f > 0 }?.toString().orEmpty()
+        }
+    }
+}
+
+/** Student chooser with a class filter, a batch filter and a name search. */
+@Composable
+fun StudentPickerDialog(vm: AppViewModel, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    var q by remember { mutableStateOf("") }
+    var std by remember { mutableStateOf("") }
+    var batch by remember { mutableStateOf("") }
+    val standards = (vm.students.map { it.standard } + vm.batches.map { it.standard }).filter { it.isNotBlank() }.distinct().sorted()
+    val batchOptions = vm.batches.filter { std.isEmpty() || it.standard == std }
+    val list = vm.students.filter { s ->
+        s.active &&
+            (q.isBlank() || s.name.contains(q, ignoreCase = true) || s.mobile.contains(q) || s.rollNo == q.trim()) &&
+            (std.isEmpty() || s.standard == std || s.batchIds.any { id -> vm.batch(id)?.standard == std }) &&
+            (batch.isEmpty() || batch in s.batchIds)
+    }.sortedBy { it.name.lowercase() }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Choose student") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.OutlinedTextField(
+                    q, { q = it }, placeholder = { Text("Search by name, mobile or roll no") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                DropdownField(
+                    "Class", std.ifEmpty { "All classes" }, listOf("All classes") + standards,
+                    { i -> std = if (i == 0) "" else standards[i - 1]; batch = "" }
+                )
+                DropdownField(
+                    "Batch", if (batch.isEmpty()) "All batches" else vm.batch(batch)?.name.orEmpty(),
+                    listOf("All batches") + batchOptions.map { it.name },
+                    { i -> batch = if (i == 0) "" else batchOptions[i - 1].id }
+                )
+                Text(list.size.toString() + " students", color = Grey, fontSize = 12.sp)
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 280.dp)) {
+                    items(list.take(300)) { s ->
+                        Column(Modifier.fillMaxWidth().clickable { onPick(s.id) }.padding(vertical = 10.dp)) {
+                            Text(s.name, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                (if (s.rollNo.isNotBlank()) "Roll " + s.rollNo + "  -  " else "") + s.standard +
+                                    (if (s.batchIds.isNotEmpty()) "  -  " + s.batchIds.mapNotNull { vm.batch(it)?.name }.joinToString(", ") else ""),
+                                color = Grey, fontSize = 12.sp
+                            )
+                        }
+                        androidx.compose.material3.HorizontalDivider()
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

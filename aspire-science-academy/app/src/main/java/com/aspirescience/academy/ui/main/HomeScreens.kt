@@ -137,6 +137,8 @@ fun AdminHome(vm: AppViewModel) {
     }
     acts.add(Act("Study material", Icons.Filled.Description) { vm.go(Screen.Materials) })
     acts.add(Act("Doubts", Icons.Filled.Campaign, vm.doubts.count { it.status != "answered" }) { vm.go(Screen.Doubts) })
+    if (vm.can(Perm.ATTENDANCE)) acts.add(Act("Leaves", Icons.Filled.Description, vm.leaves.count { it.status == "pending" }) { vm.go(Screen.LeaveRequests) })
+    if (me.role == Role.ADMIN) acts.add(Act("Subjects", Icons.Filled.Edit) { vm.go(Screen.SubjectsEdit) })
     if (vm.can(Perm.FEES)) acts.add(Act("Accounts", Icons.Filled.AccountBalanceWallet) { vm.go(Screen.Accounts) })
     if (vm.can(Perm.NOTICES)) {
         acts.add(Act("Announcements", Icons.Filled.Campaign) { vm.go(Screen.Notices) })
@@ -244,7 +246,11 @@ fun TeacherProfile(vm: AppViewModel) {
             }
             Spacer(Modifier.size(8.dp))
             InfoRow("Mobile", me.mobile.ifBlank { me.loginId })
+            InfoRow("Type", if (me.permanent()) "Permanent teacher" else "Guest teacher")
             InfoRow("Subjects", me.subjects)
+        }
+        if (me.permanent()) {
+            OutlinedButton(onClick = { vm.go(Screen.Leaves) }, modifier = Modifier.fillMaxWidth().padding(16.dp, 0.dp, 16.dp, 8.dp)) { Text("My leaves (casual leave)") }
         }
         Box(Modifier.weight(1f)) { TeacherReportContent(vm, me.id) }
     }

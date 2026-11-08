@@ -69,8 +69,11 @@ import com.aspirescience.academy.ui.theme.Orange
 import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
 
-private class PayLine(val teacherId: String, val name: String, val classes: Int, val rate: Long, val salary: Long) {
-    val amount: Long get() = classes * rate + salary
+private class PayLine(val teacherId: String, val name: String, val classes: Int, val rate: Long, val salary: Long, val permanent: Boolean) {
+    val amount: Long get() = if (permanent) salary else classes * rate
+
+    /** How the amount was worked out. */
+    val detail: String get() = if (permanent) "Permanent: monthly salary" else "Guest: " + classes + " classes x " + D.rs(rate)
 }
 
 private class Month(
@@ -106,7 +109,7 @@ fun AccountsScreen(vm: AppViewModel) {
         val entries = ledger.filter { it.date.startsWith(m) }
         val done = classes.filter { it.date.startsWith(m) && it.status == CS.APPROVED }
         val pay = vm.teachers.filter { it.active || done.any { c -> c.teacherId == it.id } }.map { t ->
-            PayLine(t.id, t.name, done.count { it.teacherId == t.id }, t.classRate, t.salary)
+            PayLine(t.id, t.name, done.count { it.teacherId == t.id }, t.classRate, t.salary, t.permanent())
         }.filter { it.amount > 0 }
         return Month(
             feeIncome, entries.filter { it.type == "income" }.sumOf { it.amount },
@@ -137,7 +140,7 @@ fun AccountsScreen(vm: AppViewModel) {
                     cur.pay.map { p ->
                         AccountsReport.PayRow(
                             p.name,
-                            p.classes.toString() + " classes x " + D.rs(p.rate) + (if (p.salary > 0) " + " + D.rs(p.salary) + " salary" else ""),
+                            p.detail,
                             p.amount, paidList.any { it.teacherId == p.teacherId }
                         )
                     },
@@ -220,13 +223,13 @@ fun AccountsScreen(vm: AppViewModel) {
                                 "Paid " + D.rs(paidTotal) + "  -  Left to pay " + D.rs((cur.teacherPay - paidTotal).coerceAtLeast(0)),
                                 color = Grey, fontSize = 11.sp
                             )
-                            Text("Approved classes x rate + fixed salary. Tap for each teacher.", color = Grey, fontSize = 11.sp)
+                            Text("Permanent: monthly salary. Guest: approved classes x rate. Tap for each teacher.", color = Grey, fontSize = 11.sp)
                         }
                         Text(D.rs(cur.teacherPay), fontWeight = FontWeight.SemiBold, color = Red)
                     }
                     if (showPay) {
                         if (cur.pay.isEmpty()) {
-                            Text("No teacher pay yet. Set a pay per class or a fixed salary on the teacher's profile.", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                            Text("No teacher pay yet. Set the teacher type and the salary or pay per class on the teacher's profile.", color = Grey, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                         }
                         cur.pay.forEach { p ->
                             val rec = paidList.firstOrNull { it.teacherId == p.teacherId }
@@ -237,7 +240,7 @@ fun AccountsScreen(vm: AppViewModel) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.name, fontSize = 14.sp)
                                     Text(
-                                        p.classes.toString() + " classes x " + D.rs(p.rate) + (if (p.salary > 0) " + " + D.rs(p.salary) + " salary" else ""),
+                                        p.detail,
                                         color = Grey, fontSize = 11.sp
                                     )
                                 }

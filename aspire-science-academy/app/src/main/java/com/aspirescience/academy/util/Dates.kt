@@ -68,5 +68,19 @@ object D {
     fun monthOfMillis(ms: Long): String =
         monthKey(Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).toLocalDate())
 
+    /** Leave year a date belongs to, for example "2026" (or "2026-27" when the year starts in April). */
+    fun leaveYear(iso: String, startMonth: Int): String {
+        val d = parse(iso) ?: LocalDate.now()
+        if (startMonth <= 1) return d.year.toString()
+        val y = if (d.monthValue >= startMonth) d.year else d.year - 1
+        return y.toString() + "-" + ((y + 1) % 100).toString().padStart(2, '0')
+    }
+
+    fun daysBetween(from: String, to: String): Int {
+        val a = parse(from) ?: return 0
+        val b = parse(to) ?: return 0
+        return (java.time.temporal.ChronoUnit.DAYS.between(a, b) + 1).toInt()
+    }
+
     fun rs(n: Long): String = "₹" + "%,d".format(EN, n)
 }

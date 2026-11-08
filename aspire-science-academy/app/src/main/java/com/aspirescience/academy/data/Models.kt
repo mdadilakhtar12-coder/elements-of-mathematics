@@ -75,10 +75,17 @@ data class UserProfile(
     var monthlyFee: Long = 0,
     var subjects: String = "",
     var classRate: Long = 0, // teacher pay per completed class (Rs)
-    var salary: Long = 0, // teacher fixed monthly salary (Rs), added to the per-class pay
+    var salary: Long = 0, // permanent teacher: fixed monthly salary (Rs)
+    var teacherType: String = "", // "permanent" or "guest"; empty = permanent when a salary is set, else guest
     var demo: Boolean = false, // created by "Demo data"
     var createdAt: Long = 0
-) : HasId
+) : HasId {
+    /** Permanent teachers get a monthly salary and casual leave; guest teachers are paid per class. */
+    fun permanent(): Boolean = if (teacherType.isNotEmpty()) teacherType == "permanent" else salary > 0
+
+    /** Pay for a month, given the number of approved classes. */
+    fun monthlyPay(approvedClasses: Int): Long = if (permanent()) salary else approvedClasses * classRate
+}
 
 data class WeeklySlot(
     var day: Int = 1, // 1 = Monday ... 7 = Sunday
@@ -141,7 +148,8 @@ data class Attendance(
     var studentId: String = "",
     var studentName: String = "",
     var date: String = "",
-    var status: String = "P" // P = present, A = absent, L = late
+    var status: String = "P", // P = present, A = absent, L = late
+    var lateTime: String = "" // HH:mm the student arrived (late only, optional)
 ) : HasId
 
 /** One paper (subject) of an exam with its own maximum marks. */
@@ -291,5 +299,21 @@ data class Doubt(
     var answeredBy: String = "",
     var answeredAt: Long = 0,
     var status: String = "open", // "open" or "answered"
+    var createdAt: Long = 0
+) : HasId
+
+/** A permanent teacher's leave request. */
+data class LeaveRequest(
+    override var id: String = "",
+    var teacherId: String = "",
+    var teacherName: String = "",
+    var from: String = "",
+    var to: String = "",
+    var days: Int = 1,
+    var reason: String = "",
+    var status: String = "pending", // pending / approved / rejected
+    var year: String = "", // leave year the days are counted in
+    var decidedBy: String = "",
+    var decidedAt: Long = 0,
     var createdAt: Long = 0
 ) : HasId

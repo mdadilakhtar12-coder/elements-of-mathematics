@@ -124,6 +124,20 @@ class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx,
             }
         }
 
+        if (me.role == Role.TEACHER && me.permanent() && last > 0L) {
+            for (l in Repo.leavesOnceOf(me.id)) {
+                if (l.decidedAt > last && l.status != "pending") {
+                    Notifier.show(ctx, l.id.hashCode(), "Leave " + l.status, l.from + (if (l.to != l.from) " to " + l.to else ""))
+                }
+            }
+        }
+        if (me.role == Role.ADMIN || (me.role == Role.SUBADMIN && "attendance" in me.perms)) {
+            val waiting = Repo.leavesPending().size
+            if (waiting > prefs.getInt("pendingLeaves", 0)) {
+                Notifier.show(ctx, 1005, "Leave request", "$waiting leave request(s) waiting for approval.")
+            }
+            prefs.edit().putInt("pendingLeaves", waiting).apply()
+        }
         if (staff) {
             val pending = Repo.classesByStatus(CS.TAKEN).size
             if (pending > prefs.getInt("pending", 0)) {

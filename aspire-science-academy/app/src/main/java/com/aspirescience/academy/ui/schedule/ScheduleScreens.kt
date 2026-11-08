@@ -59,6 +59,8 @@ import com.aspirescience.academy.data.ClassSession
 import com.aspirescience.academy.data.Perm
 import com.aspirescience.academy.data.Repo
 import com.aspirescience.academy.data.Role
+import com.aspirescience.academy.data.UserProfile
+import androidx.compose.material3.AlertDialog
 import com.aspirescience.academy.ui.AppViewModel
 import com.aspirescience.academy.ui.Screen
 import com.aspirescience.academy.ui.common.AppCard
@@ -235,8 +237,13 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
     val marks = remember(classId) { mutableStateMapOf<String, String>() }
     var topic by remember(classId) { mutableStateOf(c.topic) }
     var confirmCancel by remember { mutableStateOf(false) }
+    val lateTimes = remember(classId) { mutableStateMapOf<String, String>() }
+    var lateFor by remember { mutableStateOf<UserProfile?>(null) }
     LaunchedEffect(att) {
-        att.forEach { a -> if (marks[a.studentId] == null) marks[a.studentId] = a.status }
+        att.forEach { a ->
+            if (marks[a.studentId] == null) marks[a.studentId] = a.status
+            if (a.lateTime.isNotBlank() && lateTimes[a.studentId] == null) lateTimes[a.studentId] = a.lateTime
+        }
     }
     val canTake = c.status != CS.CANCELLED &&
         (canApprove || (isOwn && c.status != CS.APPROVED)) &&
@@ -347,6 +354,9 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
                             Column(Modifier.weight(1f)) {
                                 Text(s.name, fontWeight = FontWeight.SemiBold)
                                 if (s.rollNo.isNotBlank()) Text("Roll " + s.rollNo, color = Grey, fontSize = 12.sp)
+                                if (st == "L" && !lateTimes[s.id].isNullOrBlank()) {
+                                    Text("Came at " + D.time12(lateTimes[s.id].orEmpty()), color = Orange, fontSize = 12.sp)
+                                }
                                 if (st == "A") {
                                     TextButton(onClick = {
                                         Messenger.whatsapp(ctx, s.parentMobile.ifBlank { s.mobile }, Messages.absent(s.name, c.date, c.subject))
@@ -354,7 +364,10 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
                                 }
                             }
                             if (canTake) {
-                                StatusToggle(st) { marks[s.id] = it }
+                                StatusToggle(st) { code ->
+                                    marks[s.id] = code
+                                    if (code == "L") lateFor = s else lateTimes.remove(s.id)
+                                }
                             } else if (st.isNotEmpty()) {
                                 Pill(
                                     when (st) { "P" -> "Present"; "A" -> "Absent"; else -> "Late" },
@@ -374,7 +387,8 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
                                         Attendance(
                                             id = c.id + "_" + s.id, classId = c.id, batchId = c.batchId,
                                             batchName = c.batchName, subject = c.subject, studentId = s.id,
-                                            studentName = s.name, date = c.date, status = marks[s.id] ?: "P"
+                                            studentName = s.name, date = c.date, status = marks[s.id] ?: "P",
+                                            lateTime = if (marks[s.id] == "L") lateTimes[s.id].orEmpty() else ""
                                         )
                                     }
                                     Repo.putAll("attendance", items)
@@ -396,6 +410,27 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
             }
         }
     }
+    val lf = lateFor
+    if (lf != null) {
+        var t by remember(lf.id) { mutableStateOf(lateTimes[lf.id].orEmpty()) }
+        AlertDialog(
+            onDismissRequest = { lateFor = null },
+            title = { Text("Late: " + lf.name) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("At what time did the student come? You can also skip this.", fontSize = 14.sp)
+                    TimeField("Arrival time (optional)", t, { t = it })
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (t.isNotBlank()) lateTimes[lf.id] = t else lateTimes.remove(lf.id)
+                    lateFor = null
+                }) { Text(if (t.isBlank()) "Skip" else "Save time") }
+            },
+            dismissButton = { TextButton(onClick = { lateFor = null }) { Text("Just late, no time") } }
+        )
+    }
     if (confirmCancel) {
         ConfirmDialog(
             "Cancel class?", "Students will see this class as cancelled.", "Cancel class",
@@ -414,7 +449,7 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
     var end by remember { mutableStateOf(existing?.end ?: "17:00") }
     var subject by remember { mutableStateOf(existing?.subject ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.subject.orEmpty()) }
     var teacherId by remember { mutableStateOf(existing?.teacherId ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.teacherId.orEmpty()) }
-    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: AppConfig.SUBJECTS
+    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: vm.subjectList
     var topic by remember { mutableStateOf(existing?.topic.orEmpty()) }
     var note by remember { mutableStateOf(existing?.note.orEmpty()) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -554,11 +589,11 @@ fun TeacherReportContent(vm: AppViewModel, onlyId: String?) {
                     CountCell("Not taken", notTaken, Red)
                     CountCell("Cancelled", cancelled, Grey)
                 }
-                val earned = done * t.classRate + t.salary
+                val earned = t.monthlyPay(done)
                 if (earned > 0) {
                     val rec = paid.firstOrNull { it.teacherId == t.id && it.month == month }
                     Text(
-                        "Pay this month: " + D.rs(earned) + (if (t.classRate > 0) "  (" + done + " x " + D.rs(t.classRate) + (if (t.salary > 0) " + " + D.rs(t.salary) + " salary" else "") + ")" else ""),
+                        "Pay this month: " + D.rs(earned) + (if (t.permanent()) "  (permanent, monthly salary)" else "  (guest: " + done + " x " + D.rs(t.classRate) + ")"),
                         fontWeight = FontWeight.SemiBold, color = Green, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)
                     )
                     Box(Modifier.padding(top = 4.dp)) {

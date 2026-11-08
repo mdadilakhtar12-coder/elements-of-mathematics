@@ -122,8 +122,8 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                 AppCard {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         DropdownField(
-                            "Subject (optional)", plan.subject, AppConfig.SUBJECTS,
-                            { k -> update(i) { p -> p.copy(subject = AppConfig.SUBJECTS[k]) } },
+                            "Subject (optional)", plan.subject, vm.subjectList,
+                            { k -> update(i) { p -> p.copy(subject = vm.subjectList[k]) } },
                             Modifier.weight(1f)
                         )
                         IconButton(onClick = { plans = plans.filterIndexed { j, _ -> j != i } }) {

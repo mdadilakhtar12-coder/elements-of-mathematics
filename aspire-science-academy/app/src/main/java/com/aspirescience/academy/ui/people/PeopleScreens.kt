@@ -165,16 +165,15 @@ fun StudentImportDialog(vm: AppViewModel, batchId: String, onDismiss: () -> Unit
                     color = Grey, fontSize = 12.sp
                 )
                 TextButton(onClick = {
-                    val dir = java.io.File(ctx.cacheDir, "reports")
-                    dir.mkdirs()
-                    val f = java.io.File(dir, "students-sample.csv")
-                    f.writeText(
-                        "Name,Mobile,Password,Roll No,Parent Mobile,Monthly Fee,Standard\n" +
-                            "Aman Shaikh,9876543210,,1,9876500000,1500,11th Science\n" +
-                            "Riya Patel,9123456780,,2,9123400000,1500,11th Science\n"
+                    com.aspirescience.academy.util.Sheets.share(
+                        ctx, "students-format.xlsx",
+                        listOf(
+                            listOf("Name", "Mobile", "Password", "Roll No", "Parent Mobile", "Monthly Fee", "Standard"),
+                            listOf("Aman Shaikh", "9876543210", "", "1", "9876500000", "1500", "11th Science"),
+                            listOf("Riya Patel", "9123456780", "", "2", "9123400000", "1500", "11th Science")
+                        )
                     )
-                    com.aspirescience.academy.util.Share.file(ctx, f, "text/csv", "Sample file")
-                }) { Text("Get a sample file") }
+                }) { Text("Download format (Excel)") }
             }
         },
         confirmButton = {
@@ -203,6 +202,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
     var fee by remember { mutableStateOf(if ((existing?.monthlyFee ?: 0L) > 0L) existing?.monthlyFee.toString() else "") }
     var parent by remember { mutableStateOf(existing?.parentMobile.orEmpty()) }
     var subjects by remember { mutableStateOf(existing?.subjects.orEmpty()) }
+    var ttype by remember { mutableStateOf(existing?.takeIf { it.role == Role.TEACHER }?.let { if (it.permanent()) "permanent" else "guest" } ?: "permanent") }
     var salary by remember { mutableStateOf(if ((existing?.salary ?: 0L) > 0L) existing?.salary.toString() else "") }
     var rate by remember { mutableStateOf(if ((existing?.classRate ?: 0L) > 0L) existing?.classRate.toString() else "") }
     var batchIds by remember { mutableStateOf(existing?.batchIds ?: (if (s.batchId.isBlank()) emptyList() else listOf(s.batchId))) }
@@ -234,8 +234,15 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
             }
             if (role == Role.TEACHER) {
                 Field("Subjects taught", subjects, { subjects = it })
-                Field("Pay per class (Rs, optional)", rate, { rate = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
-                Field("Fixed monthly salary (Rs, optional)", salary, { salary = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
+                Text("Teacher type", fontWeight = FontWeight.SemiBold)
+                Segmented(listOf("Permanent", "Guest lecture"), if (ttype == "permanent") 0 else 1, { ttype = if (it == 0) "permanent" else "guest" })
+                if (ttype == "permanent") {
+                    Field("Monthly salary (Rs)", salary, { salary = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
+                    Text("A permanent teacher gets this salary every month and can take casual leave (15 days a year).", color = Grey, fontSize = 12.sp)
+                } else {
+                    Field("Pay per class (Rs)", rate, { rate = it.filter { c -> c.isDigit() } }, keyboard = KeyboardType.Number)
+                    Text("A guest teacher is paid for every class that the admin has approved.", color = Grey, fontSize = 12.sp)
+                }
             }
             if (role == Role.SUBADMIN) {
                 SectionTitle("What can this sub-admin do?")
@@ -260,7 +267,9 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
                         mobile = if (role == Role.SUBADMIN) "" else loginId.trim(),
                         rollNo = roll.trim(), standard = standard, parentMobile = parent.trim(),
                         monthlyFee = fee.toLongOrNull() ?: 0L, subjects = subjects.trim(),
-                        classRate = rate.toLongOrNull() ?: 0L, salary = salary.toLongOrNull() ?: 0L,
+                        teacherType = if (role == Role.TEACHER) ttype else "",
+                        classRate = if (ttype == "guest") (rate.toLongOrNull() ?: 0L) else 0L,
+                        salary = if (ttype == "permanent") (salary.toLongOrNull() ?: 0L) else 0L,
                         batchIds = batchIds, perms = perms
                     )
                     vm.saveUser(draft, password, isNew) { if (isNew && s.batchId.isBlank()) vm.replace(Screen.UserDetail(draft.id)) else vm.back() }
@@ -287,6 +296,7 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
     val canManage = u.role != Role.SUBADMIN && vm.can(Perm.USERS) || (u.role == Role.SUBADMIN && me.role == Role.ADMIN)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var seg by remember { mutableStateOf(0) }
+    var pickExam by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var resetDialog by remember { mutableStateOf(false) }
     var showPw by remember { mutableStateOf(false) }
@@ -356,6 +366,8 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
                                     InfoRow("Batches", u.batchIds.mapNotNull { vm.batch(it)?.name }.joinToString(", "))
                                 }
                                 if (u.role == Role.TEACHER) {
+                                    InfoRow("Type", if (u.permanent()) "Permanent" else "Guest lecture")
+                                    InfoRow(if (u.permanent()) "Monthly salary" else "Pay per class", D.rs(if (u.permanent()) u.salary else u.classRate))
                                     InfoRow("Subjects", u.subjects)
                                     InfoRow("Batches", vm.batches.filter { it.hasTeacher(u.id) }.joinToString(", ") { it.name })
                                 }
@@ -367,6 +379,9 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
                         if (canManage) {
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (u.role == Role.STUDENT && vm.can(Perm.EXAMS)) {
+                                        OutlinedButton(onClick = { pickExam = true }, modifier = Modifier.fillMaxWidth()) { Text("Update marks") }
+                                    }
                                     if (u.role == Role.STUDENT && vm.can(Perm.FEES)) {
                                         PrimaryButton("Collect fee", onClick = { vm.go(Screen.FeeAdd(u.id)) })
                                     }
@@ -390,6 +405,18 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
                         }
                     }
                 }
+            }
+        }
+    }
+    if (pickExam) {
+        val opts = vm.exams.filter { it.batchId in u.batchIds }.sortedByDescending { it.date }.map { it.id to (it.name + " - " + it.batchName + " (" + D.shortDate(it.date) + ")") }
+        if (opts.isEmpty()) {
+            pickExam = false
+            vm.toast("No exams for this student's batches yet")
+        } else {
+            com.aspirescience.academy.ui.common.PickDialog("Choose the exam", opts, { pickExam = false }) { id ->
+                pickExam = false
+                vm.go(Screen.ExamDetail(id, u.id))
             }
         }
     }

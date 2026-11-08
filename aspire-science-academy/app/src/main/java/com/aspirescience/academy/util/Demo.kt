@@ -9,6 +9,8 @@ import com.aspirescience.academy.data.Fee
 import com.aspirescience.academy.data.Doubt
 import com.aspirescience.academy.data.Homework
 import com.aspirescience.academy.data.StudyMaterial
+import com.aspirescience.academy.AppConfig
+import com.aspirescience.academy.data.LeaveRequest
 import com.aspirescience.academy.data.LedgerEntry
 import com.aspirescience.academy.data.Paper
 import com.aspirescience.academy.data.Mark
@@ -37,28 +39,27 @@ object Demo {
     private class Sub(val subject: String, val teacher: Int, val days: List<Int>, val hourOffset: Int = 0)
     private class BDef(val id: String, val name: String, val std: String, val hour: Int, val size: Int, val fee: Long, val subs: List<Sub>)
 
+    // Subjects: MIL, English, Physics, Chemistry, Mathematics, Biology (Botany + Zoology), IT.
+    private fun bigSubs() = listOf(
+        Sub("Physics", 0, listOf(1, 4)), Sub("Chemistry", 1, listOf(2, 5)), Sub("Mathematics", 2, listOf(3, 6)),
+        Sub("Biology", 3, listOf(1, 4), 1), Sub("English", 4, listOf(2, 5), 1), Sub("MIL", 5, listOf(3, 6), 1), Sub("IT", 6, listOf(1), 2)
+    )
+
     private val BATCHES = listOf(
+        BDef("demo_b1", "11th Science - Group A", "11th Science", 15, 18, 1800, bigSubs()),
+        BDef("demo_b2", "11th Science - Group B", "11th Science", 16, 17, 1800, bigSubs()),
+        BDef("demo_b3", "12th Science - Group A", "12th Science", 17, 16, 2200, bigSubs()),
+        BDef("demo_b4", "12th Science - Group B", "12th Science", 18, 18, 2200, bigSubs()),
         BDef(
-            "demo_b1", "11th Science - Group A", "11th Science", 16, 18, 1800,
-            listOf(Sub("Physics", 0, listOf(1, 4)), Sub("Chemistry", 1, listOf(2, 5)), Sub("Maths", 2, listOf(3, 6)), Sub("Biology", 3, listOf(1, 4), 1))
-        ),
-        BDef(
-            "demo_b2", "11th Science - Group B", "11th Science", 17, 17, 1800,
-            listOf(Sub("Physics", 0, listOf(1, 4)), Sub("Chemistry", 1, listOf(2, 5)), Sub("Maths", 2, listOf(3, 6)), Sub("English", 4, listOf(1, 4), 1))
-        ),
-        BDef(
-            "demo_b3", "12th Science - Group A", "12th Science", 18, 16, 2200,
-            listOf(Sub("Physics", 0, listOf(1, 4)), Sub("Chemistry", 1, listOf(2, 5)), Sub("Maths", 2, listOf(3, 6)), Sub("Biology", 3, listOf(1, 4), 1))
-        ),
-        BDef(
-            "demo_b4", "12th Science - Group B", "12th Science", 19, 18, 2200,
-            listOf(Sub("Physics", 0, listOf(1, 4)), Sub("Chemistry", 1, listOf(2, 5)), Sub("Maths", 2, listOf(3, 6)), Sub("English", 4, listOf(1, 4), 1))
-        ),
-        BDef(
-            "demo_b5", "10th - Foundation", "10th", 15, 15, 1200,
-            listOf(Sub("Maths", 2, listOf(3, 6)), Sub("Science", 3, listOf(1, 4)), Sub("English", 4, listOf(2, 5)))
+            "demo_b5", "10th - Foundation", "10th", 14, 15, 1200,
+            listOf(Sub("Mathematics", 2, listOf(3, 6)), Sub("English", 4, listOf(2, 5)), Sub("MIL", 5, listOf(1, 4)), Sub("IT", 6, listOf(2), 2))
         )
     )
+
+    private fun plusMinutes(hhmm: String, m: Int): String {
+        val t = hhmm.substring(0, 2).toInt() * 60 + hhmm.substring(3, 5).toInt() + m
+        return (t / 60).toString().padStart(2, '0') + ":" + (t % 60).toString().padStart(2, '0')
+    }
 
     private fun hh(h: Int) = h.toString().padStart(2, '0') + ":00"
 
@@ -83,9 +84,13 @@ object Demo {
         val today = LocalDate.now()
 
         // ---- teachers
+        // name, subject, permanent?, monthly salary (permanent) or pay per class (guest)
+        class TDef(val name: String, val subject: String, val permanent: Boolean, val amount: Long)
         val tdefs = listOf(
-            "Rakesh Sharma" to "Physics", "Neha Verma" to "Chemistry", "Imran Qureshi" to "Maths",
-            "Pooja Desai" to "Biology", "Vikas Joshi" to "English"
+            TDef("Rakesh Sharma", "Physics", true, 30000), TDef("Neha Verma", "Chemistry", true, 28000),
+            TDef("Imran Qureshi", "Mathematics", false, 400), TDef("Pooja Desai", "Biology", false, 350),
+            TDef("Vikas Joshi", "English", true, 25000), TDef("Meera Trivedi", "MIL", false, 300),
+            TDef("Kunal Shah", "IT", false, 300)
         )
         val teachers = ArrayList<UserProfile>()
         tdefs.forEachIndexed { i, def ->
@@ -93,8 +98,10 @@ object Demo {
             val login = "900000000" + (i + 1)
             val uid = createUser(login)
             val p = UserProfile(
-                id = uid, role = Role.TEACHER, name = def.first, loginId = login, mobile = login,
-                subjects = def.second, classRate = 400, demo = true, createdAt = now
+                id = uid, role = Role.TEACHER, name = def.name, loginId = login, mobile = login,
+                subjects = def.subject, teacherType = if (def.permanent) "permanent" else "guest",
+                salary = if (def.permanent) def.amount else 0L, classRate = if (def.permanent) 0L else def.amount,
+                demo = true, createdAt = now
             )
             Repo.put("users", p)
             Repo.setPassword(uid, login, Role.TEACHER, PASSWORD)
@@ -178,7 +185,8 @@ object Demo {
                                     Attendance(
                                         id = id + "_" + s.id, classId = id, batchId = b.id, batchName = b.name,
                                         subject = plan.subject, studentId = s.id, studentName = s.name,
-                                        date = date.toString(), status = st
+                                        date = date.toString(), status = st,
+                                        lateTime = if (st == "L") plusMinutes(slot.start, 5 + rnd.nextInt(20)) else ""
                                     )
                                 )
                             }
@@ -303,7 +311,7 @@ object Demo {
         val mats = listOf(
             StudyMaterial("demo_m1", b0.id, b0.name, "Physics", "Kinematics notes", "Short notes of the chapter with solved examples.", "https://www.khanacademy.org/science/physics", "Notes", teachers[0].id, teachers[0].name, now - 9 * 3600_000L),
             StudyMaterial("demo_m2", b0.id, b0.name, "Chemistry", "Periodic table video", "Watch before the next class.", "https://www.youtube.com/results?search_query=periodic+table+class+11", "Video", teachers[1].id, teachers[1].name, now - 8 * 3600_000L),
-            StudyMaterial("demo_m3", b0.id, b0.name, "Maths", "Practice paper 1", "Solve in 90 minutes.", "https://www.ncert.nic.in", "Practice paper", teachers[2].id, teachers[2].name, now - 7 * 3600_000L),
+            StudyMaterial("demo_m3", b0.id, b0.name, "Mathematics", "Practice paper 1", "Solve in 90 minutes.", "https://www.ncert.nic.in", "Practice paper", teachers[2].id, teachers[2].name, now - 7 * 3600_000L),
             StudyMaterial("demo_m4", batches[2].id, batches[2].name, "Biology", "Cell division diagrams", "Diagrams for revision.", "https://www.khanacademy.org/science/biology", "Notes", teachers[3].id, teachers[3].name, now - 6 * 3600_000L),
             StudyMaterial("demo_m5", batches[4].id, batches[4].name, "English", "Letter writing formats", "Formal and informal letter formats.", "https://www.ncert.nic.in", "PDF", teachers[4].id, teachers[4].name, now - 5 * 3600_000L)
         )
@@ -312,9 +320,30 @@ object Demo {
         val doubts = listOf(
             Doubt("demo_d1", kids0[0].id, kids0[0].name, b0.id, b0.name, "Physics", "Sir, how do we find the displacement when the acceleration is not constant?", false, "Use integration of the velocity function. We will also do an example in the next class.", teachers[0].name, now - 20 * 3600_000L, "answered", now - 30 * 3600_000L),
             Doubt("demo_d2", kids0[1].id, kids0[1].name, b0.id, b0.name, "Chemistry", "What is the difference between electron affinity and electronegativity?", false, "", "", 0, "open", now - 4 * 3600_000L),
-            Doubt("demo_d3", kids0[2].id, kids0[2].name, b0.id, b0.name, "Maths", "Please explain question 7 of exercise 4.2 again.", false, "", "", 0, "open", now - 2 * 3600_000L)
+            Doubt("demo_d3", kids0[2].id, kids0[2].name, b0.id, b0.name, "Mathematics", "Please explain question 7 of exercise 4.2 again.", false, "", "", 0, "open", now - 2 * 3600_000L)
         )
         Repo.putAll("doubts", doubts)
+
+        // ---- leave requests of permanent teachers
+        progress("Creating leave requests")
+        fun leave(n: Int, t: Int, fromOff: Int, days: Int, reason: String, status: String): LeaveRequest {
+            val from = today.plusDays(fromOff.toLong())
+            return LeaveRequest(
+                id = PREFIX + "lv" + n, teacherId = teachers[t].id, teacherName = teachers[t].name,
+                from = from.toString(), to = from.plusDays((days - 1).toLong()).toString(), days = days, reason = reason,
+                status = status, year = D.leaveYear(from.toString(), AppConfig.LEAVE_YEAR_START_MONTH),
+                decidedBy = if (status == "pending") "" else "Admin", decidedAt = if (status == "pending") 0L else now - 5 * 3600_000L,
+                createdAt = now - 24 * 3600_000L - n * 1000L
+            )
+        }
+        Repo.putAll(
+            "leaves",
+            listOf(
+                leave(1, 0, -20, 2, "Family function", "approved"), leave(2, 0, 6, 1, "Doctor appointment", "pending"),
+                leave(3, 1, -9, 1, "Not well", "approved"), leave(4, 4, 3, 2, "Personal work", "pending"),
+                leave(5, 4, -30, 1, "", "rejected")
+            )
+        )
 
         // ---- announcements and homework
         progress("Creating announcements and homework")
@@ -340,7 +369,7 @@ object Demo {
     }
 
     suspend fun remove(users: List<UserProfile>, progress: (String) -> Unit): String {
-        for (col in listOf("attendance", "marks", "fees", "ledger", "doubts", "materials", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
+        for (col in listOf("attendance", "marks", "fees", "ledger", "leaves", "doubts", "materials", "classes", "exams", "homework", "notices", "leaderboards", "batches")) {
             progress("Removing demo $col")
             Repo.deleteAll(col, Repo.idsWithPrefix(col, PREFIX))
         }

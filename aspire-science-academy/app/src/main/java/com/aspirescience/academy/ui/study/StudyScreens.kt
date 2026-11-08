@@ -171,7 +171,7 @@ fun MaterialAddScreen(vm: AppViewModel) {
     var desc by remember { mutableStateOf("") }
     var link by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(MATERIAL_TYPES[0]) }
-    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: AppConfig.SUBJECTS
+    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: vm.subjectList
 
     Page("Add material", vm::back) {
         FormColumn {
@@ -251,7 +251,7 @@ fun DoubtAskScreen(vm: AppViewModel) {
     var subject by remember { mutableStateOf("") }
     var question by remember { mutableStateOf("") }
     var photo by remember { mutableStateOf<String?>(null) }
-    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: AppConfig.SUBJECTS
+    val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: vm.subjectList
 
     Page("Ask a doubt", vm::back) {
         FormColumn {

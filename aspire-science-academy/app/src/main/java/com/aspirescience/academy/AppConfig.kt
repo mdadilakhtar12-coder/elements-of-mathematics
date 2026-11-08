@@ -19,10 +19,17 @@ object AppConfig {
         "4th", "5th", "6th", "7th", "8th", "9th", "10th",
         "11th Science", "11th Commerce", "12th Science", "12th Commerce"
     )
-    val SUBJECTS = listOf(
-        "Maths", "Physics", "Chemistry", "Biology", "Botany", "Zoology", "IT", "Science", "English", "Hindi",
-        "Gujarati", "Sanskrit", "Social Science", "Computer", "Accountancy", "Economics"
-    )
+    /** Default subject list. The admin can change it in the app (Subjects). */
+    val SUBJECTS = listOf("MIL", "English", "Physics", "Chemistry", "Mathematics", "Biology", "Botany", "Zoology", "IT")
+
+    /** Subjects an exam gets by default: Biology is replaced by its two papers, Botany and Zoology. */
+    fun defaultPapers(subjects: List<String>): List<String> = subjects.filter { it != "Biology" }
+
+    /** Casual leave of a permanent teacher: days per leave year (all kinds of leave together). */
+    const val LEAVE_QUOTA = 15
+
+    /** First month of the leave year (1 = January, 4 = April). */
+    const val LEAVE_YEAR_START_MONTH = 1
     /** Papers that add up to one subject in results (Botany + Zoology = Biology). */
     private val SUBJECT_GROUPS = mapOf("Botany" to "Biology", "Zoology" to "Biology")
     fun groupOf(subject: String): String = SUBJECT_GROUPS[subject] ?: subject

@@ -38,7 +38,7 @@ sealed class Screen {
     data class ClassDetail(val classId: String) : Screen()
     data class ClassEdit(val classId: String = "", val batchId: String = "", val date: String = "") : Screen()
     data class ExamEdit(val examId: String = "") : Screen()
-    data class ExamDetail(val examId: String) : Screen()
+    data class ExamDetail(val examId: String, val studentId: String = "") : Screen()
     data class FeeAdd(val studentId: String = "", val month: String = "", val amount: Long = 0) : Screen()
     data object Approvals : Screen()
     data object TeacherReport : Screen()
@@ -54,6 +54,10 @@ sealed class Screen {
     data object Doubts : Screen()
     data object DoubtAsk : Screen()
     data class DoubtDetail(val id: String) : Screen()
+    data object Leaves : Screen()
+    data object LeaveApply : Screen()
+    data object LeaveRequests : Screen()
+    data object SubjectsEdit : Screen()
     data object Accounts : Screen()
     data object LedgerAdd : Screen()
     data object ChangePassword : Screen()
@@ -78,6 +82,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var notices by mutableStateOf<List<Notice>>(emptyList())
     var homework by mutableStateOf<List<Homework>>(emptyList())
     var leaderboards by mutableStateOf<List<com.aspirescience.academy.data.Leaderboard>>(emptyList())
+    var leaves by mutableStateOf<List<com.aspirescience.academy.data.LeaveRequest>>(emptyList())
+    var subjects by mutableStateOf(com.aspirescience.academy.AppConfig.SUBJECTS)
     var materials by mutableStateOf<List<com.aspirescience.academy.data.StudyMaterial>>(emptyList())
     var doubts by mutableStateOf<List<com.aspirescience.academy.data.Doubt>>(emptyList())
 
@@ -188,6 +194,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch { Repo.homework().collect { homework = it } }
         scope.launch { Repo.exams().collect { exams = it } }
         scope.launch { Repo.leaderboards().collect { leaderboards = it } }
+        scope.launch { Repo.subjectSettings().collect { if (it.isNotEmpty()) subjects = it } }
+        if (p.role == Role.TEACHER) {
+            scope.launch { Repo.leavesOfTeacher(p.id).collect { leaves = it } }
+        } else if (p.role == Role.ADMIN || (p.role == Role.SUBADMIN && "attendance" in p.perms)) {
+            scope.launch { Repo.leavesAll().collect { leaves = it } }
+        }
         scope.launch { Repo.materials().collect { materials = it } }
         scope.launch {
             val flow = if (p.role == Role.STUDENT) Repo.doubtsOfStudent(p.id) else Repo.doubtsAll()
@@ -233,6 +245,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         notices = emptyList()
         homework = emptyList()
         leaderboards = emptyList()
+        leaves = emptyList()
         materials = emptyList()
         doubts = emptyList()
         banner = null
@@ -253,6 +266,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 busy = false
             }
         }
+    }
+
+    /** Subjects offered in every drop-down (edited by the admin). */
+    val subjectList: List<String> get() = subjects
+
+    fun saveSubjects(list: List<String>, onDone: () -> Unit) = op("Subjects saved", onDone) {
+        Repo.saveSubjects(list)
+        subjects = list
     }
 
     // ---------- permissions ----------

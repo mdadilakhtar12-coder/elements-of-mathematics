@@ -94,6 +94,16 @@ service cloud.firestore {
       allow read, create, delete: if signedIn();
     }
 
+    // Leave requests of permanent teachers.
+    match /leaves/{id} {
+      allow read: if signedIn() && (resource.data.teacherId == request.auth.uid || can('attendance'));
+      allow create: if isTeacher() && request.resource.data.teacherId == request.auth.uid
+                    && request.resource.data.status == 'pending';
+      allow update: if can('attendance');
+      allow delete: if can('attendance')
+                    || (signedIn() && resource.data.teacherId == request.auth.uid && resource.data.status == 'pending');
+    }
+
     // Income and expenses of the institute.
     match /ledger/{id} {
       allow read, write: if can('fees');

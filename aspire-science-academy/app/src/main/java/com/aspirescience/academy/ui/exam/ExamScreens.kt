@@ -90,7 +90,7 @@ import com.aspirescience.academy.ui.theme.Red
 import com.aspirescience.academy.util.D
 import com.aspirescience.academy.util.Messages
 import com.aspirescience.academy.util.Messenger
-import com.aspirescience.academy.util.Share
+import com.aspirescience.academy.util.Sheets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -157,7 +157,7 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var batchId by remember { mutableStateOf(existing?.batchId.orEmpty()) }
     var date by remember { mutableStateOf(existing?.date ?: D.today()) }
-    var papers by remember { mutableStateOf(existing?.paperList() ?: emptyList()) }
+    var papers by remember { mutableStateOf(existing?.paperList() ?: AppConfig.defaultPapers(vm.subjectList).map { Paper(it, 50) }) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     fun update(i: Int, f: (Paper) -> Paper) {
@@ -181,8 +181,8 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
             papers.forEachIndexed { i, p ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DropdownField(
-                        "Subject", p.subject, AppConfig.SUBJECTS,
-                        { k -> update(i) { x -> x.copy(subject = AppConfig.SUBJECTS[k]) } },
+                        "Subject", p.subject, vm.subjectList,
+                        { k -> update(i) { x -> x.copy(subject = vm.subjectList[k]) } },
                         Modifier.weight(1f)
                     )
                     Field(
@@ -196,6 +196,10 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
             val batchPlans = vm.batch(batchId)?.plans().orEmpty()
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = { papers = papers + Paper("", 50) }, modifier = Modifier.weight(1f)) { Text("Add paper") }
+                OutlinedButton(
+                    onClick = { papers = AppConfig.defaultPapers(vm.subjectList).map { Paper(it, papers.firstOrNull()?.maxMarks ?: 50L) } },
+                    modifier = Modifier.weight(1f)
+                ) { Text("All subjects") }
                 if (batchPlans.isNotEmpty()) {
                     OutlinedButton(
                         onClick = {
@@ -205,7 +209,7 @@ fun ExamEditScreen(vm: AppViewModel, examId: String) {
                             papers = names.map { n -> Paper(n, papers.firstOrNull()?.maxMarks ?: 50L) }
                         },
                         modifier = Modifier.weight(1f)
-                    ) { Text("All batch subjects") }
+                    ) { Text("Batch subjects") }
                 }
             }
             if (papers.isNotEmpty()) {
@@ -331,7 +335,7 @@ private fun MarksCell(value: String, onChange: (String) -> Unit, max: Long, modi
 }
 
 @Composable
-fun ExamDetailScreen(vm: AppViewModel, examId: String) {
+fun ExamDetailScreen(vm: AppViewModel, examId: String, openStudent: String = "") {
     val exam = vm.exam(examId)
     val ctx = LocalContext.current
     if (exam == null) {
@@ -345,6 +349,9 @@ fun ExamDetailScreen(vm: AppViewModel, examId: String) {
     val entries = remember(examId) { mutableStateMapOf<String, String>() }
     var view by remember { mutableStateOf(0) } // 0 = overview, i = paper i - 1
     var editStudent by remember { mutableStateOf<UserProfile?>(null) }
+    LaunchedEffect(openStudent, students.size) {
+        if (openStudent.isNotEmpty() && editStudent == null) editStudent = students.firstOrNull { it.id == openStudent }
+    }
     LaunchedEffect(saved) {
         saved.forEach { m ->
             val k = key(m.studentId, m.subject)
@@ -469,22 +476,16 @@ fun ExamDetailScreen(vm: AppViewModel, examId: String) {
                             Text("  Upload Excel / CSV")
                         }
                         TextButton(onClick = {
-                            val dir = java.io.File(ctx.cacheDir, "reports")
-                            dir.mkdirs()
-                            val f = java.io.File(dir, "marks-sample.csv")
-                            val head = "Name,Mobile," + papers.joinToString(",") { it.subject }
-                            val lines = students.take(3).joinToString("\n") { s ->
-                                s.name + "," + s.mobile + "," + papers.joinToString(",") { "" }
-                            }
-                            f.writeText(head + "\n" + lines + "\n")
-                            Share.file(ctx, f, "text/csv", "Sample file")
-                        }) { Text("Sample file") }
+                            val head = listOf("Roll No", "Name", "Mobile") + papers.map { it.subject + " (" + it.maxMarks + ")" }
+                            val body = students.map { s -> listOf(s.rollNo, s.name, s.mobile) + papers.map { "" } }
+                            Sheets.share(ctx, "marks-format-" + exam.name.replace(Regex("[^A-Za-z0-9]"), "_") + ".xlsx", listOf(head) + body)
+                        }) { Text("Download format") }
                     }
                 }
                 item {
                     Text(
-                        "File: first row has headings. Use Mobile (or Roll No or Name) and one column per subject, " +
-                            "named like the papers. Write AB for absent.",
+                        "Tap Download format, fill the marks in that Excel file and upload it back. One column per subject. " +
+                            "Write AB for absent. All subjects of the exam are filled in automatically.",
                         color = Grey, fontSize = 12.sp
                     )
                 }

@@ -30,7 +30,7 @@ fun DemoScreen(vm: AppViewModel) {
             AppCard {
                 Text("Sample data for testing", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Text(
-                    "Creates 5 teachers, 84 students in 5 batches (11th and 12th Science with Group A and B, and 10th), " +
+                    "Creates 7 teachers (permanent and guest), 84 students in 5 batches (11th and 12th Science with Group A and B, and 10th), " +
                         "4 weeks of classes, attendance, 3 exams per batch with marks and leaderboards, fee payments, " +
                         "announcements and homework.",
                     color = Grey, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp)
@@ -43,8 +43,8 @@ fun DemoScreen(vm: AppViewModel) {
             AppCard {
                 Text("Demo logins (password: demo123)", fontWeight = FontWeight.Bold)
                 Column(Modifier.padding(top = 6.dp)) {
-                    Text("Teachers: 9000000001 to 9000000005", fontSize = 13.sp)
-                    Text("Teacher 1 teaches Physics, 2 Chemistry, 3 Maths, 4 Biology, 5 English", color = Grey, fontSize = 12.sp)
+                    Text("Teachers: 9000000001 to 9000000007", fontSize = 13.sp)
+                    Text("1 Physics, 2 Chemistry, 3 Mathematics, 4 Biology, 5 English, 6 MIL, 7 IT. Teachers 1, 2 and 5 are permanent (they can apply for leave), the others are guest teachers.", color = Grey, fontSize = 12.sp)
                     Text("Students: 9100000001 to 9100000084", fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
                     Text("Log out and log in with these to see the teacher and student screens.", color = Grey, fontSize = 12.sp)
                 }

@@ -2,6 +2,17 @@
 
 package com.aspirescience.academy.ui.student
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
+import com.aspirescience.academy.data.Attendance
+import com.aspirescience.academy.ui.common.MonthSwitcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -64,6 +75,7 @@ fun AttendanceContent(vm: AppViewModel, studentId: String) {
             }
         }
         if (att.isEmpty()) item { Text("No attendance recorded yet", color = Grey) }
+        if (att.isNotEmpty()) item { AttendanceCalendar(att) }
         if (groups.size >= 2) {
             item {
                 AppCard {
@@ -88,7 +100,7 @@ fun AttendanceContent(vm: AppViewModel, studentId: String) {
                             Text(a.subject.ifBlank { a.batchName }, color = Grey, fontSize = 13.sp)
                         }
                         Pill(
-                            when (a.status) { "P" -> "Present"; "A" -> "Absent"; else -> "Late" },
+                            when (a.status) { "P" -> "Present"; "A" -> "Absent"; else -> "Late" + (if (a.lateTime.isNotBlank()) " " + D.time12(a.lateTime) else "") },
                             when (a.status) { "P" -> Green; "A" -> Red; else -> Orange }
                         )
                     }
@@ -210,6 +222,68 @@ fun ResultsContent(vm: AppViewModel, studentId: String) {
                     }
                 }
             }
+        }
+    }
+}
+
+/** Month calendar: green = came, red = absent, orange = late. A day with several classes shows the worst of them. */
+@Composable
+private fun AttendanceCalendar(att: List<Attendance>) {
+    var month by remember { mutableStateOf(D.thisMonth()) }
+    var picked by remember { mutableStateOf("") }
+    val ym = java.time.YearMonth.parse(month)
+    val lead = ym.atDay(1).dayOfWeek.value % 7 // the week starts on Sunday
+    val total = ym.lengthOfMonth()
+    val byDate = att.filter { it.date.startsWith(month) }.groupBy { it.date }
+    fun colorOf(l: List<Attendance>): Color = when {
+        l.any { it.status == "A" } -> Red
+        l.any { it.status == "L" } -> Orange
+        else -> Green
+    }
+    AppCard {
+        Text("Month calendar", fontWeight = FontWeight.Bold)
+        MonthSwitcher(month) { month = it; picked = "" }
+        Row(Modifier.fillMaxWidth()) {
+            listOf("S", "M", "T", "W", "T", "F", "S").forEach {
+                Text(it, Modifier.weight(1f), textAlign = TextAlign.Center, color = Grey, fontSize = 12.sp)
+            }
+        }
+        for (r in 0 until (lead + total + 6) / 7) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                for (c in 0 until 7) {
+                    val day = r * 7 + c - lead + 1
+                    Box(Modifier.weight(1f).aspectRatio(1f).padding(2.dp), contentAlignment = Alignment.Center) {
+                        if (day in 1..total) {
+                            val iso = month + "-" + day.toString().padStart(2, '0')
+                            val recs = byDate[iso]
+                            val col = recs?.let { colorOf(it) }
+                            Box(
+                                Modifier.fillMaxSize().background(col ?: Color.Transparent, CircleShape)
+                                    .then(if (iso == picked) Modifier.border(2.dp, Indigo, CircleShape) else Modifier)
+                                    .clickable(enabled = recs != null) { picked = if (picked == iso) "" else iso },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    day.toString(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                    color = if (col != null) Color.White else Color(0xFF6B7080)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("Came", color = Green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("Absent", color = Red, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Text("Late", color = Orange, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+        byDate[picked]?.sortedBy { it.subject }?.forEach { a ->
+            Text(
+                D.shortDate(a.date) + "  " + a.subject.ifBlank { a.batchName } + " - " +
+                    when (a.status) { "P" -> "Present"; "A" -> "Absent"; else -> "Late" + (if (a.lateTime.isNotBlank()) " (came at " + D.time12(a.lateTime) + ")" else "") },
+                fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
