@@ -1,0 +1,41 @@
+:root {
+  --bg: #f5f6fa; --card: #fff; --text: #111827; --muted: #6b7280; --line: #e5e7eb;
+  --primary: #4338ca; --primary-text: #fff; --ok: #16a34a; --warn: #ea580c; --bad: #dc2626;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0f1220; --card: #181c2e; --text: #e5e7eb; --muted: #9ca3af; --line: #2a2f45; --primary: #818cf8; --primary-text: #0f1220; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; background: var(--card); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+h1 { margin: 0; font-size: 18px; } h1 span { color: var(--muted); font-weight: 500; }
+main { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+.center { text-align: center; } .muted { color: var(--muted); }
+button { font: inherit; border-radius: 8px; border: 1px solid var(--line); padding: 8px 14px; cursor: pointer; background: var(--card); color: var(--text); }
+button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); font-weight: 600; }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button.ghost { background: transparent; }
+button:disabled { opacity: .5; cursor: default; }
+input, select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.tile b { display: block; font-size: 24px; } .tile span { color: var(--muted); font-size: 13px; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; } .toolbar input { flex: 1; min-width: 200px; }
+.table-wrap { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; } th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); } tr:last-child td { border-bottom: 0; }
+td small { display: block; color: var(--muted); }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; border: 1px solid currentColor; }
+.badge.active { color: var(--ok); } .badge.suspended { color: var(--bad); } .badge.expired { color: var(--warn); }
+.bar { height: 6px; border-radius: 4px; background: var(--line); margin: 2px 0 6px; overflow: hidden; } .bar i { display: block; height: 100%; background: var(--primary); } .bar i.full { background: var(--bad); }
+.use { font-size: 12px; color: var(--muted); min-width: 130px; }
+#msg { min-height: 1.4em; color: var(--muted); } #msg.err { color: var(--bad); } #msg.ok { color: var(--ok); }
+dialog { width: min(640px, 94vw); border: 1px solid var(--line); border-radius: 14px; padding: 0; background: var(--card); color: var(--text); }
+dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); margin: 0; } .dlg-head h2 { margin: 0; font-size: 17px; }
+#dbody { padding: 6px 18px 18px; max-height: 75vh; overflow-y: auto; }
+.sec { padding: 12px 0; border-bottom: 1px solid var(--line); } .sec:last-child { border-bottom: 0; } .sec h3 { margin: 0 0 8px; font-size: 14px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.feat { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; } .feat input { margin-top: 3px; }
+.limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; } .limits label { font-size: 12px; color: var(--muted); display: block; } .limits input { width: 100%; }

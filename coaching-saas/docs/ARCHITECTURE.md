@@ -51,4 +51,5 @@ operation; it is the price of instant suspension and feature gating without wait
 3. **Features port A** — people, batches, timetable, attendance/approvals, notices/homework
 4. **Features port B** — exams/marks/Excel, fees/accounts, study, doubts, leaves, backup
 5. **Plans** — limits, feature gating in the UI, super-admin Cloud Functions, usage counters
-6. *(next)* Super Admin web panel   7. *(next)* FCM push notifications
+6. **Super Admin web panel** (`admin-web/`) — talks only to the `sa*` callables; never reads tenant data ✅
+7. **FCM push** — `institutes/{inst}/devices/{token}`; Firestore triggers + 2 scheduled reminders; only for live institutes with the `push` feature ✅

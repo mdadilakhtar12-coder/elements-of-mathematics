@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coach Hub Super Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>Coach Hub <span>Super Admin</span></h1>
+    <div id="who" hidden><span id="email"></span> <button id="signout" class="ghost">Sign out</button></div>
+  </header>
+
+  <main>
+    <section id="login" class="card center" hidden>
+      <h2>Platform owner sign-in</h2>
+      <p class="muted">Only accounts with the super-admin claim can use this panel.</p>
+      <button id="google" class="primary">Continue with Google</button>
+    </section>
+
+    <section id="denied" class="card center" hidden>
+      <h2>Not a super admin</h2>
+      <p class="muted">This account has no <code>sa</code> claim. Run <code>node scripts/make-superadmin.js your@email</code>, then sign out and in again.</p>
+    </section>
+
+    <section id="app" hidden>
+      <div class="tiles" id="tiles"></div>
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="Search name, code or owner e-mail">
+        <select id="fplan"><option value="">All plans</option></select>
+        <select id="fstatus">
+          <option value="">All statuses</option><option value="active">Active</option>
+          <option value="suspended">Suspended</option><option value="expired">Expired</option>
+        </select>
+        <button id="reload" class="ghost">Refresh</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Institute</th><th>Plan</th><th>Status</th><th>Expires</th><th>Usage</th><th></th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="muted center" hidden>No institutes match.</p>
+    </section>
+    <p id="msg" role="status"></p>
+  </main>
+
+  <dialog id="dlg">
+    <form method="dialog" class="dlg-head"><h2 id="dtitle"></h2><button class="ghost" aria-label="Close">&times;</button></form>
+    <div id="dbody"></div>
+  </dialog>
+
+  <script src="logic.js"></script>
+  <script src="config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

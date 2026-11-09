@@ -8,6 +8,7 @@ coaching-saas/
   android/          Android app (package com.coachsaas.app)
   functions/        Cloud Functions (accounts, plan limits, super admin) + tests
   firestore.rules   tenant isolation + suspend/expiry + feature gating
+  admin-web/        Super Admin web panel (static; deploy with Firebase Hosting)
   scripts/          make-superadmin.js, seed-plans.js
   docs/ARCHITECTURE.md
 ```
@@ -20,8 +21,8 @@ coaching-saas/
 | 2 Login | institute code + username + password, owner Google / email link, register institute, reset/deactivate/delete (Cloud Functions) | done — backend tested, Android CI-compiled |
 | 3-4 Features port | people, batches, timetable, attendance/approvals, exams+Excel, fees, accounts, study, doubts, leaves, backup, report cards | ported (not run on a device yet) |
 | 5 Plans | Free/Basic/Pro, limits in a transaction, feature gating (rules + UI), super-admin functions | done — backend tested |
-| 6 | Super Admin **web panel** | next |
-| 7 | FCM push notifications (abhi purana polling worker hai) | next |
+| 6 Super Admin web panel | `admin-web/` (static site, Firebase Hosting): institutes list, plan, features, limits, suspend, expiry, usage | done — logic unit-tested, rendered in a real browser with a stubbed SDK |
+| 7 FCM push | Cloud Functions triggers + daily reminders, Android service, per-device registry; polling worker hata diya | done — logic tested on emulator with a fake FCM |
 
 ## Plans (functions/src/plans.js)
 | | Free | Basic | Pro |
@@ -42,8 +43,10 @@ Free ke numbers aapke diye hue hain; Basic/Pro ke numbers aur price **mere andaa
    GOOGLE_APPLICATION_CREDENTIALS=sa.json node scripts/seed-plans.js
    GOOGLE_APPLICATION_CREDENTIALS=sa.json node scripts/make-superadmin.js you@gmail.com
    ```
-4. Email-link login ke liye `-PAUTH_LINK_DOMAIN=<project>.firebaseapp.com` (ya env var) do aur Console → Authentication → Settings mein wo domain authorize karo.
-5. Tests: `cd functions && npm run test:all` (Java chahiye, emulator khud download hota hai).
+4. Super Admin panel: `admin-web/config.js` mein Firebase web config daalo, phir `npx firebase deploy --only hosting` aur us URL par apne super-admin Google account se login karo. (Authentication → Authorized domains mein hosting domain hona chahiye.)
+5. Push: Basic/Pro plan mein `push` feature on hai. Firestore ka region `asia-south1` rakho (triggers usi region mein chalte hain). Android 13+ par app notification permission maangta hai.
+6. Email-link login ke liye `-PAUTH_LINK_DOMAIN=<project>.firebaseapp.com` (ya env var) do aur Console → Authentication → Settings mein wo domain authorize karo.
+7. Tests: `cd functions && npm run test:all` (Java chahiye, emulator khud download hota hai).
 
 ## Security notes
 * Passwords sirf Firebase Auth mein (hashed). Firestore mein `credentials` collection nahi hai; admin password dekh nahi sakta, sirf reset kar sakta hai (random password ek baar dikhta hai).
@@ -55,4 +58,5 @@ Free ke numbers aapke diye hue hain; Basic/Pro ke numbers aur price **mere andaa
 * Android app **device par chalaya nahi gaya** (yahan Android SDK nahi); sirf GitHub Actions se compile hota hai. Pehle run par chhoti bugs aa sakti hain.
 * Email-link aur Google sign-in ka end-to-end test Firebase project ke bina possible nahi tha.
 * Plan expire hone par institute lock ho jaata hai (auto-downgrade nahi) — chahein to Free par girane ka scheduled function jod sakte hain.
-* Purana `CheckWorker` polling abhi bhi hai; phase 7 mein FCM se replace hoga.
+* Push ka asli FCM delivery (Firebase project + phone) test nahi hua; targeting aur token-cleanup emulator par fake FCM ke saath tested hain. Logout offline ho to purana device token us institute mein reh sakta hai jab tak naya user register na kare ya FCM use dead na bataye.
+* Admin panel ko asli Firebase login ke saath nahi chalaya (stubbed SDK se browser test hua).
