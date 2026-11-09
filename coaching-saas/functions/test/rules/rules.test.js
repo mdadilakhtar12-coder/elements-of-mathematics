@@ -157,3 +157,13 @@ test('students can post their own doubt only', async () => {
   await assertSucceeds(setDoc(doc(stu, 'institutes/a/doubts/d1'), { studentId: 'stuA', question: 'q' }));
   await assertFails(setDoc(doc(stu, 'institutes/a/doubts/d2'), { studentId: 'stuA2', question: 'q' }));
 });
+
+test('push devices: a user registers only their own device and cannot read others', async () => {
+  const stu = as('a', 'stuA');
+  await assertSucceeds(setDoc(doc(stu, 'institutes/a/devices/tokA'), { uid: 'stuA', role: 'student', platform: 'android', updatedAt: 1 }));
+  await assertFails(setDoc(doc(stu, 'institutes/a/devices/tokB'), { uid: 'stuA2', role: 'student' }));
+  await assertFails(setDoc(doc(stu, 'institutes/a/devices/tokC'), { uid: 'stuA', secret: 'x' }));
+  await assertSucceeds(getDoc(doc(stu, 'institutes/a/devices/tokA')));
+  await assertFails(getDoc(doc(as('a', 'teachA'), 'institutes/a/devices/tokA')));
+  await assertSucceeds(deleteDoc(doc(stu, 'institutes/a/devices/tokA')));
+});

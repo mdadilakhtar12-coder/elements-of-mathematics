@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.functions.FirebaseFunctions
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.functions.FirebaseFunctionsException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
@@ -394,6 +395,33 @@ object Repo {
     suspend fun registerInstitute(name: String, code: String): Session {
         call("registerInstitute", mapOf("name" to name.trim(), "code" to code.trim().lowercase()))
         return openSession()
+    }
+
+    // ---------- push (FCM) ----------
+
+    /** Saves this phone's FCM token under institutes/{id}/devices so Cloud Functions can notify this user. */
+    suspend fun registerDevice(token: String? = null) {
+        val user = auth.currentUser ?: return
+        if (instituteId.isEmpty()) return
+        val t = token ?: FirebaseMessaging.getInstance().token.await()
+        val role = loadProfile(user.uid)?.role.orEmpty()
+        coll("devices").document(t).set(
+            mapOf("uid" to user.uid, "role" to role, "platform" to "android", "updatedAt" to System.currentTimeMillis())
+        ).await()
+    }
+
+    /** Stops pushes for this user on this phone (called on log out, before signing out). */
+    suspend fun unregisterDevice() {
+        if (auth.currentUser == null || instituteId.isEmpty()) return
+        try {
+            // Offline writes never complete, so do not wait forever before signing out.
+            kotlinx.coroutines.withTimeoutOrNull(3000) {
+                val t = FirebaseMessaging.getInstance().token.await()
+                coll("devices").document(t).delete().await()
+            }
+        } catch (e: Exception) {
+            // Offline: the token stays until the next user registers or FCM reports it dead.
+        }
     }
 
     /** True when the signed-in user has an e-mail/password login (staff, students) rather than Google / e-mail link. */

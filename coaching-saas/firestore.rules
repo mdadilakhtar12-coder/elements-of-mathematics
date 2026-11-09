@@ -68,6 +68,13 @@ service cloud.firestore {
             ]);
       }
 
+      // ---- push devices (FCM tokens). Each user manages only their own; Cloud Functions read them to send. ----
+      match /devices/{token} {
+        allow read, delete: if member(inst) && resource.data.uid == request.auth.uid;
+        allow create, update: if member(inst) && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'role', 'platform', 'updatedAt']);
+      }
+
       // ---- core features (every plan) ----
       match /batches/{id} {
         allow read: if member(inst);

@@ -188,6 +188,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         scope.launch { Repo.homework().collect { homework = it } }
         scope.launch { Repo.subjectSettings().collect { if (it.isNotEmpty()) subjects = it } }
         scope.launch { Repo.messageTemplates().collect { com.coachsaas.app.util.Messages.overrides = it } }
+        // Register this phone for push while the plan includes it.
+        scope.launch {
+            snapshotFlow { institute?.has(Feature.PUSH) == true }.distinctUntilChanged().collect { on ->
+                if (on) try { Repo.registerDevice() } catch (e: Exception) { /* retried at next start */ }
+            }
+        }
         // Collections of plan features are only listened to while the plan includes them
         // (the rules would refuse them otherwise). Restarted whenever the feature set changes.
         scope.launch {
@@ -288,7 +294,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun logout() {
         stopListening()
-        Repo.signOut()
+        // Stop pushes for this user on this phone before the session is dropped.
+        viewModelScope.launch {
+            Repo.unregisterDevice()
+            if (me == null && !busy) Repo.signOut()
+        }
         me = null
         institute = null
         needsRegistration = false

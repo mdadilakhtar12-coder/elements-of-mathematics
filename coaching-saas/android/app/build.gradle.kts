@@ -66,8 +66,8 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-messaging")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // Google sign-in for the institute owner
     implementation("androidx.credentials:credentials:1.3.0")
