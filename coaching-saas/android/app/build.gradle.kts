@@ -28,6 +28,17 @@ android {
         manifestPlaceholders["authLinkDomain"] = linkDomain
     }
 
+    // One fixed DEBUG key (committed on purpose, password "android" like Android's own debug key), so every CI build has
+    // the same SHA-1 and Google sign-in keeps working. NEVER use it for a Play Store release: make a separate upload key then.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

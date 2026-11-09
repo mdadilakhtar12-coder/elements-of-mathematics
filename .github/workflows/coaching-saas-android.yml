@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      AUTH_LINK_DOMAIN: attendance-app-1cdf6.firebaseapp.com
     defaults:
       run:
         working-directory: coaching-saas/android
