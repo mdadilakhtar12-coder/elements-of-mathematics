@@ -1,0 +1,173 @@
+rules_version = '2';
+// Multi-institute coaching app.
+//
+// Isolation: everything an institute owns lives under institutes/{inst}/... and a signed-in user
+// only gets in when their custom claim `inst` (set by Cloud Functions, never by the client) equals {inst}.
+// Plans: `institutes/{inst}.features` and `.status/.expiresAt` are read here, so a suspended / expired
+// institute or a switched-off feature is blocked on the server, whatever the app does.
+// Accounts, plan, usage and limits are written only by Cloud Functions (admin SDK bypasses these rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function isSuper() { return signedIn() && request.auth.token.get('sa', false) == true; }
+    function inInst(inst) { return signedIn() && request.auth.token.get('inst', '') == inst; }
+
+    function instDoc(inst) { return get(/databases/$(database)/documents/institutes/$(inst)).data; }
+    function instLive(inst) {
+      return instDoc(inst).status == 'active'
+        && (instDoc(inst).get('expiresAt', null) == null || instDoc(inst).expiresAt > request.time);
+    }
+    function feat(inst, f) { return instDoc(inst).get('features', {}).get(f, false) == true; }
+
+    function meDoc(inst) {
+      return get(/databases/$(database)/documents/institutes/$(inst)/users/$(request.auth.uid)).data;
+    }
+    // A usable member: right institute, institute live, own account active.
+    function member(inst) { return inInst(inst) && instLive(inst) && meDoc(inst).active == true; }
+    function roleIs(inst, r) { return member(inst) && meDoc(inst).role == r; }
+    function isAdmin(inst) { return roleIs(inst, 'admin'); }
+    function isTeacher(inst) { return roleIs(inst, 'teacher'); }
+    function can(inst, p) {
+      return member(inst) && (meDoc(inst).role == 'admin'
+        || (meDoc(inst).role == 'subadmin' && p in meDoc(inst).get('perms', [])));
+    }
+    function isStaffOrTeacher(inst) {
+      return member(inst) && meDoc(inst).role in ['admin', 'subadmin', 'teacher'];
+    }
+
+    // Everything not matched below is denied.
+
+    // ---------- global, read-only data ----------
+    match /plans/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ---------- the institute ----------
+    match /institutes/{inst} {
+      // Members may read it even when suspended, so the app can show the reason.
+      allow read: if inInst(inst) || isSuper();
+      allow write: if false; // Cloud Functions only (plan, limits, usage, status, expiry)
+
+      // ---- accounts ----
+      match /users/{uid} {
+        allow read: if (inInst(inst) && request.auth.uid == uid) || isStaffOrTeacher(inst);
+        allow create, delete: if false; // createUser / deleteUser Cloud Functions (limits + Auth account)
+        // role, loginId, active, createdAt can never be changed from the app.
+        allow update: if (
+              isAdmin(inst)
+              || (can(inst, 'users') && resource.data.role in ['student', 'teacher'])
+              || (can(inst, 'batches') && resource.data.role == 'student'
+                  && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchIds']))
+            )
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+              'name', 'mobile', 'perms', 'batchIds', 'rollNo', 'standard', 'parentMobile',
+              'monthlyFee', 'subjects', 'classRate', 'salary', 'teacherType'
+            ]);
+      }
+
+      // ---- push devices (FCM tokens). Each user manages only their own; Cloud Functions read them to send. ----
+      match /devices/{token} {
+        allow read, delete: if member(inst) && resource.data.uid == request.auth.uid;
+        allow create, update: if member(inst) && request.resource.data.uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'role', 'platform', 'updatedAt']);
+      }
+
+      // ---- core features (every plan) ----
+      match /batches/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'batches');
+      }
+      match /classes/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'schedule') || can(inst, 'attendance')
+          || (isTeacher(inst) && resource != null && resource.data.teacherId == request.auth.uid
+              && request.resource.data.teacherId == request.auth.uid);
+      }
+      match /attendance/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'attendance') || isTeacher(inst);
+      }
+      match /notices/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'notices') || isTeacher(inst);
+      }
+      match /homework/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'notices') || isTeacher(inst);
+      }
+      // Subject list, WhatsApp message texts.
+      match /settings/{id} {
+        allow read: if member(inst);
+        allow write: if can(inst, 'notices');
+      }
+
+      // ---- exams (feature: exams) ----
+      match /exams/{id} {
+        allow read: if member(inst) && feat(inst, 'exams');
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+      }
+      match /marks/{id} {
+        allow read: if member(inst) && feat(inst, 'exams')
+          && (isStaffOrTeacher(inst) || resource.data.studentId == request.auth.uid);
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+      }
+      match /leaderboards/{id} {
+        allow read: if member(inst) && feat(inst, 'exams');
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+      }
+
+      // ---- fees (feature: fees) ----
+      match /fees/{id} {
+        allow read: if member(inst) && feat(inst, 'fees')
+          && (can(inst, 'fees') || resource.data.studentId == request.auth.uid);
+        allow write: if feat(inst, 'fees') && can(inst, 'fees');
+      }
+
+      // ---- accounts (feature: accounts) ----
+      match /ledger/{id} {
+        allow read, write: if feat(inst, 'accounts') && can(inst, 'fees');
+      }
+      match /bills/{id} {
+        allow read, write: if feat(inst, 'accounts') && can(inst, 'fees');
+      }
+      match /salaryPaid/{id} {
+        allow read: if member(inst) && feat(inst, 'accounts')
+          && (can(inst, 'fees') || resource.data.teacherId == request.auth.uid);
+        allow write: if feat(inst, 'accounts') && can(inst, 'fees');
+      }
+
+      // ---- study material (feature: study) ----
+      match /materials/{id} {
+        allow read: if member(inst) && feat(inst, 'study');
+        allow write: if feat(inst, 'study') && (can(inst, 'notices') || isTeacher(inst));
+      }
+
+      // ---- doubts (feature: doubts) ----
+      match /doubts/{id} {
+        allow read: if member(inst) && feat(inst, 'doubts')
+          && (resource.data.studentId == request.auth.uid || isStaffOrTeacher(inst));
+        allow create: if member(inst) && feat(inst, 'doubts') && request.resource.data.studentId == request.auth.uid;
+        allow update: if feat(inst, 'doubts') && isStaffOrTeacher(inst);
+        allow delete: if member(inst) && feat(inst, 'doubts')
+          && (resource.data.studentId == request.auth.uid || isStaffOrTeacher(inst));
+      }
+      match /doubtPhotos/{id} {
+        allow read, create, delete: if member(inst) && feat(inst, 'doubts');
+      }
+
+      // ---- leaves (feature: leaves) ----
+      match /leaves/{id} {
+        allow read: if member(inst) && feat(inst, 'leaves')
+          && (resource.data.teacherId == request.auth.uid || can(inst, 'attendance'));
+        allow create: if feat(inst, 'leaves') && isTeacher(inst)
+          && request.resource.data.teacherId == request.auth.uid && request.resource.data.status == 'pending';
+        allow update: if feat(inst, 'leaves') && can(inst, 'attendance');
+        allow delete: if feat(inst, 'leaves') && (can(inst, 'attendance')
+          || (member(inst) && resource.data.teacherId == request.auth.uid && resource.data.status == 'pending'));
+      }
+    }
+  }
+}

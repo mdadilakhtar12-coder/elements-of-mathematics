@@ -1,0 +1,67 @@
+name: Coaching SaaS deploy (Firebase)
+
+# Run by hand: Actions tab -> "Coaching SaaS deploy (Firebase)" -> Run workflow.
+# Needs ONE repository secret: FIREBASE_SERVICE_ACCOUNT (the deployer service account's JSON key).
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        required: true
+        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin]
+      email:
+        description: "Only for make-superadmin: the Google e-mail (must have signed in once)"
+        required: false
+        default: ''
+
+env:
+  PROJECT: attendance-app-1cdf6
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: coaching-saas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: coaching-saas/functions
+
+      - name: Check access (read-only)
+        if: inputs.action == 'check-access'
+        run: |
+          npx --yes firebase-tools@13 projects:list --json | head -c 600
+          echo; npx --yes firebase-tools@13 apps:list --project "$PROJECT"
+          npx --yes firebase-tools@13 firestore:databases:list --project "$PROJECT"
+
+      - name: Deploy Firestore rules
+        if: inputs.action == 'deploy-rules' || inputs.action == 'deploy-all'
+        run: npx --yes firebase-tools@13 deploy --only firestore --project "$PROJECT" --non-interactive
+
+      - name: Deploy Cloud Functions
+        if: inputs.action == 'deploy-functions' || inputs.action == 'deploy-all'
+        run: npx --yes firebase-tools@13 deploy --only functions --project "$PROJECT" --non-interactive --force
+
+      - name: Deploy Hosting (admin panel)
+        if: inputs.action == 'deploy-hosting' || inputs.action == 'deploy-all'
+        run: npx --yes firebase-tools@13 deploy --only hosting --project "$PROJECT" --non-interactive
+
+      - name: Seed plans
+        if: inputs.action == 'seed-plans'
+        run: node scripts/seed-plans.js
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}
+
+      - name: Make super admin
+        if: inputs.action == 'make-superadmin'
+        run: node scripts/make-superadmin.js "${{ inputs.email }}"
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}
