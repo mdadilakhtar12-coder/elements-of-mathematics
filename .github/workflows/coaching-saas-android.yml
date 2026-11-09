@@ -19,12 +19,21 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
 
-      # Optional: google-services.json (base64) as repo secret GOOGLE_SERVICES_JSON connects the APK to your Firebase.
+      # Optional: secret GOOGLE_SERVICES_JSON connects the APK to your Firebase.
+      # It may hold the plain google-services.json text OR its base64 - both work.
       - name: Add Firebase config
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         if: env.GOOGLE_SERVICES_JSON != ''
-        run: echo "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+        run: |
+          first=$(printf '%s' "$GOOGLE_SERVICES_JSON" | tr -d '[:space:]' | head -c 1)
+          if [ "$first" = "{" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
+          else
+            printf '%s' "$GOOGLE_SERVICES_JSON" | base64 --decode > app/google-services.json
+          fi
+          python3 -c "import json; d=json.load(open('app/google-services.json')); print('google-services.json OK for project', d['project_info']['project_id'], '- package(s):', [c['client_info']['android_client_info']['package_name'] for c in d['client']])" \
+            || { echo "::error::GOOGLE_SERVICES_JSON secret is not valid JSON (plain or base64)"; exit 1; }
 
       - name: Build debug APK
         run: |
