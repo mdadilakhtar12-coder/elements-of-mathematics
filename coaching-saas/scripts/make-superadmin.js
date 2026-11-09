@@ -5,8 +5,10 @@
  * The user must sign out and in again (or refresh the ID token) afterwards.
  */
 const path = require('node:path');
-const { initializeApp } = require(path.join(__dirname, '../functions/node_modules/firebase-admin/app'));
-const { getAuth } = require(path.join(__dirname, '../functions/node_modules/firebase-admin/auth'));
+// Resolve packages as the functions folder would (works with package "exports"; needs `npm ci` in functions/).
+const req = require('node:module').createRequire(path.join(__dirname, '../functions/package.json'));
+const { initializeApp } = req('firebase-admin/app');
+const { getAuth } = req('firebase-admin/auth');
 
 (async () => {
   const email = process.argv[2];
@@ -18,4 +20,7 @@ const { getAuth } = require(path.join(__dirname, '../functions/node_modules/fire
   if (process.argv.includes('--remove')) delete claims.sa; else claims.sa = true;
   await auth.setCustomUserClaims(user.uid, claims);
   console.log(`${email}: sa=${claims.sa === true}`);
-})().catch((e) => { console.error(e.message); process.exit(1); });
+})().catch((e) => {
+  console.error(e.code === 'auth/user-not-found' ? 'Is e-mail ka user nahi mila: pehle isi Google account se admin panel (ya app) mein ek baar login karo, phir dobara chalao.' : e.message);
+  process.exit(1);
+});

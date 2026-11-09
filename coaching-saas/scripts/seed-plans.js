@@ -1,8 +1,10 @@
 'use strict';
 /** Publishes the plan catalogue (functions/src/plans.js) to plans/{id} for the pricing screen. Re-run after editing plans. */
 const path = require('node:path');
-const { initializeApp } = require(path.join(__dirname, '../functions/node_modules/firebase-admin/app'));
-const { getFirestore } = require(path.join(__dirname, '../functions/node_modules/firebase-admin/firestore'));
+// Resolve packages as the functions folder would (works with package "exports"; needs `npm ci` in functions/).
+const req = require('node:module').createRequire(path.join(__dirname, '../functions/package.json'));
+const { initializeApp } = req('firebase-admin/app');
+const { getFirestore } = req('firebase-admin/firestore');
 const { PLANS, FEATURES } = require('../functions/src/plans');
 
 (async () => {
