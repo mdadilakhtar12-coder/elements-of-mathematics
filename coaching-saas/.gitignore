@@ -1,0 +1,13 @@
+node_modules/
+.firebaserc
+*.log
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+android/app/google-services.json
+android/local.properties
+android/build/
+android/app/build/
+android/.gradle/
+.idea/
+*.iml
