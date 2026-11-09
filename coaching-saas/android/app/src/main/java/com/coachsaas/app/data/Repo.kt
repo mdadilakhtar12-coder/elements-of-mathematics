@@ -304,7 +304,7 @@ object Repo {
 
     /** Calls a Cloud Function and returns its result map. Errors carry a user-readable message. */
     suspend fun call(name: String, data: Map<String, Any?> = emptyMap()): Map<String, Any?> {
-        val res = functions.getHttpsCallable(name).call(data).await().data
+        val res = functions.getHttpsCallable(name).call(data).await().getData()
         @Suppress("UNCHECKED_CAST")
         return (res as? Map<String, Any?>) ?: emptyMap()
     }
