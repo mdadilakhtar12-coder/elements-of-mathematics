@@ -11,7 +11,8 @@
         "node_modules",
         "test",
         ".git"
-      ]
+      ],
+      "runtime": "nodejs22"
     }
   ],
   "emulators": {

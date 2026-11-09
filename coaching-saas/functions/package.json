@@ -3,7 +3,7 @@
   "private": true,
   "description": "Cloud Functions for the multi-institute coaching app (accounts, plans, limits, super admin)",
   "main": "src/index.js",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "scripts": {
     "test": "node --test test/unit/*.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-coachsaas \"node --test test/rules/*.test.js\"",
