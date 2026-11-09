@@ -12,3 +12,6 @@ build/
 app/google-services.json
 *.jks
 *.keystore
+
+# Coach Hub fixed DEBUG key (public password "android"); see coaching-saas/android/app/build.gradle.kts
+!coaching-saas/android/app/debug.keystore
