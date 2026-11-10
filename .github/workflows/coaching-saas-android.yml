@@ -5,6 +5,9 @@ on:
     paths: ['coaching-saas/android/**', '.github/workflows/coaching-saas-android.yml']
   workflow_dispatch:
 
+permissions:
+  contents: write   # to publish the APK to the "coachhub-latest" release
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,3 +51,16 @@ jobs:
         with:
           name: coachhub-debug-apk
           path: coaching-saas/android/app/build/outputs/apk/debug/app-debug.apk
+
+      # Fixed download link (no login needed):
+      #   https://github.com/<owner>/<repo>/releases/download/coachhub-latest/CoachHub.apk
+      - name: Publish APK to the coachhub-latest release
+        if: github.ref == 'refs/heads/claude/android-education-app-f4iwdp'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/CoachHub.apk"
+          gh release view coachhub-latest >/dev/null 2>&1 || gh release create coachhub-latest \
+            --title "Coach Hub (latest debug APK)" --prerelease \
+            --notes "Latest debug build of the Coach Hub Android app. Replaced on every build. Debug key - not for the Play Store."
+          gh release upload coachhub-latest "$RUNNER_TEMP/CoachHub.apk" --clobber
