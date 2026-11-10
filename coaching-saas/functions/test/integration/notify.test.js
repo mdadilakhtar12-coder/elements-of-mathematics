@@ -126,3 +126,16 @@ test('fee reminder only on days 7-10 and only for students who still owe', async
 test('istParts uses India time', () => {
   assert.deepEqual(N.istParts(Date.UTC(2026, 10, 9, 20, 0), 1), { date: '2026-11-11', month: '2026-11', day: 11, hour: 1 });
 });
+
+test('absent alert: when a class is approved, students marked absent are told; a teacher who is also sub-admin gets approvals', async () => {
+  await db.doc(`${I}/attendance/c9_s1`).set({ classId: 'c9', studentId: 's1', status: 'A' });
+  await db.doc(`${I}/attendance/c9_s2`).set({ classId: 'c9', studentId: 's2', status: 'P' });
+  const base = { batchId: 'b1', batchName: 'B1', teacherId: 't1', date: '2026-11-10' };
+  await N.onClassChanged(deps, 'a', { ...base, status: 'taken' }, { ...base, status: 'approved' }, 'c9');
+  assert.deepEqual(tokens(), ['tok-s1', 'tok-s1b', 'tok-t1']);
+  assert.ok(sent.some((m) => m.notification.title === 'Marked absent'));
+  sent = [];
+  await db.doc(`${I}/users/t2`).update({ alsoSubadmin: true, perms: ['attendance'] });
+  await N.onClassChanged(deps, 'a', { ...base, status: 'scheduled' }, { ...base, status: 'taken' }, 'c9');
+  assert.deepEqual(tokens(), ['tok-admin', 'tok-subOK', 'tok-t2']);
+});

@@ -41,6 +41,7 @@ exports.createUsers = callable(accounts.createUsers, { timeoutSeconds: 300 });
 exports.resetPassword = callable(accounts.resetPassword);
 exports.setUserActive = callable(accounts.setUserActive);
 exports.deleteUser = callable(accounts.deleteUser);
+exports.setTeacherAdmin = callable(accounts.setTeacherAdmin);
 
 // ---- super admin (phase 5) ----
 exports.saListInstitutes = callable(sa.listInstitutes);
@@ -72,7 +73,8 @@ exports.pushHomework = created('institutes/{inst}/homework/{id}', 'homework', no
 exports.pushMaterial = created('institutes/{inst}/materials/{id}', 'material', notify.onMaterial);
 exports.pushDoubt = created('institutes/{inst}/doubts/{id}', 'doubt', notify.onDoubtAsked);
 exports.pushDoubtAnswer = updated('institutes/{inst}/doubts/{id}', 'doubtAnswer', notify.onDoubtAnswered);
-exports.pushClass = updated('institutes/{inst}/classes/{id}', 'class', notify.onClassChanged);
+exports.pushClass = onDocumentUpdated('institutes/{inst}/classes/{id}', (e) =>
+  safely('class', () => notify.onClassChanged(pdeps(), e.params.inst, e.data.before.data(), e.data.after.data(), e.params.id)));
 exports.pushFee = created('institutes/{inst}/fees/{id}', 'fee', notify.onFeeReceived);
 exports.pushLeave = created('institutes/{inst}/leaves/{id}', 'leave', notify.onLeaveCreated);
 exports.pushLeaveDecision = updated('institutes/{inst}/leaves/{id}', 'leaveDecision', notify.onLeaveDecided);
@@ -95,6 +97,9 @@ const logged = (kind) => onDocumentWrittenWithAuthContext(`institutes/{inst}/${k
     after: e.data.after.exists ? e.data.after.data() : null,
     actorId: e.authId || '', actorType: e.authType || 'unknown',
   })));
+// Receipt numbers: 1, 2, 3 ... per institute, given by the server so two phones can never get the same one.
+exports.numberReceipt = onDocumentCreated('institutes/{inst}/fees/{id}', (e) =>
+  safely('numberReceipt', () => integrity.assignReceiptNo({ db: getFirestore() }, e.params.inst, e.data.ref)));
 exports.logFees = logged('fees');
 exports.logLedger = logged('ledger');
 exports.logSalaryPaid = logged('salaryPaid');

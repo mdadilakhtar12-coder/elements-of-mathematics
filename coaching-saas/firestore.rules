@@ -25,13 +25,22 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/institutes/$(inst)/users/$(request.auth.uid)).data;
     }
     // A usable member: right institute, institute live, own account active.
-    function member(inst) { return inInst(inst) && instLive(inst) && meDoc(inst).active == true; }
+    // Students can use the app only when the plan includes student login (Free does not).
+    function member(inst) {
+      return inInst(inst) && instLive(inst) && meDoc(inst).active == true
+        && (meDoc(inst).role != 'student' || feat(inst, 'student_login'));
+    }
+    // Sub-admin rights: a real sub-admin, or a teacher the admin has also made a sub-admin (setTeacherAdmin function).
+    function hasAdminAccess(inst) {
+      return meDoc(inst).role == 'subadmin'
+        || (meDoc(inst).role == 'teacher' && meDoc(inst).get('alsoSubadmin', false) == true);
+    }
     function roleIs(inst, r) { return member(inst) && meDoc(inst).role == r; }
     function isAdmin(inst) { return roleIs(inst, 'admin'); }
     function isTeacher(inst) { return roleIs(inst, 'teacher'); }
     function can(inst, p) {
       return member(inst) && (meDoc(inst).role == 'admin'
-        || (meDoc(inst).role == 'subadmin' && p in meDoc(inst).get('perms', [])));
+        || (hasAdminAccess(inst) && p in meDoc(inst).get('perms', [])));
     }
     function isStaffOrTeacher(inst) {
       return member(inst) && meDoc(inst).role in ['admin', 'subadmin', 'teacher'];
@@ -89,7 +98,7 @@ service cloud.firestore {
         // Own profile; admins and sub-admins see everyone; a teacher sees students only
         // (not other teachers' pay); a student sees nobody else.
         allow read: if (inInst(inst) && request.auth.uid == uid)
-          || (member(inst) && meDoc(inst).role in ['admin', 'subadmin'])
+          || (member(inst) && (meDoc(inst).role == 'admin' || hasAdminAccess(inst)))
           || (isTeacher(inst) && resource.data.role == 'student');
         allow create, delete: if false; // createUser / deleteUser Cloud Functions (limits + Auth account)
         // role, loginId, active, createdAt can never be changed from the app.
@@ -156,7 +165,8 @@ service cloud.firestore {
       // Subject list, WhatsApp message texts.
       match /settings/{id} {
         allow read: if member(inst);
-        allow write: if can(inst, 'notices');
+        // settings/fees (UPI id for payments) belongs to whoever handles fees; the rest to notices.
+        allow write: if id == 'fees' ? can(inst, 'fees') : can(inst, 'notices');
       }
 
       // ---- exams (feature: exams) ----

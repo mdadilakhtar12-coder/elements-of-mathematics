@@ -28,6 +28,7 @@ const FEATURES = {
   messaging: 'WhatsApp / SMS message templates',
   backup: 'Data backup export',
   push: 'Push notifications',
+  student_login: 'Students can log in to the app',
 };
 
 const FEATURE_KEYS = Object.keys(FEATURES);
@@ -51,7 +52,7 @@ const PLANS = {
     name: 'Basic',
     pricePerMonth: 499,
     limits: { admin: 1, subadmin: 3, teacher: 20, student: 200 },
-    features: featureMap(['exams', 'fees', 'study', 'import_excel', 'messaging', 'push']),
+    features: featureMap(['exams', 'fees', 'study', 'import_excel', 'messaging', 'push', 'student_login']),
   },
   pro: {
     id: 'pro',

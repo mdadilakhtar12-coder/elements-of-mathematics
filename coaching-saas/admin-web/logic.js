@@ -14,7 +14,8 @@
     import_excel: 'Excel / CSV import of students and marks',
     messaging: 'WhatsApp / SMS message templates',
     backup: 'Data backup export',
-    push: 'Push notifications'
+    push: 'Push notifications',
+    student_login: 'Students can log in to the app'
   };
   var ROLES = [['admin', 'Admins'], ['subadmin', 'Sub-admins'], ['teacher', 'Teachers'], ['student', 'Students']];
   var PLANS = ['free', 'basic', 'pro'];

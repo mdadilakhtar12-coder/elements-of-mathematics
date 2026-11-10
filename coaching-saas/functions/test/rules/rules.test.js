@@ -8,8 +8,8 @@ const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@fir
 const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, Timestamp } = require('firebase/firestore');
 
 let env;
-const FREE = { core: true, exams: false, fees: false, accounts: false, study: false, doubts: false, leaves: false };
-const PRO = { core: true, exams: true, fees: true, accounts: true, study: true, doubts: true, leaves: true };
+const FREE = { core: true, student_login: true, exams: false, fees: false, accounts: false, study: false, doubts: false, leaves: false };
+const PRO = { core: true, student_login: true, exams: true, fees: true, accounts: true, study: true, doubts: true, leaves: true };
 
 before(async () => {
   env = await initializeTestEnvironment({

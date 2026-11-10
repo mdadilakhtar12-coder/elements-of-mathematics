@@ -39,3 +39,16 @@ test('activity log: create, update, delete are recorded with the actor; retries 
   assert.equal(upd.before.amount, 1000); assert.equal(upd.after.amount, 100); assert.equal(upd.who, 'Asha');
   assert.equal(upd.before.secretInternal, undefined);
 });
+
+test('receipt numbers: 1, 2, 3 per institute, never duplicated even when payments arrive together', async () => {
+  const d = { db };
+  const refs = [];
+  for (let i = 0; i < 6; i++) { const r = db.doc(`institutes/a/fees/f${i}`); await r.set({ amount: 100 }); refs.push(r); }
+  const other = db.doc('institutes/b/fees/x'); await other.set({ amount: 1 });
+  const nums = await Promise.all(refs.map((r) => G.assignReceiptNo(d, 'a', r)));
+  assert.deepEqual([...nums].sort((x, y) => x - y), [1, 2, 3, 4, 5, 6]);
+  assert.equal(await G.assignReceiptNo(d, 'a', refs[0]), nums[0], 'a retried event keeps its number');
+  assert.equal(await G.assignReceiptNo(d, 'b', other), 1, 'each institute has its own series');
+  assert.equal((await refs[3].get()).data().receiptNo, nums[3]);
+  assert.equal(await G.assignReceiptNo(d, 'a', db.doc('institutes/a/fees/gone')), null);
+});

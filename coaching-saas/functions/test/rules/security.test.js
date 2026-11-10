@@ -7,7 +7,7 @@ const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@fir
 const { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit, writeBatch } = require('firebase/firestore');
 
 let env;
-const ALL = { core: true, exams: true, fees: true, accounts: true, study: true, doubts: true, leaves: true };
+const ALL = { core: true, student_login: true, exams: true, fees: true, accounts: true, study: true, doubts: true, leaves: true };
 before(async () => {
   env = await initializeTestEnvironment({
     projectId: 'demo-coachsaas-sec',
@@ -202,4 +202,32 @@ test('#9 fees: staff record under their own id; only the admin changes or delete
   await assertFails(getDocs(c(sub, 'activity')));
   await assertFails(setDoc(doc(as('admin'), `${I}/activity/a2`), { kind: 'fees' }));
   await assertFails(deleteDoc(doc(as('admin'), `${I}/activity/a1`)));
+});
+
+// ---------------------------------------------------------------- features
+test('student login: without the feature a student is locked out, staff are not', async () => {
+  await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), I), { 'features.student_login': false }));
+  await assertFails(getDoc(doc(as('s1'), `${I}/batches/b1`)));
+  await assertFails(getDocs(query(c(as('s1'), 'attendance'), where('studentId', '==', 's1'))));
+  await assertSucceeds(getDoc(doc(as('s1'), I)), 'can still read why');
+  await assertSucceeds(getDoc(doc(as('t1'), `${I}/batches/b1`)));
+  await assertSucceeds(getDocs(c(as('admin'), 'users')));
+});
+test('teacher who is also a sub-admin: gets exactly the chosen permissions, keeps teacher rights, cannot give it to themself', async () => {
+  const t = as('t1');
+  await assertFails(setDoc(doc(t, `${I}/fees/x1`), { studentId: 's1', amount: 1, createdBy: 't1' }));
+  await assertFails(updateDoc(doc(t, `${I}/users/t1`), { alsoSubadmin: true, perms: ['fees'] }));
+  await assertFails(updateDoc(doc(as('admin'), `${I}/users/t1`), { alsoSubadmin: true }), 'only the Cloud Function sets it');
+  await env.withSecurityRulesDisabled((ctx) => updateDoc(doc(ctx.firestore(), `${I}/users/t1`), { alsoSubadmin: true, perms: ['fees'] }));
+  await assertSucceeds(setDoc(doc(t, `${I}/fees/x1`), { studentId: 's1', amount: 1, createdBy: 't1' }));
+  await assertSucceeds(getDocs(c(t, 'users')));
+  await assertFails(setDoc(doc(t, `${I}/batches/new`), { name: 'x' }), 'no batches permission');
+  await assertSucceeds(setDoc(doc(t, `${I}/homework/hw9`), { title: 'x', batchId: 'b1' }), 'still a teacher');
+  await assertFails(updateDoc(doc(t, `${I}/classes/c1`), { status: 'approved' }), 'no attendance permission');
+});
+test('fee settings (UPI id) belong to fees staff, other settings to notices staff', async () => {
+  await assertSucceeds(setDoc(doc(as('sub'), `${I}/settings/fees`), { upiId: 'x@upi' }));
+  await assertFails(setDoc(doc(as('sub'), `${I}/settings/subjects`), { list: [] }));
+  await assertFails(setDoc(doc(as('t1'), `${I}/settings/fees`), { upiId: 'evil@upi' }));
+  await assertSucceeds(getDoc(doc(as('s1'), `${I}/settings/fees`)));
 });

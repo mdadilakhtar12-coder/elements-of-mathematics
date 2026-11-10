@@ -46,7 +46,8 @@ async function activeUsers(deps, inst, where) {
 async function staffUids(deps, inst, perm) {
   const users = await activeUsers(deps, inst);
   return users
-    .filter((u) => u.role === 'admin' || (u.role === 'subadmin' && (!perm || (u.perms || []).includes(perm))))
+    .filter((u) => u.role === 'admin'
+      || ((u.role === 'subadmin' || (u.role === 'teacher' && u.alsoSubadmin === true)) && (!perm || (u.perms || []).includes(perm))))
     .map((u) => u.uid);
 }
 
@@ -142,17 +143,37 @@ async function onDoubtAnswered(deps, inst, before, after) {
     { title: 'Your doubt was answered', body: after.answer, data: { kind: 'doubt' } });
 }
 
-async function onClassChanged(deps, inst, before, after) {
+/** Once a class is approved, every student marked absent gets "You were marked absent". */
+async function absentAlerts(deps, inst, classId, cls) {
+  if (!classId || !(await pushInstitute(deps, inst))) return 0;
+  const snap = await col(deps, inst, 'attendance').where('classId', '==', classId).get();
+  const absent = snap.docs.map((d) => d.data()).filter((a) => a.status === 'A').map((a) => a.studentId);
+  let sent = 0;
+  for (const uid of absent) {
+    sent += await sendToUids(deps, inst, [uid], {
+      title: 'Marked absent',
+      body: `${cls.batchName || ''}${cls.subject ? ' ' + cls.subject : ''} on ${cls.date || ''}. Contact the institute if this is wrong.`,
+      data: { kind: 'attendance' },
+    });
+  }
+  return sent;
+}
+
+async function onClassChanged(deps, inst, before, after, classId) {
   if (before.status === after.status) return 0;
   const label = (after.batchName || '') + (after.subject ? ' ' + after.subject : '') + ' ' + (after.date || '');
   switch (after.status) {
     case 'taken':
       return notify(deps, inst, null, async () => new Set(await staffUids(deps, inst, 'attendance')),
         { title: 'Class waiting for approval', body: (after.teacherName || 'A teacher') + ': ' + label, data: { kind: 'approval' } });
-    case 'approved':
+    case 'approved': {
+      const n = await notify(deps, inst, null, async () => new Set([after.teacherId]),
+        { title: 'Class approved', body: label, data: { kind: 'class' } });
+      return n + await absentAlerts(deps, inst, classId, after);
+    }
     case 'rejected':
       return notify(deps, inst, null, async () => new Set([after.teacherId]),
-        { title: 'Class ' + after.status, body: label, data: { kind: 'class' } });
+        { title: 'Class rejected', body: label, data: { kind: 'class' } });
     case 'cancelled':
       return notify(deps, inst, null, async () => { const a = await batchAudience(deps, inst, after.batchId); return a; },
         { title: 'Class cancelled', body: label, data: { kind: 'class' } });

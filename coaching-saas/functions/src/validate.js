@@ -69,7 +69,7 @@ function randomPassword(length = 10, rand = require('node:crypto').randomInt) {
 function canManageRole(caller, targetRole) {
   if (!caller) return false;
   if (caller.role === 'admin') return true;
-  if (caller.role === 'subadmin') {
+  if (caller.role === 'subadmin' || (caller.role === 'teacher' && caller.alsoSubadmin === true)) {
     return (caller.perms || []).includes('users') && (targetRole === 'student' || targetRole === 'teacher');
   }
   return false;

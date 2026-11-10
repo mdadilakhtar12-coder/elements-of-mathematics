@@ -44,4 +44,21 @@ async function logActivity(deps, { inst, kind, docId, eventId, before, after, ac
   return entry;
 }
 
-module.exports = { teacherIdsOf, syncBatchTeachers, logActivity };
+/**
+ * Gives a new fee payment the next receipt number of its institute (1, 2, 3 ...), exactly once.
+ * The counter lives in institutes/{inst}/counters/receipts, which no app can read or write.
+ */
+async function assignReceiptNo(deps, inst, feeRef) {
+  const counterRef = deps.db.collection('institutes').doc(inst).collection('counters').doc('receipts');
+  return deps.db.runTransaction(async (tx) => {
+    const [fee, counter] = await Promise.all([tx.get(feeRef), tx.get(counterRef)]);
+    if (!fee.exists) return null;
+    if (fee.data().receiptNo) return fee.data().receiptNo; // retried event
+    const next = (counter.exists ? counter.data().last || 0 : 0) + 1;
+    tx.set(counterRef, { last: next }, { merge: true });
+    tx.update(feeRef, { receiptNo: next });
+    return next;
+  });
+}
+
+module.exports = { teacherIdsOf, syncBatchTeachers, logActivity, assignReceiptNo };

@@ -111,9 +111,13 @@ async function setExpiry(deps, caller, data) {
 async function recountUsage(deps, caller, data) {
   requireSuper(caller);
   const i = await loadInst(deps, data);
-  const users = await i.ref.collection('users').select('role').get();
+  const users = await i.ref.collection('users').select('role', 'alsoSubadmin').get();
   const usage = emptyUsage();
-  users.forEach((d) => { const r = d.get('role'); if (r in usage) usage[r]++; });
+  users.forEach((d) => {
+    const r = d.get('role');
+    if (r in usage) usage[r]++;
+    if (r === 'teacher' && d.get('alsoSubadmin') === true) usage.subadmin++; // teacher who is also a sub-admin
+  });
   await i.ref.update({ usage });
   await audit(deps, caller, 'recountUsage', i.id, usage);
   return { inst: i.id, usage };

@@ -249,7 +249,10 @@ async function deleteUser(deps, caller, data) {
     const iRef = instRef(db, ctx.inst);
     const i = (await tx.get(iRef)).data();
     tx.delete(userRef(db, ctx.inst, uid));
-    tx.update(iRef, { [`usage.${target.role}`]: Math.max(0, (i.usage?.[target.role] || 0) - 1) });
+    const upd = { [`usage.${target.role}`]: Math.max(0, (i.usage?.[target.role] || 0) - 1) };
+    // a teacher who was also a sub-admin held a sub-admin slot too
+    if (target.role === 'teacher' && target.alsoSubadmin === true) upd['usage.subadmin'] = Math.max(0, (i.usage?.subadmin || 0) - 1);
+    tx.update(iRef, upd);
   });
   try {
     await deps.auth.deleteUser(uid);
@@ -259,4 +262,39 @@ async function deleteUser(deps, caller, data) {
   return { uid };
 }
 
-module.exports = { MAX_REGISTRATIONS_PER_DAY, registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };
+/**
+ * Admin only: gives a teacher sub-admin rights as well (they stay a teacher), changes those rights, or takes them away.
+ * data: { uid, enable: boolean, perms: string[] }. A teacher with sub-admin rights uses one sub-admin slot of the plan.
+ */
+async function setTeacherAdmin(deps, caller, data) {
+  const ctx = await loadCaller(deps, caller);
+  if (ctx.me.role !== 'admin') throw new AppError('permission-denied', 'Only the admin can do this.');
+  const uid = data?.uid;
+  if (typeof uid !== 'string' || !uid) throw new AppError('invalid-argument', 'Missing user.');
+  const enable = data?.enable === true;
+  const perms = Array.isArray(data?.perms) ? [...new Set(data.perms.filter((p) => V.SUBADMIN_PERMS.includes(p)))] : [];
+  if (enable && perms.length === 0) throw new AppError('invalid-argument', 'Choose at least one permission.');
+  const { db } = deps;
+  await db.runTransaction(async (tx) => {
+    const iRef = instRef(db, ctx.inst);
+    const uRef = userRef(db, ctx.inst, uid);
+    const [iSnap, uSnap] = await Promise.all([tx.get(iRef), tx.get(uRef)]);
+    if (!uSnap.exists) throw new AppError('not-found', 'User not found.');
+    const u = uSnap.data();
+    const i = iSnap.data();
+    if (u.role !== 'teacher') throw new AppError('failed-precondition', 'Only a teacher can be made a sub-admin this way.');
+    const was = u.alsoSubadmin === true;
+    const used = i.usage?.subadmin || 0;
+    if (enable && !was) {
+      const lim = checkLimit(i.limits, i.usage, 'subadmin');
+      if (!lim.ok) throw new AppError('resource-exhausted', describeLimit(i.plan, 'subadmin', lim.limit));
+      tx.update(iRef, { 'usage.subadmin': used + 1 });
+    } else if (!enable && was) {
+      tx.update(iRef, { 'usage.subadmin': Math.max(0, used - 1) });
+    }
+    tx.update(uRef, { alsoSubadmin: enable, perms: enable ? perms : [] });
+  });
+  return { uid, alsoSubadmin: enable, perms: enable ? perms : [] };
+}
+
+module.exports = { setTeacherAdmin, MAX_REGISTRATIONS_PER_DAY, registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };

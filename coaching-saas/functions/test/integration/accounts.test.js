@@ -245,3 +245,42 @@ test('super admin: plan change, feature toggle, limits, suspend, expiry, recount
   assert.equal(list.institutes[0].id, 'alpha');
   assert.ok((await db.collection('audit').get()).size >= 6);
 });
+
+test('setTeacherAdmin: teacher becomes sub-admin too (uses a sub-admin slot), perms change, and it can be undone', async () => {
+  const admin = await setup();
+  const t = await A.createUser(deps, admin, { role: 'teacher', name: 'T', username: 'teach1', password: 'Maths2024x' });
+  const s = await A.createUser(deps, admin, student(1));
+  const tCaller = asUser(t.uid, 'alpha', 'teacher');
+  await rejects(A.createUser(deps, tCaller, student(2)), 'permission-denied');
+  await rejects(A.setTeacherAdmin(deps, tCaller, { uid: t.uid, enable: true, perms: ['users'] }), 'permission-denied');
+  await rejects(A.setTeacherAdmin(deps, admin, { uid: s.uid, enable: true, perms: ['users'] }), 'failed-precondition');
+  await rejects(A.setTeacherAdmin(deps, admin, { uid: t.uid, enable: true, perms: ['hack'] }), 'invalid-argument');
+  await A.setTeacherAdmin(deps, admin, { uid: t.uid, enable: true, perms: ['users', 'fees', 'hack'] });
+  let u = (await db.doc(`institutes/alpha/users/${t.uid}`).get()).data();
+  assert.equal(u.role, 'teacher'); assert.equal(u.alsoSubadmin, true); assert.deepEqual(u.perms, ['users', 'fees']);
+  assert.equal((await db.doc('institutes/alpha').get()).data().usage.subadmin, 1);
+  await A.createUser(deps, tCaller, student(2)); // now allowed through the "users" permission
+  await rejects(A.createUser(deps, tCaller, { role: 'subadmin', name: 'x', username: 'subx', password: 'Maths2024x' }), 'permission-denied');
+  // Free plan: 1 sub-admin slot, now taken
+  await rejects(A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'Maths2024x' }), 'resource-exhausted');
+  const t2 = await A.createUser(deps, admin, { role: 'teacher', name: 'T2', username: 'teach2', password: 'Maths2024x' });
+  await rejects(A.setTeacherAdmin(deps, admin, { uid: t2.uid, enable: true, perms: ['fees'] }), 'resource-exhausted');
+  await A.setTeacherAdmin(deps, admin, { uid: t.uid, enable: true, perms: ['fees'] }); // change perms: no extra slot
+  assert.equal((await db.doc('institutes/alpha').get()).data().usage.subadmin, 1);
+  assert.deepEqual((await SA.recountUsage(deps, tokenFor('root', undefined, { sa: true }), { inst: 'alpha' })).usage, { admin: 1, subadmin: 1, teacher: 2, student: 2 });
+  await A.setTeacherAdmin(deps, admin, { uid: t.uid, enable: false });
+  u = (await db.doc(`institutes/alpha/users/${t.uid}`).get()).data();
+  assert.equal(u.alsoSubadmin, false); assert.deepEqual(u.perms, []);
+  assert.equal((await db.doc('institutes/alpha').get()).data().usage.subadmin, 0);
+  await A.setTeacherAdmin(deps, admin, { uid: t2.uid, enable: true, perms: ['fees'] });
+  await A.deleteUser(deps, admin, { uid: t2.uid }); // frees both slots
+  const usage = (await db.doc('institutes/alpha').get()).data().usage;
+  assert.equal(usage.subadmin, 0); assert.equal(usage.teacher, 1);
+});
+
+test('plans: student login is off in Free and on in Basic / Pro', async () => {
+  await setup();
+  assert.equal((await db.doc('institutes/alpha').get()).data().features.student_login, false);
+  await SA.setPlan(deps, tokenFor('root', undefined, { sa: true }), { inst: 'alpha', plan: 'basic' });
+  assert.equal((await db.doc('institutes/alpha').get()).data().features.student_login, true);
+});
