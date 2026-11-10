@@ -457,8 +457,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 // Only the fields the rules let the app change (never role / login / active).
                 Repo.update(
                     "users", draft.id,
+                    // permissions can be changed by the admin only (the rules refuse them from anyone else)
+                    (if (me?.role == Role.ADMIN && draft.role == Role.SUBADMIN) mapOf("perms" to draft.perms) else emptyMap()) +
                     mapOf(
-                        "name" to draft.name, "mobile" to draft.mobile, "perms" to draft.perms, "batchIds" to draft.batchIds,
+                        "name" to draft.name, "mobile" to draft.mobile, "batchIds" to draft.batchIds,
                         "rollNo" to draft.rollNo, "standard" to draft.standard, "parentMobile" to draft.parentMobile,
                         "monthlyFee" to draft.monthlyFee, "subjects" to draft.subjects, "classRate" to draft.classRate,
                         "salary" to draft.salary, "teacherType" to draft.teacherType

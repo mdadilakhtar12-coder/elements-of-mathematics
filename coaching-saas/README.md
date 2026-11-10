@@ -60,3 +60,12 @@ Free ke numbers aapke diye hue hain; Basic/Pro ke numbers aur price **mere andaa
 * Plan expire hone par institute lock ho jaata hai (auto-downgrade nahi) — chahein to Free par girane ka scheduled function jod sakte hain.
 * Push ka asli FCM delivery (Firebase project + phone) test nahi hua; targeting aur token-cleanup emulator par fake FCM ke saath tested hain. Logout offline ho to purana device token us institute mein reh sakta hai jab tak naya user register na kare ya FCM use dead na bataye.
 * Admin panel ko asli Firebase login ke saath nahi chalaya (stubbed SDK se browser test hua).
+
+## Baad mein jude features (security + features update)
+* **Security:** student/teacher sirf apna data dekhte hain, teacher class approve nahi kar sakta, fees ka activity log, password policy, registration cap.
+* **Teacher + Sub-admin:** admin teacher ko sub-admin rights bhi de sakta hai (`setTeacherAdmin`); teacher ko "Teacher view / Admin view" switch milta hai.
+* **Student login** ab plan feature hai (`student_login`): Free mein band, Basic/Pro mein on.
+* **Fees:** server se receipt number, PDF receipt, institute ka UPI ID (Pay by UPI + QR), daily collection report, batch ki default fee.
+* **Promote:** batch ke saare students doosre batch mein.
+* **Push:** class approve hone par absent students ko alert.
+* Naye feature/rules ke baad ek baar chalana: `deploy-rules`, `deploy-functions`, `backfill-teacher-ids`, `sync-plan-features`.
