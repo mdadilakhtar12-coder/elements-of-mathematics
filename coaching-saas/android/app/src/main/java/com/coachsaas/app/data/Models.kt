@@ -78,6 +78,7 @@ data class UserProfile(
     var salary: Long = 0, // permanent teacher: fixed monthly salary (Rs)
     var teacherType: String = "", // "permanent" or "guest"; empty = permanent when a salary is set, else guest
     var demo: Boolean = false, // created by "Demo data"
+    var alsoSubadmin: Boolean = false, // a teacher the admin has also given sub-admin rights (perms)
     var owner: Boolean = false, // the institute owner (cannot be deactivated or deleted)
     var createdBy: String = "",
     var createdAt: Long = 0
@@ -113,6 +114,7 @@ data class Batch(
     var teacherId: String = "",
     var teacherName: String = "",
     var weekly: List<WeeklySlot> = emptyList(),
+    var monthlyFee: Long = 0, // default monthly fee for students added to this batch (0 = none)
     /** Ids of all teachers of this batch. The rules use it to decide which batch a teacher may write to. */
     var teacherIds: List<String> = emptyList()
 ) : HasId {
@@ -209,6 +211,7 @@ data class Fee(
     var note: String = "",
     var receivedBy: String = "",
     var createdBy: String = "", // uid of who recorded it (checked by the rules)
+    var receiptNo: Long = 0, // 1, 2, 3 ... given by the server a moment after saving
     var createdAt: Long = 0
 ) : HasId
 
@@ -349,6 +352,7 @@ object Feature {
     const val MESSAGING = "messaging"
     const val BACKUP = "backup"
     const val PUSH = "push"
+    const val STUDENT_LOGIN = "student_login"
 
     fun label(f: String) = when (f) {
         EXAMS -> "Exams & results"
@@ -361,6 +365,7 @@ object Feature {
         MESSAGING -> "WhatsApp messages"
         BACKUP -> "Backup"
         PUSH -> "Push notifications"
+        STUDENT_LOGIN -> "Student login"
         else -> f
     }
 }
@@ -405,3 +410,9 @@ data class ActivityEntry(
     var before: Map<String, Any?>? = null,
     var after: Map<String, Any?>? = null
 ) : HasId
+
+/** settings/fees: how students pay (the institute's own UPI id; money goes straight to them). */
+data class FeeSettings(
+    var upiId: String = "",
+    var payeeName: String = ""
+)

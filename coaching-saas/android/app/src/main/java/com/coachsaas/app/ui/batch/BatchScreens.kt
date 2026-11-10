@@ -101,6 +101,7 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var nameTouched by remember { mutableStateOf(existing != null) }
     var plans by remember { mutableStateOf(existing?.plans() ?: emptyList()) }
+    var batchFee by remember { mutableStateOf(existing?.monthlyFee?.takeIf { it > 0 }?.toString().orEmpty()) }
 
     fun update(i: Int, f: (SubjectPlan) -> SubjectPlan) {
         plans = plans.mapIndexed { j, p -> if (j == i) f(p) else p }
@@ -171,6 +172,11 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                     }
                 }
             }
+            Field(
+                "Monthly fee of this batch (Rs, optional)", batchFee, { batchFee = it.filter { c -> c.isDigit() } },
+                keyboard = androidx.compose.ui.text.input.KeyboardType.Number
+            )
+            Text("New students added to this batch get this fee automatically. You can still change it per student.", color = Grey, fontSize = 12.sp)
             OutlinedButton(onClick = { plans = plans + SubjectPlan() }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, null)
                 Text(if (plans.isEmpty()) " Add a subject with teacher and timetable" else " Add another subject")
@@ -186,7 +192,8 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                         subjects = plans
                             .filter { it.subject.isNotBlank() || it.teacherId.isNotBlank() || it.weekly.isNotEmpty() }
                             .map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
-                        subject = "", teacherId = "", teacherName = "", weekly = emptyList()
+                        subject = "", teacherId = "", teacherName = "", weekly = emptyList(),
+                        monthlyFee = batchFee.toLongOrNull() ?: 0L
                     )
                     b.teacherIds = b.plans().map { it.teacherId }.filter { it.isNotBlank() }.distinct()
                     vm.op("Saved", { if (existing == null) vm.replace(Screen.BatchDetail(b.id)) else vm.back() }) {
@@ -218,6 +225,8 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
     var addStudents by remember { mutableStateOf(false) }
     var generate by remember { mutableStateOf(false) }
     var removeTarget by remember { mutableStateOf<String?>(null) }
+    var promote by remember { mutableStateOf(false) }
+    var promoteTo by remember { mutableStateOf<String?>(null) }
 
     Page(
         b.name, vm::back,
@@ -285,6 +294,13 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
                     }
                 }
             }
+            if (canUsers && students.isNotEmpty() && vm.batches.size > 1) {
+                item {
+                    OutlinedButton(onClick = { promote = true }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Promote: move all students to another batch")
+                    }
+                }
+            }
             if (students.isEmpty()) item { Text("No students in this batch yet", color = Grey) }
             items(students) { s ->
                 AppCard(onClick = if (vm.role == Role.TEACHER) null else ({ vm.go(Screen.UserDetail(s.id)) })) {
@@ -296,6 +312,22 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
             }
             if (canEdit) item { DangerTextButton("Delete this batch") { confirmDelete = true } }
         }
+    }
+    if (promote) {
+        com.coachsaas.app.ui.common.PickDialog(
+            "Move " + students.size + " students to", vm.batches.filter { it.id != b.id }.map { it.id to it.name },
+            { promote = false }
+        ) { id -> promote = false; promoteTo = id }
+    }
+    promoteTo?.let { id ->
+        val target = vm.batch(id)
+        if (target == null) promoteTo = null else ConfirmDialog(
+            "Move to " + target.name + "?",
+            students.size.toString() + " students leave " + b.name + " and join " + target.name +
+                (if (target.standard.isNotBlank()) " (standard " + target.standard + ")" else "") +
+                ". Old attendance, marks and fee records stay as they are.",
+            "Move", { promoteTo = null; vm.moveStudents(students, b.id, target) {} }, { promoteTo = null }
+        )
     }
     if (confirmDelete) {
         ConfirmDialog(

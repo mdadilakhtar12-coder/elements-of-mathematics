@@ -72,21 +72,6 @@ import com.coachsaas.app.util.Messages
 import com.coachsaas.app.util.Messenger
 import androidx.compose.material3.TextButton
 
-fun shareReceipt(ctx: Context, f: Fee) {
-    val text = AppConfig.APP_NAME + "\nFee Receipt\n\n" +
-        "Student: " + f.studentName + "\n" +
-        "Amount: " + D.rs(f.amount) + "\n" +
-        "For month: " + D.monthLabel(f.month) + "\n" +
-        "Paid on: " + D.pretty(f.date) + "\n" +
-        "Mode: " + f.mode + "\n" +
-        (if (f.note.isNotBlank()) "Note: " + f.note + "\n" else "") +
-        "Received by: " + f.receivedBy
-    val i = Intent(Intent.ACTION_SEND)
-    i.type = "text/plain"
-    i.putExtra(Intent.EXTRA_TEXT, text)
-    ctx.startActivity(Intent.createChooser(i, "Share receipt"))
-}
-
 @Composable
 fun FeesTab(vm: AppViewModel) {
     val ctx = LocalContext.current
@@ -110,8 +95,14 @@ fun FeesTab(vm: AppViewModel) {
                     StatTile("Pending (" + due.size + ")", D.rs(dueTotal), if (dueTotal > 0) Red else Grey, Modifier.weight(1f))
                 }
                 Segmented(listOf("Payments (" + payments.size + ")", "Pending (" + due.size + ")"), seg, { seg = it })
-                OutlinedButton(onClick = { vm.go(Screen.Accounts) }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Accounts: profit, loss and expenses")
+                if (vm.has(com.coachsaas.app.data.Feature.ACCOUNTS)) {
+                    OutlinedButton(onClick = { vm.go(Screen.Accounts) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Accounts: profit, loss and expenses")
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { vm.go(Screen.Collection) }, modifier = Modifier.weight(1f)) { Text("Daily collection") }
+                    OutlinedButton(onClick = { vm.go(Screen.FeeSettings) }, modifier = Modifier.weight(1f)) { Text("UPI settings") }
                 }
             }
             Box(Modifier.weight(1f)) {
@@ -121,10 +112,13 @@ fun FeesTab(vm: AppViewModel) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(f.studentName, fontWeight = FontWeight.SemiBold)
-                                    Text(D.shortDate(f.date) + " · " + f.mode, color = Grey, fontSize = 13.sp)
+                                    Text(
+                                        D.shortDate(f.date) + " · " + f.mode + (if (f.receiptNo > 0) " · Receipt #" + f.receiptNo else ""),
+                                        color = Grey, fontSize = 13.sp
+                                    )
                                 }
                                 Text(D.rs(f.amount), fontWeight = FontWeight.Bold, color = Green, fontSize = 16.sp)
-                                IconButton(onClick = { shareReceipt(ctx, f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
+                                IconButton(onClick = { vm.shareReceipt(f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
                                 // Only the admin can delete a payment; every change is kept in the activity log.
                                 if (vm.role == com.coachsaas.app.data.Role.ADMIN) IconButton(onClick = { toDelete = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Red) }
                             }
@@ -294,6 +288,10 @@ fun StudentFeesContent(vm: AppViewModel, student: UserProfile, adminView: Boolea
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { FeeDueBanner(student, fees) }
+        val dueNow = student.monthlyFee - fees.filter { it.month == now }.sumOf { it.amount }
+        if (!adminView && vm.feeSettings.upiId.isNotBlank() && dueNow > 0) {
+            item { UpiPayCard(vm, student.name, dueNow, now) }
+        }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 StatTile("Monthly fee", if (student.monthlyFee > 0) D.rs(student.monthlyFee) else "-", Indigo, Modifier.weight(1f))
@@ -324,9 +322,9 @@ fun StudentFeesContent(vm: AppViewModel, student: UserProfile, adminView: Boolea
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(D.rs(f.amount) + " for " + D.monthLabel(f.month), fontWeight = FontWeight.SemiBold)
-                        Text(D.pretty(f.date) + " · " + f.mode, color = Grey, fontSize = 13.sp)
+                        Text(D.pretty(f.date) + " · " + f.mode + (if (f.receiptNo > 0) " · Receipt #" + f.receiptNo else ""), color = Grey, fontSize = 13.sp)
                     }
-                    IconButton(onClick = { shareReceipt(ctx, f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
+                    IconButton(onClick = { vm.shareReceipt(f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
                 }
             }
         }

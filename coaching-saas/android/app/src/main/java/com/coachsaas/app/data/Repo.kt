@@ -459,6 +459,10 @@ object Repo {
             auth.signOut()
             error("This account has been deactivated.")
         }
+        if (me.role == Role.STUDENT && !institute.has(Feature.STUDENT_LOGIN)) {
+            auth.signOut()
+            error(STUDENT_LOGIN_OFF)
+        }
         return Session.Ready(me, institute)
     }
 
@@ -475,6 +479,27 @@ object Repo {
     suspend fun registerInstitute(name: String, code: String): Session {
         call("registerInstitute", mapOf("name" to name.trim(), "code" to code.trim().lowercase()))
         return openSession()
+    }
+
+    const val STUDENT_LOGIN_OFF = "Student login is not part of your institute's plan. Please contact your institute."
+
+    /** Admin: give a teacher sub-admin rights as well (enable + perms), change them, or take them away. */
+    suspend fun setTeacherAdmin(uid: String, enable: Boolean, perms: List<String>) {
+        call("setTeacherAdmin", mapOf("uid" to uid, "enable" to enable, "perms" to perms))
+    }
+
+    // ---------- fee settings ----------
+
+    fun feeSettings(): Flow<FeeSettings> = callbackFlow {
+        val reg = coll("settings").document("fees").addSnapshotListener { s, e ->
+            if (e != null) return@addSnapshotListener
+            if (s != null) trySend(if (s.exists()) s.toObject(FeeSettings::class.java) ?: FeeSettings() else FeeSettings())
+        }
+        awaitClose { reg.remove() }
+    }
+
+    suspend fun saveFeeSettings(f: FeeSettings) {
+        coll("settings").document("fees").set(f).await()
     }
 
     // ---------- push (FCM) ----------

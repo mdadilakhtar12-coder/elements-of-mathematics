@@ -152,7 +152,7 @@ fun AdminHome(vm: AppViewModel) {
     acts.add(Act("Password", Icons.Filled.Lock) { vm.go(Screen.ChangePassword) })
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Greeting(me.name, Role.label(me.role)) }
+        item { Greeting(me.name, Role.label(vm.role)) }
         if (me.role == Role.ADMIN) item { PlanCard(vm) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

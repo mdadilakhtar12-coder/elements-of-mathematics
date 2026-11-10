@@ -2,6 +2,11 @@
 
 package com.coachsaas.app.ui.main
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import com.coachsaas.app.ui.common.Segmented
+import androidx.compose.ui.unit.dp
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -138,9 +143,16 @@ fun MainScreen(vm: AppViewModel) {
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { pad ->
-        Box(Modifier.padding(pad).fillMaxSize()) {
+        Column(Modifier.padding(pad).fillMaxSize()) {
+          // A teacher who is also a sub-admin switches between the two views here.
+          if (vm.dual) {
+              Box(Modifier.padding(16.dp, 6.dp, 16.dp, 2.dp)) {
+                  Segmented(listOf("Teacher view", "Admin view"), if (vm.adminMode) 1 else 0, { vm.switchMode(it == 1) })
+              }
+          }
+          Box(Modifier.weight(1f).fillMaxWidth()) {
             when (cur.key) {
-                "home" -> when (me.role) {
+                "home" -> when (vm.role) {
                     Role.TEACHER -> TeacherHome(vm)
                     Role.STUDENT -> StudentHome(vm)
                     else -> AdminHome(vm)
@@ -154,6 +166,7 @@ fun MainScreen(vm: AppViewModel) {
                 "attendance" -> AttendanceContent(vm, me.id)
                 "results" -> ResultsContent(vm, me.id)
             }
+          }
         }
     }
 }

@@ -9,7 +9,7 @@ on:
         description: What to do
         type: choice
         required: true
-        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin, backfill-teacher-ids]
+        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin, backfill-teacher-ids, sync-plan-features]
       email:
         description: "Only for make-superadmin: the Google e-mail (must have signed in once)"
         required: false
@@ -70,5 +70,12 @@ jobs:
       - name: Backfill batch teacher ids
         if: inputs.action == 'backfill-teacher-ids'
         run: node scripts/backfill-teacher-ids.js
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}
+
+      # After a new plan feature is added: gives existing institutes the missing feature keys (plan defaults).
+      - name: Sync plan features
+        if: inputs.action == 'sync-plan-features'
+        run: node scripts/sync-plan-features.js
         env:
           GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}

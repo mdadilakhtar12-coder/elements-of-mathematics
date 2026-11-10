@@ -147,6 +147,8 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.LedgerAdd -> com.coachsaas.app.ui.fees.LedgerAddScreen(vm)
         is Screen.MessageTexts -> com.coachsaas.app.ui.main.MessageTextsScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
+        is Screen.FeeSettings -> com.coachsaas.app.ui.fees.FeeSettingsScreen(vm)
+        is Screen.Collection -> com.coachsaas.app.ui.fees.CollectionScreen(vm)
         is Screen.Activity -> com.coachsaas.app.ui.fees.ActivityScreen(vm)
     }
     if (vm.busy) {

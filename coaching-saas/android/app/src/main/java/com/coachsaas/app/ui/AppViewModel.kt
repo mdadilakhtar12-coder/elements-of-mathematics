@@ -66,6 +66,8 @@ sealed class Screen {
     data object LedgerAdd : Screen()
     data object ChangePassword : Screen()
     data object Activity : Screen()
+    data object FeeSettings : Screen()
+    data object Collection : Screen()
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -177,6 +179,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 if (ni != null) {
                     institute = ni
                     val problem = ni.blockedReason()
+                        ?: (if (p.role == Role.STUDENT && !ni.has(Feature.STUDENT_LOGIN)) Repo.STUDENT_LOGIN_OFF else null)
                     if (problem != null) {
                         logout()
                         loginError = problem
@@ -203,6 +206,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             scope.launch { Repo.notices().collect { notices = it } }
             scope.launch { Repo.homework().collect { homework = it } }
         }
+        scope.launch { Repo.feeSettings().collect { feeSettings = it } }
         scope.launch { Repo.subjectSettings().collect { if (it.isNotEmpty()) subjects = it } }
         scope.launch { Repo.messageTemplates().collect { com.coachsaas.app.util.Messages.overrides = it } }
         // Register this phone for push while the plan includes it.
@@ -214,11 +218,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Collections of plan features are only listened to while the plan includes them
         // (the rules would refuse them otherwise). Restarted whenever the feature set changes.
         scope.launch {
-            snapshotFlow { institute?.features to me?.batchIds }.distinctUntilChanged().collectLatest { startGated(p) }
+            snapshotFlow { Triple(institute?.features, me?.batchIds, me?.perms) }.distinctUntilChanged().collectLatest { startGated(p) }
         }
         if (p.role == Role.TEACHER) {
-            // Teachers see student profiles only (not other staff).
-            scope.launch { Repo.students().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
+            // Teachers see student profiles only (not other staff) - unless the admin made them a sub-admin too.
+            scope.launch {
+                snapshotFlow { me?.alsoSubadmin == true }.distinctUntilChanged().collectLatest { all ->
+                    (if (all) Repo.users() else Repo.students()).collect { users = it.sortedBy { u -> u.name.lowercase() } }
+                }
+            }
         } else if (p.role != Role.STUDENT) {
             scope.launch { Repo.users().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
         }
@@ -238,10 +246,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             scope.launch { (if (student) Repo.leaderboardsByIds(myIds) else Repo.leaderboards()).collect { leaderboards = it } }
         }
         if (has(Feature.LEAVES)) {
-            if (p.role == Role.TEACHER) {
-                scope.launch { Repo.leavesOfTeacher(p.id).collect { leaves = it } }
-            } else if (p.role == Role.ADMIN || (p.role == Role.SUBADMIN && "attendance" in p.perms)) {
+            val cur = me ?: p
+            val approver = cur.role == Role.ADMIN ||
+                ((cur.role == Role.SUBADMIN || cur.alsoSubadmin) && "attendance" in cur.perms)
+            if (approver) {
                 scope.launch { Repo.leavesAll().collect { leaves = it } }
+            } else if (cur.role == Role.TEACHER) {
+                scope.launch { Repo.leavesOfTeacher(p.id).collect { leaves = it } }
             }
         }
         if (has(Feature.STUDY)) scope.launch { (if (student) Repo.materialsOfBatches(myIds) else Repo.materials()).collect { materials = it } }
@@ -322,6 +333,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (me == null && !busy) Repo.signOut()
         }
         me = null
+        adminMode = false
         institute = null
         needsRegistration = false
         users = emptyList()
@@ -364,7 +376,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- permissions ----------
 
-    val role: String get() = me?.role ?: Role.STUDENT
+    /** A teacher whom the admin has also made a sub-admin has two views and switches between them. */
+    var adminMode by mutableStateOf(false)
+    val dual: Boolean get() = me?.let { it.role == Role.TEACHER && it.alsoSubadmin } == true
+
+    /** The role the screens are shown for: "subadmin" while a dual teacher is in the admin view. */
+    val role: String
+        get() {
+            val u = me ?: return Role.STUDENT
+            return if (dual && adminMode) Role.SUBADMIN else u.role
+        }
+
+    fun switchMode(admin: Boolean) {
+        adminMode = admin && dual
+        tab = 0
+        stack.clear()
+        stack.add(Screen.Main)
+    }
+
+    var feeSettings by mutableStateOf(com.coachsaas.app.data.FeeSettings())
     val isStaff: Boolean get() = role == Role.ADMIN || role == Role.SUBADMIN
 
     /** Is this feature part of the institute's plan? (The server enforces it too; this only hides/locks the UI.) */
@@ -372,7 +402,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun can(perm: String): Boolean {
         val u = me ?: return false
-        return u.role == Role.ADMIN || (u.role == Role.SUBADMIN && perm in u.perms)
+        return u.role == Role.ADMIN || ((u.role == Role.SUBADMIN || (dual && adminMode)) && perm in u.perms)
     }
 
     // ---------- lookups ----------
@@ -394,7 +424,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val myBatches: List<Batch>
         get() {
             val u = me ?: return emptyList()
-            return when (u.role) {
+            return when (role) {
                 Role.TEACHER -> batches.filter { it.hasTeacher(u.id) }
                 Role.STUDENT -> batches.filter { it.id in u.batchIds }
                 else -> batches
@@ -404,7 +434,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Classes the current user should see on schedules. */
     fun visibleClasses(): List<ClassSession> {
         val u = me ?: return emptyList()
-        return when (u.role) {
+        return when (role) {
             Role.TEACHER -> classes.filter { it.teacherId == u.id }
             Role.STUDENT -> classes.filter { it.batchId in u.batchIds }
             else -> classes
@@ -424,9 +454,43 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (isNew) {
                 Repo.createUser(newAccountFields(draft, password))
             } else {
-                Repo.put("users", draft)
+                // Only the fields the rules let the app change (never role / login / active).
+                Repo.update(
+                    "users", draft.id,
+                    mapOf(
+                        "name" to draft.name, "mobile" to draft.mobile, "perms" to draft.perms, "batchIds" to draft.batchIds,
+                        "rollNo" to draft.rollNo, "standard" to draft.standard, "parentMobile" to draft.parentMobile,
+                        "monthlyFee" to draft.monthlyFee, "subjects" to draft.subjects, "classRate" to draft.classRate,
+                        "salary" to draft.salary, "teacherType" to draft.teacherType
+                    )
+                )
             }
         }
+
+    fun setTeacherAdmin(u: UserProfile, enable: Boolean, perms: List<String>, onDone: () -> Unit) =
+        op(if (enable) "Sub-admin access saved" else "Sub-admin access removed", onDone) {
+            Repo.setTeacherAdmin(u.id, enable, perms)
+        }
+
+    /** Promotion: moves students from one batch to another (and gives them the new batch's standard). */
+    fun moveStudents(list: List<UserProfile>, fromBatchId: String, to: Batch, onDone: () -> Unit) =
+        op(list.size.toString() + " students moved to " + to.name, onDone) {
+            for (s in list) {
+                val fields = HashMap<String, Any?>()
+                fields["batchIds"] = (s.batchIds - fromBatchId + to.id).distinct()
+                if (to.standard.isNotBlank() && can("users")) fields["standard"] = to.standard
+                Repo.update("users", s.id, fields)
+            }
+        }
+
+    fun shareReceipt(f: com.coachsaas.app.data.Fee) = op {
+        val file = com.coachsaas.app.util.Receipt.create(getApplication(), f)
+        com.coachsaas.app.util.Share.file(getApplication(), file, "application/pdf", "Share receipt")
+    }
+
+    fun saveFeeSettings(f: com.coachsaas.app.data.FeeSettings, onDone: () -> Unit) = op("Saved", onDone) {
+        Repo.saveFeeSettings(f)
+    }
 
     private fun newAccountFields(d: UserProfile, password: String): Map<String, Any?> = mapOf(
         "role" to d.role, "name" to d.name, "username" to d.loginId, "password" to password, "mobile" to d.mobile,
