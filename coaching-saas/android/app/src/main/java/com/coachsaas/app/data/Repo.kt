@@ -20,6 +20,10 @@ import com.google.firebase.firestore.Source
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 /** All Firebase access lives here. */
@@ -80,6 +84,92 @@ object Repo {
         }
         awaitClose { reg.remove() }
     }
+
+    // ---------- scoped queries (students / teachers may only read what is theirs; see firestore.rules) ----------
+
+    /** Like models(), but emits an empty list on an error, so several of these can be merged without one stalling the rest. */
+    private inline fun <reified T : HasId> Query.modelsOrEmpty(): Flow<List<T>> = callbackFlow {
+        val reg = addSnapshotListener { snap, err ->
+            if (err != null) {
+                val denied = err is FirebaseFirestoreException && err.code == FirebaseFirestoreException.Code.PERMISSION_DENIED
+                if (!denied) onError(friendly(err))
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            if (snap != null) {
+                trySend(snap.documents.mapNotNull { d -> d.toObject(T::class.java)?.also { m -> m.id = d.id } })
+            }
+        }
+        awaitClose { reg.remove() }
+    }
+
+    /** One document as a 0-or-1 element list (missing or not readable = empty). */
+    private inline fun <reified T : HasId> docFlow(col: String, id: String): Flow<List<T>> = callbackFlow {
+        val reg = coll(col).document(id).addSnapshotListener { s, e ->
+            if (e != null || s == null || !s.exists()) trySend(emptyList())
+            else trySend(listOfNotNull(s.toObject(T::class.java)?.also { m -> m.id = s.id }))
+        }
+        awaitClose { reg.remove() }
+    }
+
+    /** All lists joined into one; emits once every part has answered. */
+    private fun <T> merged(flows: List<Flow<List<T>>>): Flow<List<T>> {
+        if (flows.isEmpty()) return flowOf(emptyList())
+        return channelFlow {
+            val latest = MutableList<List<T>?>(flows.size) { null }
+            flows.forEachIndexed { i, f ->
+                launch {
+                    f.collect { part ->
+                        latest[i] = part
+                        if (latest.all { it != null }) send(latest.flatMap { it.orEmpty() })
+                    }
+                }
+            }
+        }
+    }
+
+    private fun clean(ids: List<String>) = ids.filter { it.isNotBlank() }.distinct().take(20)
+
+    fun batchesByIds(ids: List<String>): Flow<List<Batch>> = merged(clean(ids).map { docFlow<Batch>("batches", it) })
+
+    fun leaderboardsByIds(ids: List<String>): Flow<List<Leaderboard>> =
+        merged(clean(ids).map { docFlow<Leaderboard>("leaderboards", it) })
+
+    fun classesOfBatches(ids: List<String>, fromDate: String): Flow<List<ClassSession>> = merged(
+        clean(ids).map { coll("classes").whereEqualTo("batchId", it).whereGreaterThanOrEqualTo("date", fromDate).modelsOrEmpty<ClassSession>() }
+    )
+
+    /** Notices for everyone ("" batch) plus those of the given batches, newest first. */
+    fun noticesFor(ids: List<String>): Flow<List<Notice>> = merged(
+        (listOf("") + clean(ids)).map {
+            coll("notices").whereEqualTo("batchId", it).orderBy("createdAt", Query.Direction.DESCENDING).limit(50).modelsOrEmpty<Notice>()
+        }
+    ).map { l -> l.sortedByDescending { it.createdAt } }
+
+    fun homeworkOfBatches(ids: List<String>): Flow<List<Homework>> = merged(
+        clean(ids).map {
+            coll("homework").whereEqualTo("batchId", it).orderBy("createdAt", Query.Direction.DESCENDING).limit(100).modelsOrEmpty<Homework>()
+        }
+    ).map { l -> l.sortedByDescending { it.createdAt } }
+
+    fun materialsOfBatches(ids: List<String>): Flow<List<StudyMaterial>> = merged(
+        clean(ids).map {
+            coll("materials").whereEqualTo("batchId", it).orderBy("createdAt", Query.Direction.DESCENDING).limit(100).modelsOrEmpty<StudyMaterial>()
+        }
+    ).map { l -> l.sortedByDescending { it.createdAt } }
+
+    fun examsOfBatches(ids: List<String>): Flow<List<Exam>> = merged(
+        clean(ids).map {
+            coll("exams").whereEqualTo("batchId", it).orderBy("date", Query.Direction.DESCENDING).limit(100).modelsOrEmpty<Exam>()
+        }
+    ).map { l -> l.sortedByDescending { it.date } }
+
+    /** Teachers may read student profiles only. */
+    fun students(): Flow<List<UserProfile>> = coll("users").whereEqualTo("role", Role.STUDENT).models()
+
+    /** Who created / changed / deleted money records (admin only; written by Cloud Functions). */
+    fun activity(): Flow<List<ActivityEntry>> =
+        coll("activity").orderBy("at", Query.Direction.DESCENDING).limit(200).models()
 
     fun profile(uid: String): Flow<UserProfile?> = callbackFlow {
         val reg = coll("users").document(uid).addSnapshotListener { s, e ->
@@ -308,16 +398,6 @@ object Repo {
         val res = functions.getHttpsCallable(name).call(data).await().getData()
         @Suppress("UNCHECKED_CAST")
         return (res as? Map<String, Any?>) ?: emptyMap()
-    }
-
-    /** "Does this institute code exist?" for the login screen. Returns the institute name or throws a readable error. */
-    suspend fun lookupInstitute(code: String): String {
-        val r = call("lookupInstitute", mapOf("code" to code.trim().lowercase()))
-        if (r["exists"] != true) error("No institute with this code")
-        if (r["usable"] != true) {
-            error(if (r["status"] == "suspended") "This institute is suspended. Please contact support." else "This institute's plan has expired.")
-        }
-        return r["name"] as? String ?: code
     }
 
     /** Staff / students: institute code + username + password. The password goes only to Firebase Auth. */

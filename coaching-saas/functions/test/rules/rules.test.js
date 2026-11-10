@@ -36,7 +36,7 @@ async function seed() {
     await mk('a', 'adminA', 'admin');
     await mk('a', 'subA', 'subadmin', { perms: ['batches'] });
     await mk('a', 'teachA', 'teacher');
-    await mk('a', 'stuA', 'student');
+    await mk('a', 'stuA', 'student', { batchIds: ['b1'] });
     await mk('a', 'stuA2', 'student');
     await mk('a', 'offA', 'student', { active: false });
     await mk('b', 'adminB', 'admin');
@@ -135,7 +135,7 @@ test('feature gating: Free plan cannot touch fees / exams even as admin; Pro can
   await assertFails(getDoc(doc(as('b', 'adminB'), 'institutes/b/exams/e1')));
   await assertFails(setDoc(doc(as('b', 'adminB'), 'institutes/b/fees/f9'), { studentId: 'stuB' }));
   await assertSucceeds(setDoc(doc(as('a', 'adminA'), 'institutes/a/exams/e2'), { name: 'x' }));
-  await assertSucceeds(setDoc(doc(as('a', 'adminA'), 'institutes/a/fees/f9'), { studentId: 'stuA' }));
+  await assertSucceeds(setDoc(doc(as('a', 'adminA'), 'institutes/a/fees/f9'), { studentId: 'stuA', createdBy: 'adminA' }));
 });
 
 test('fees: a student sees only their own', async () => {

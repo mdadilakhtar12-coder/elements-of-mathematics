@@ -147,6 +147,7 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.LedgerAdd -> com.coachsaas.app.ui.fees.LedgerAddScreen(vm)
         is Screen.MessageTexts -> com.coachsaas.app.ui.main.MessageTextsScreen(vm)
         is Screen.ChangePassword -> ChangePasswordScreen(vm)
+        is Screen.Activity -> com.coachsaas.app.ui.fees.ActivityScreen(vm)
     }
     if (vm.busy) {
         androidx.compose.material3.LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))

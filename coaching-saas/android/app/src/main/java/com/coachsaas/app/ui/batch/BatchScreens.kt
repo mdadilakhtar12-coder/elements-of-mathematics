@@ -188,6 +188,7 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                             .map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
                         subject = "", teacherId = "", teacherName = "", weekly = emptyList()
                     )
+                    b.teacherIds = b.plans().map { it.teacherId }.filter { it.isNotBlank() }.distinct()
                     vm.op("Saved", { if (existing == null) vm.replace(Screen.BatchDetail(b.id)) else vm.back() }) {
                         Repo.put("batches", b)
                     }

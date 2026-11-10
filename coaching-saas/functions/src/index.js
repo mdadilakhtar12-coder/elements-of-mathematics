@@ -3,7 +3,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, Timestamp } = require('firebase-admin/firestore');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onDocumentCreated, onDocumentUpdated, onDocumentWritten, onDocumentWrittenWithAuthContext } = require('firebase-functions/v2/firestore');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { getMessaging } = require('firebase-admin/messaging');
 const { setGlobalOptions, logger } = require('firebase-functions/v2');
@@ -12,6 +12,7 @@ const { AppError } = require('./errors');
 const accounts = require('./accounts');
 const sa = require('./sa');
 const notify = require('./notify');
+const integrity = require('./integrity');
 
 initializeApp();
 // Mumbai. The Android app must use FirebaseFunctions.getInstance("asia-south1").
@@ -34,7 +35,7 @@ function callable(fn, opts = {}) {
 
 // ---- accounts (phase 2) ----
 exports.registerInstitute = callable(accounts.registerInstitute);
-exports.lookupInstitute = callable(accounts.lookupInstitute);
+// lookupInstitute is deliberately NOT exported: an open endpoint that confirms institute codes helps attackers and the app does not need it.
 exports.createUser = callable(accounts.createUser);
 exports.createUsers = callable(accounts.createUsers, { timeoutSeconds: 300 });
 exports.resetPassword = callable(accounts.resetPassword);
@@ -80,3 +81,20 @@ exports.remindTomorrowClasses = onSchedule({ schedule: '0 17 * * *', timeZone: '
   () => safely('tomorrowClasses', () => notify.tomorrowClasses(pdeps())));
 exports.remindFees = onSchedule({ schedule: '0 10 * * *', timeZone: 'Asia/Kolkata' },
   () => safely('feeReminders', () => notify.feeReminders(pdeps())));
+
+// ---- integrity (security hardening) ----
+// Keeps batches/{id}.teacherIds correct on the server; firestore.rules use it to decide which batch a teacher may write to.
+exports.syncBatchTeachers = onDocumentWritten('institutes/{inst}/batches/{id}', (e) =>
+  safely('syncBatchTeachers', () => integrity.syncBatchTeachers(e.data.after)));
+
+// Activity log: who created / changed / deleted money records. The admin reads it in the app; nobody can edit it.
+const logged = (kind) => onDocumentWrittenWithAuthContext(`institutes/{inst}/${kind}/{id}`, (e) =>
+  safely('activity:' + kind, () => integrity.logActivity({ db: getFirestore(), Timestamp }, {
+    inst: e.params.inst, kind, docId: e.params.id, eventId: e.id,
+    before: e.data.before.exists ? e.data.before.data() : null,
+    after: e.data.after.exists ? e.data.after.data() : null,
+    actorId: e.authId || '', actorType: e.authType || 'unknown',
+  })));
+exports.logFees = logged('fees');
+exports.logLedger = logged('ledger');
+exports.logSalaryPaid = logged('salaryPaid');

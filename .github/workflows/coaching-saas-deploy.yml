@@ -9,7 +9,7 @@ on:
         description: What to do
         type: choice
         required: true
-        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin]
+        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin, backfill-teacher-ids]
       email:
         description: "Only for make-superadmin: the Google e-mail (must have signed in once)"
         required: false
@@ -63,5 +63,12 @@ jobs:
       - name: Make super admin
         if: inputs.action == 'make-superadmin'
         run: node scripts/make-superadmin.js "${{ inputs.email }}"
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}
+
+      # One-time after the security update: fills batches/{id}.teacherIds for batches created before it.
+      - name: Backfill batch teacher ids
+        if: inputs.action == 'backfill-teacher-ids'
+        run: node scripts/backfill-teacher-ids.js
         env:
           GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}

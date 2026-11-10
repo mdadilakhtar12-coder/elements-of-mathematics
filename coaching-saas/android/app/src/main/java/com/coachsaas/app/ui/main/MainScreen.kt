@@ -169,7 +169,8 @@ fun ChangePasswordScreen(vm: AppViewModel) {
             Field("New password (min 8 characters)", new1, { new1 = it }, password = true)
             Field("Repeat new password", new2, { new2 = it }, password = true)
             PrimaryButton("Change password", onClick = {
-                if (new1.length < 8) vm.toast("Password must be at least 8 characters")
+                val problem = com.coachsaas.app.util.Passwords.problem(new1, vm.me?.loginId.orEmpty(), vm.me?.mobile.orEmpty())
+                if (problem != null) vm.toast(problem)
                 else if (new1 != new2) vm.toast("Passwords do not match")
                 else vm.changeOwnPassword(cur, new1) { vm.back() }
             }, busy = vm.busy)

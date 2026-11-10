@@ -1,1 +1,10 @@
-{ "indexes": [], "fieldOverrides": [] }
+{
+  "indexes": [
+    { "collectionGroup": "classes",   "queryScope": "COLLECTION", "fields": [{ "fieldPath": "batchId", "order": "ASCENDING" }, { "fieldPath": "date", "order": "ASCENDING" }] },
+    { "collectionGroup": "notices",   "queryScope": "COLLECTION", "fields": [{ "fieldPath": "batchId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "homework",  "queryScope": "COLLECTION", "fields": [{ "fieldPath": "batchId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "materials", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "batchId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "exams",     "queryScope": "COLLECTION", "fields": [{ "fieldPath": "batchId", "order": "ASCENDING" }, { "fieldPath": "date", "order": "DESCENDING" }] }
+  ],
+  "fieldOverrides": []
+}

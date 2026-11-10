@@ -18,6 +18,13 @@ test('username & password', () => {
   assert.ok(v.validateUsername('x/y'));
   assert.ok(v.validatePassword('short'));
   assert.equal(v.validatePassword('longenough1'), null);
+  assert.ok(v.validatePassword('12345678901'), 'digits only');
+  assert.ok(v.validatePassword('Password123'), 'common');
+  assert.ok(v.validatePassword('aaaa1111aa'), 'too few different characters');
+  assert.ok(v.validatePassword('xx9876543210', { mobile: '9876543210' }), 'contains mobile');
+  assert.ok(v.validatePassword('Rahul.k2024', { username: 'rahul.k' }), 'contains username');
+  assert.equal(v.validatePassword('Blue7Kite9', { username: 'rahul.k', mobile: '9876543210' }), null);
+  assert.equal(v.validatePassword('ab12cd34', { username: 'ab' }), null, 'very short usernames are not matched');
 });
 
 test('login email is unique per (institute, username) and case-insensitive', () => {

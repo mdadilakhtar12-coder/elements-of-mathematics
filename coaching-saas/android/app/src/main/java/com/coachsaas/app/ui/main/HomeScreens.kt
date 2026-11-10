@@ -148,6 +148,7 @@ fun AdminHome(vm: AppViewModel) {
     }
     if (vm.has(Feature.EXAMS)) acts.add(Act("Leaderboard", Icons.Filled.EmojiEvents) { vm.go(Screen.Leaderboard) })
     if (me.role == Role.ADMIN && vm.has(Feature.BACKUP)) acts.add(Act("Backup", Icons.Filled.Download) { vm.backup() })
+    if (me.role == Role.ADMIN && (vm.has(Feature.FEES) || vm.has(Feature.ACCOUNTS))) acts.add(Act("Activity log", Icons.Filled.FactCheck) { vm.go(Screen.Activity) })
     acts.add(Act("Password", Icons.Filled.Lock) { vm.go(Screen.ChangePassword) })
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PAD, verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -13,6 +13,8 @@ const { checkLimit, planLimits, planFeatures, emptyUsage, DEFAULT_PLAN, getPlan 
 const V = require('./validate');
 
 const MAX_BULK = 200;
+/** Platform-wide cap on new institutes per day (India time): stops scripted sign-up floods and code squatting sprees. */
+const MAX_REGISTRATIONS_PER_DAY = Number(process.env.MAX_REGISTRATIONS_PER_DAY) || 40;
 
 const instRef = (db, inst) => db.collection('institutes').doc(inst);
 const userRef = (db, inst, uid) => instRef(db, inst).collection('users').doc(uid);
@@ -71,9 +73,17 @@ async function registerInstitute(deps, caller, data) {
 
   const plan = DEFAULT_PLAN;
   const nowMs = deps.now ? deps.now() : Date.now();
+  const day = new Date(nowMs + 330 * 60000).toISOString().slice(0, 10);
+  const statRef = db.collection('stats').doc('registrations-' + day);
   await db.runTransaction(async (tx) => {
     const ref = instRef(db, code);
-    if ((await tx.get(ref)).exists) throw new AppError('already-exists', 'This institute code is taken. Please choose another.');
+    const [existing, stat] = await Promise.all([tx.get(ref), tx.get(statRef)]);
+    if (existing.exists) throw new AppError('already-exists', 'This institute code is taken. Please choose another.');
+    const count = stat.exists ? stat.data().count || 0 : 0;
+    if (count >= MAX_REGISTRATIONS_PER_DAY) {
+      throw new AppError('resource-exhausted', 'Too many new registrations today. Please try again tomorrow or contact support.');
+    }
+    tx.set(statRef, { count: count + 1, day }, { merge: true });
     tx.set(ref, {
       name, code, plan, status: 'active', expiresAt: null,
       limits: planLimits(plan), features: planFeatures(plan),
@@ -126,7 +136,7 @@ async function createOne(deps, ctx, input) {
   const username = V.normUsername(input.username);
   const uErr = V.validateUsername(username);
   if (uErr) throw new AppError('invalid-argument', uErr);
-  const pErr = V.validatePassword(input.password);
+  const pErr = V.validatePassword(input.password, { username, mobile: input.mobile });
   if (pErr) throw new AppError('invalid-argument', pErr);
 
   // Cheap early check (the transaction below is the real, race-free one).
@@ -205,10 +215,10 @@ async function loadTarget(deps, ctx, uid) {
 async function resetPassword(deps, caller, data) {
   const ctx = await loadCaller(deps, caller);
   const uid = data?.uid;
-  await loadTarget(deps, ctx, uid);
+  const target = await loadTarget(deps, ctx, uid);
   const generated = data?.password == null;
   const password = generated ? V.randomPassword() : data.password;
-  const pErr = V.validatePassword(password);
+  const pErr = V.validatePassword(password, { username: target.loginId, mobile: target.mobile });
   if (pErr) throw new AppError('invalid-argument', pErr);
   await deps.auth.updateUser(uid, { password });
   await deps.auth.revokeRefreshTokens(uid);
@@ -249,4 +259,4 @@ async function deleteUser(deps, caller, data) {
   return { uid };
 }
 
-module.exports = { registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };
+module.exports = { MAX_REGISTRATIONS_PER_DAY, registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };

@@ -28,9 +28,27 @@ function validateUsername(u) {
   return null;
 }
 
-function validatePassword(p) {
+const COMMON_PASSWORDS = new Set([
+  'password', 'password1', 'password12', 'password123', 'passw0rd', 'qwerty123', 'qwertyuiop', 'abcd1234', 'abc12345',
+  'a1b2c3d4', 'india123', 'india1234', 'welcome1', 'welcome123', 'admin123', 'admin1234', 'student1', 'student123',
+  'teacher123', 'iloveyou1', 'test1234', 'pass1234', 'asdf1234', 'aaaa1111', 'qwer1234',
+]);
+
+/**
+ * Password policy for staff / student logins. `ctx` = { username, mobile } of the account, so the
+ * password cannot simply be the login id or phone number (the old habit, and the first thing an attacker tries).
+ */
+function validatePassword(p, ctx = {}) {
   if (typeof p !== 'string' || p.length < 8) return 'Password must be at least 8 characters.';
   if (p.length > 100) return 'Password is too long.';
+  if (/^\d+$/.test(p)) return 'Password cannot be only numbers. Add some letters.';
+  if (new Set(p).size < 4) return 'Password is too simple.';
+  const low = p.toLowerCase();
+  if (COMMON_PASSWORDS.has(low)) return 'This password is too common. Choose another.';
+  for (const part of [ctx.username, ctx.mobile]) {
+    const x = String(part ?? '').trim().toLowerCase();
+    if (x.length >= 4 && low.includes(x)) return 'Password cannot contain the username or mobile number.';
+  }
   return null;
 }
 

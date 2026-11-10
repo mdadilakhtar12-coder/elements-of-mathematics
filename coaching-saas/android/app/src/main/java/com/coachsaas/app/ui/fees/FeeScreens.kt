@@ -125,7 +125,8 @@ fun FeesTab(vm: AppViewModel) {
                                 }
                                 Text(D.rs(f.amount), fontWeight = FontWeight.Bold, color = Green, fontSize = 16.sp)
                                 IconButton(onClick = { shareReceipt(ctx, f) }) { Icon(Icons.Filled.Share, "Share receipt", tint = Indigo) }
-                                IconButton(onClick = { toDelete = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Red) }
+                                // Only the admin can delete a payment; every change is kept in the activity log.
+                                if (vm.role == com.coachsaas.app.data.Role.ADMIN) IconButton(onClick = { toDelete = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Red) }
                             }
                         }
                     }
@@ -193,7 +194,7 @@ fun FeeAddScreen(vm: AppViewModel, s: Screen.FeeAdd) {
                 } else {
                     val f = Fee(
                         studentId = st.id, studentName = st.name, amount = amt, month = month, date = date,
-                        mode = mode, note = note.trim(), receivedBy = vm.me?.name.orEmpty(),
+                        mode = mode, note = note.trim(), receivedBy = vm.me?.name.orEmpty(), createdBy = vm.me?.id.orEmpty(),
                         createdAt = System.currentTimeMillis()
                     )
                     vm.op("Payment saved", { vm.back() }) { Repo.put("fees", f) }

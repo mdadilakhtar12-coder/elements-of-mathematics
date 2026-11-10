@@ -36,7 +36,7 @@ async function setup(code = 'alpha', owner = 'owner1') {
   return tokenFor(owner, undefined, { inst: code, role: 'admin' });
 }
 const asUser = (uid, inst, role) => tokenFor(uid, `${uid}@x`, { inst, role });
-const student = (n, extra = {}) => ({ role: 'student', name: 'S' + n, username: 'stu' + n, password: 'password' + n, ...extra });
+const student = (n, extra = {}) => ({ role: 'student', name: 'S' + n, username: 'stu' + n, password: 'Kite48x' + n, ...extra });
 
 beforeEach(wipe);
 
@@ -70,9 +70,9 @@ test('createUser: student can sign in material exists, password is hashed by Aut
   assert.equal(r.loginEmail, 'stu1@alpha.login.coachsaas.app');
   const u = (await db.doc(`institutes/alpha/users/${r.uid}`).get()).data();
   assert.equal(u.role, 'student'); assert.equal(u.loginId, 'stu1'); assert.equal(u.rollNo, '7');
-  assert.equal(JSON.stringify(u).includes('password1'), false);
+  assert.equal(JSON.stringify(u).includes('Kite48x1'), false);
   const dump = JSON.stringify((await db.collection('institutes').doc('alpha').collection('users').get()).docs.map((d) => d.data()));
-  assert.equal(dump.includes('password'), false);
+  assert.equal(dump.includes('Kite48x'), false);
   assert.deepEqual((await auth.getUser(r.uid)).customClaims, { inst: 'alpha', role: 'student' });
   assert.equal((await db.doc('institutes/alpha').get()).data().usage.student, 1);
 });
@@ -89,11 +89,11 @@ test('FREE plan limits are enforced on the server: 30 students, 5 teachers, 1 su
   const admin = await setup();
   for (let i = 1; i <= 30; i++) await A.createUser(deps, admin, student(i));
   await rejects(A.createUser(deps, admin, student(31)), 'resource-exhausted');
-  for (let i = 1; i <= 5; i++) await A.createUser(deps, admin, { role: 'teacher', name: 'T' + i, username: 'teach' + i, password: 'password123' });
-  await rejects(A.createUser(deps, admin, { role: 'teacher', name: 'T6', username: 'teach6', password: 'password123' }), 'resource-exhausted');
-  await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'password123', perms: ['users'] });
-  await rejects(A.createUser(deps, admin, { role: 'subadmin', name: 'Sub2', username: 'sub2', password: 'password123' }), 'resource-exhausted');
-  await rejects(A.createUser(deps, admin, { role: 'admin', name: 'Adm2', username: 'adm2', password: 'password123' }), 'resource-exhausted');
+  for (let i = 1; i <= 5; i++) await A.createUser(deps, admin, { role: 'teacher', name: 'T' + i, username: 'teach' + i, password: 'Maths2024x' });
+  await rejects(A.createUser(deps, admin, { role: 'teacher', name: 'T6', username: 'teach6', password: 'Maths2024x' }), 'resource-exhausted');
+  await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'Maths2024x', perms: ['users'] });
+  await rejects(A.createUser(deps, admin, { role: 'subadmin', name: 'Sub2', username: 'sub2', password: 'Maths2024x' }), 'resource-exhausted');
+  await rejects(A.createUser(deps, admin, { role: 'admin', name: 'Adm2', username: 'adm2', password: 'Maths2024x' }), 'resource-exhausted');
   const i = (await db.doc('institutes/alpha').get()).data();
   assert.deepEqual(i.usage, { admin: 1, subadmin: 1, teacher: 5, student: 30 });
   // a refused attempt leaves no orphan login behind
@@ -113,11 +113,11 @@ async function SA_setLimit(inst, limits) { await db.doc(`institutes/${inst}`).up
 
 test('permissions: sub-admin with "users" creates students/teachers only; teacher and student cannot create', async () => {
   const admin = await setup();
-  const sub = await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'password123', perms: ['users'] });
-  const noPerm = await A.createUser(deps, admin, { role: 'teacher', name: 'T', username: 'teach1', password: 'password123' });
+  const sub = await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'Maths2024x', perms: ['users'] });
+  const noPerm = await A.createUser(deps, admin, { role: 'teacher', name: 'T', username: 'teach1', password: 'Maths2024x' });
   const subCaller = asUser(sub.uid, 'alpha', 'subadmin');
   await A.createUser(deps, subCaller, student(1));
-  await rejects(A.createUser(deps, subCaller, { role: 'subadmin', name: 'x', username: 'subx', password: 'password123' }), 'permission-denied');
+  await rejects(A.createUser(deps, subCaller, { role: 'subadmin', name: 'x', username: 'subx', password: 'Maths2024x' }), 'permission-denied');
   await rejects(A.createUser(deps, asUser(noPerm.uid, 'alpha', 'teacher'), student(2)), 'permission-denied');
   await rejects(A.createUser(deps, { uid: 'ghost', token: { inst: 'alpha' } }, student(3)), 'permission-denied');
   await rejects(A.createUser(deps, { uid: undefined }, student(4)), 'unauthenticated');
@@ -140,9 +140,9 @@ test('resetPassword: sets a new password (Auth only), generated one is returned 
   const r2 = await A.resetPassword(deps, admin, { uid: s.uid, password: 'brandnewpass1' });
   assert.equal(r2.password, undefined);
   await rejects(A.resetPassword(deps, admin, { uid: s.uid, password: 'short' }), 'invalid-argument');
-  const t = await A.createUser(deps, admin, { role: 'teacher', name: 'T', username: 'teach1', password: 'password123' });
-  const sub = await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'password123', perms: ['users'] });
-  await rejects(A.resetPassword(deps, asUser(sub.uid, 'alpha', 'subadmin'), { uid: 'owner1', password: 'password123' }), 'permission-denied');
+  const t = await A.createUser(deps, admin, { role: 'teacher', name: 'T', username: 'teach1', password: 'Maths2024x' });
+  const sub = await A.createUser(deps, admin, { role: 'subadmin', name: 'Sub', username: 'sub1', password: 'Maths2024x', perms: ['users'] });
+  await rejects(A.resetPassword(deps, asUser(sub.uid, 'alpha', 'subadmin'), { uid: 'owner1', password: 'Maths2024x' }), 'permission-denied');
   await rejects(A.resetPassword(deps, asUser(t.uid, 'alpha', 'teacher'), { uid: s.uid }), 'permission-denied');
   const all = JSON.stringify((await db.collection('institutes').doc('alpha').collection('users').get()).docs.map((d) => d.data()));
   assert.equal(all.includes(r1.password), false);
@@ -177,6 +177,33 @@ test('suspended / expired institutes cannot create or manage accounts', async ()
   await db.doc('institutes/alpha').update({ expiresAt: Timestamp.fromMillis(clock + 100000) });
   await A.createUser(deps, admin, student(2));
   assert.deepEqual(await A.lookupInstitute(deps, null, { code: 'nope-x' }), { exists: false });
+});
+
+test('password policy on the server: not only digits, not the username / mobile, not a common one', async () => {
+  const admin = await setup();
+  const mk = (password, extra = {}) => A.createUser(deps, admin, { role: 'student', name: 'S', username: '9876543210', mobile: '9876543210', password, ...extra });
+  await rejects(mk('9876543210'), 'invalid-argument');
+  await rejects(mk('1234567890'), 'invalid-argument');
+  await rejects(mk('ab9876543210'), 'invalid-argument');
+  await rejects(mk('password123'), 'invalid-argument');
+  await rejects(mk('aaaaaaa1'), 'invalid-argument');
+  const ok = await mk('Blue7Kite9');
+  await rejects(A.resetPassword(deps, admin, { uid: ok.uid, password: '9876543210' }), 'invalid-argument');
+  await rejects(A.resetPassword(deps, admin, { uid: ok.uid, password: 'x9876543210x' }), 'invalid-argument');
+  await A.resetPassword(deps, admin, { uid: ok.uid, password: 'Green4Tree2' });
+});
+
+test('registration flood: the daily cap stops new institutes, existing ones are unaffected', async () => {
+  const admin = await setup('alpha', 'oa');
+  const day = new Date(clock + 330 * 60000).toISOString().slice(0, 10);
+  assert.equal((await db.doc('stats/registrations-' + day).get()).data().count, 1);
+  await db.doc('stats/registrations-' + day).set({ count: A.MAX_REGISTRATIONS_PER_DAY, day });
+  await auth.createUser({ uid: 'late', email: 'late@gmail.com', emailVerified: true });
+  await rejects(A.registerInstitute(deps, tokenFor('late'), { name: 'Late Academy', code: 'late-one' }), 'resource-exhausted');
+  assert.equal((await db.doc('institutes/late-one').get()).exists, false);
+  await A.createUser(deps, admin, student(1));
+  clock += 86400000; // next day
+  await A.registerInstitute(deps, tokenFor('late'), { name: 'Late Academy', code: 'late-one' });
 });
 
 test('createUsers (bulk): per-row results, stops exactly at the plan limit', async () => {

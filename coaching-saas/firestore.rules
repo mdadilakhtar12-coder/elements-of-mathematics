@@ -37,6 +37,39 @@ service cloud.firestore {
       return member(inst) && meDoc(inst).role in ['admin', 'subadmin', 'teacher'];
     }
 
+    // ---- who may see / touch what (tightened: students and teachers get only what is theirs) ----
+    function isStudent(inst) { return roleIs(inst, 'student'); }
+    function myBatchIds(inst) { return meDoc(inst).get('batchIds', []); }
+    // A student of that batch (batchId comes from the document being read).
+    function studentOf(inst, batchId) { return isStudent(inst) && batchId in myBatchIds(inst); }
+    function batchDoc(inst, batchId) {
+      return get(/databases/$(database)/documents/institutes/$(inst)/batches/$(batchId)).data;
+    }
+    // A teacher of that batch. `teacherIds` is kept on the batch by the app and re-checked by a Cloud Function.
+    function teaches(inst, batchId) {
+      return isTeacher(inst) && request.auth.uid in batchDoc(inst, batchId).get('teacherIds', []);
+    }
+    // Teacher writing a document that carries `batchId` (homework, notices, exams, marks, materials):
+    // only for a batch they teach, and they cannot move it to another batch.
+    function teacherBatchWrite(inst) {
+      return request.method == 'delete'
+        ? teaches(inst, resource.data.batchId)
+        : (resource == null
+            ? teaches(inst, request.resource.data.batchId)
+            : (resource.data.batchId == request.resource.data.batchId && teaches(inst, resource.data.batchId)));
+    }
+    function classDoc(inst, classId) {
+      return get(/databases/$(database)/documents/institutes/$(inst)/classes/$(classId)).data;
+    }
+    // Teacher marking attendance: only for a class that is theirs (covers substitutes) and not yet approved / cancelled.
+    function teacherAttendanceWrite(inst) {
+      let cid = request.method == 'delete' ? resource.data.classId : request.resource.data.classId;
+      return isTeacher(inst)
+        && (request.method != 'update' || resource.data.classId == request.resource.data.classId)
+        && classDoc(inst, cid).teacherId == request.auth.uid
+        && classDoc(inst, cid).status in ['scheduled', 'rejected', 'taken'];
+    }
+
     // Everything not matched below is denied.
 
     // ---------- global, read-only data ----------
@@ -53,7 +86,11 @@ service cloud.firestore {
 
       // ---- accounts ----
       match /users/{uid} {
-        allow read: if (inInst(inst) && request.auth.uid == uid) || isStaffOrTeacher(inst);
+        // Own profile; admins and sub-admins see everyone; a teacher sees students only
+        // (not other teachers' pay); a student sees nobody else.
+        allow read: if (inInst(inst) && request.auth.uid == uid)
+          || (member(inst) && meDoc(inst).role in ['admin', 'subadmin'])
+          || (isTeacher(inst) && resource.data.role == 'student');
         allow create, delete: if false; // createUser / deleteUser Cloud Functions (limits + Auth account)
         // role, loginId, active, createdAt can never be changed from the app.
         allow update: if (
@@ -65,7 +102,9 @@ service cloud.firestore {
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
               'name', 'mobile', 'perms', 'batchIds', 'rollNo', 'standard', 'parentMobile',
               'monthlyFee', 'subjects', 'classRate', 'salary', 'teacherType'
-            ]);
+            ])
+            // only the admin hands out permissions
+            && (isAdmin(inst) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['perms']));
       }
 
       // ---- push devices (FCM tokens). Each user manages only their own; Cloud Functions read them to send. ----
@@ -75,28 +114,44 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['uid', 'role', 'platform', 'updatedAt']);
       }
 
+      // ---- activity log (who changed fees / accounts). Written by Cloud Functions, read by the admin. ----
+      match /activity/{id} {
+        allow read: if isAdmin(inst);
+        allow write: if false;
+      }
+
       // ---- core features (every plan) ----
       match /batches/{id} {
-        allow read: if member(inst);
+        allow read: if isStaffOrTeacher(inst) || studentOf(inst, id);
         allow write: if can(inst, 'batches');
       }
       match /classes/{id} {
-        allow read: if member(inst);
-        allow write: if can(inst, 'schedule') || can(inst, 'attendance')
-          || (isTeacher(inst) && resource != null && resource.data.teacherId == request.auth.uid
-              && request.resource.data.teacherId == request.auth.uid);
+        allow read: if isStaffOrTeacher(inst) || studentOf(inst, resource.data.batchId);
+        allow create, delete: if can(inst, 'schedule') || can(inst, 'attendance');
+        // A teacher may only hand in their own class for approval ("taken"): never approve it,
+        // never touch it once approved / cancelled, never change date, batch or teacher.
+        allow update: if can(inst, 'schedule') || can(inst, 'attendance')
+          || (isTeacher(inst)
+              && resource.data.teacherId == request.auth.uid
+              && resource.data.status in ['scheduled', 'rejected', 'taken']
+              && request.resource.data.status == 'taken'
+              && request.resource.data.get('approvedBy', '') == ''
+              && request.resource.data.diff(resource.data).affectedKeys()
+                   .hasOnly(['status', 'topic', 'note', 'takenBy', 'takenAt', 'approvedBy']));
       }
       match /attendance/{id} {
-        allow read: if member(inst);
-        allow write: if can(inst, 'attendance') || isTeacher(inst);
+        allow read: if isStaffOrTeacher(inst) || (member(inst) && resource.data.studentId == request.auth.uid);
+        allow write: if can(inst, 'attendance') || teacherAttendanceWrite(inst);
       }
       match /notices/{id} {
-        allow read: if member(inst);
-        allow write: if can(inst, 'notices') || isTeacher(inst);
+        // batchId '' = for everyone
+        allow read: if isStaffOrTeacher(inst)
+          || (isStudent(inst) && (resource.data.batchId == '' || resource.data.batchId in myBatchIds(inst)));
+        allow write: if can(inst, 'notices') || teacherBatchWrite(inst);
       }
       match /homework/{id} {
-        allow read: if member(inst);
-        allow write: if can(inst, 'notices') || isTeacher(inst);
+        allow read: if isStaffOrTeacher(inst) || studentOf(inst, resource.data.batchId);
+        allow write: if can(inst, 'notices') || teacherBatchWrite(inst);
       }
       // Subject list, WhatsApp message texts.
       match /settings/{id} {
@@ -106,24 +161,28 @@ service cloud.firestore {
 
       // ---- exams (feature: exams) ----
       match /exams/{id} {
-        allow read: if member(inst) && feat(inst, 'exams');
-        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+        allow read: if feat(inst, 'exams') && (isStaffOrTeacher(inst) || studentOf(inst, resource.data.batchId));
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || teacherBatchWrite(inst));
       }
       match /marks/{id} {
         allow read: if member(inst) && feat(inst, 'exams')
           && (isStaffOrTeacher(inst) || resource.data.studentId == request.auth.uid);
-        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || teacherBatchWrite(inst));
       }
       match /leaderboards/{id} {
-        allow read: if member(inst) && feat(inst, 'exams');
-        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || isTeacher(inst));
+        // document id = batch id
+        allow read: if feat(inst, 'exams') && (isStaffOrTeacher(inst) || studentOf(inst, id));
+        allow write: if feat(inst, 'exams') && (can(inst, 'exams') || teaches(inst, id));
       }
 
       // ---- fees (feature: fees) ----
       match /fees/{id} {
         allow read: if member(inst) && feat(inst, 'fees')
           && (can(inst, 'fees') || resource.data.studentId == request.auth.uid);
-        allow write: if feat(inst, 'fees') && can(inst, 'fees');
+        // Staff record payments under their own id; only the admin may change or delete one.
+        // Every create / change / delete is also written to the activity log by a Cloud Function.
+        allow create: if feat(inst, 'fees') && can(inst, 'fees') && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if feat(inst, 'fees') && isAdmin(inst);
       }
 
       // ---- accounts (feature: accounts) ----
@@ -141,8 +200,8 @@ service cloud.firestore {
 
       // ---- study material (feature: study) ----
       match /materials/{id} {
-        allow read: if member(inst) && feat(inst, 'study');
-        allow write: if feat(inst, 'study') && (can(inst, 'notices') || isTeacher(inst));
+        allow read: if feat(inst, 'study') && (isStaffOrTeacher(inst) || studentOf(inst, resource.data.batchId));
+        allow write: if feat(inst, 'study') && (can(inst, 'notices') || teacherBatchWrite(inst));
       }
 
       // ---- doubts (feature: doubts) ----
@@ -154,8 +213,13 @@ service cloud.firestore {
         allow delete: if member(inst) && feat(inst, 'doubts')
           && (resource.data.studentId == request.auth.uid || isStaffOrTeacher(inst));
       }
+      // Photo of a doubt (document id = doubt id): the student who asked, and staff / teachers.
       match /doubtPhotos/{id} {
-        allow read, create, delete: if member(inst) && feat(inst, 'doubts');
+        function doubtOwner() {
+          return get(/databases/$(database)/documents/institutes/$(inst)/doubts/$(id)).data.studentId == request.auth.uid;
+        }
+        allow read, delete: if member(inst) && feat(inst, 'doubts') && (isStaffOrTeacher(inst) || doubtOwner());
+        allow create: if member(inst) && feat(inst, 'doubts') && doubtOwner();
       }
 
       // ---- leaves (feature: leaves) ----

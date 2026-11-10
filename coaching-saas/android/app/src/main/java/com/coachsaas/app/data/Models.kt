@@ -112,7 +112,9 @@ data class Batch(
     var subject: String = "",
     var teacherId: String = "",
     var teacherName: String = "",
-    var weekly: List<WeeklySlot> = emptyList()
+    var weekly: List<WeeklySlot> = emptyList(),
+    /** Ids of all teachers of this batch. The rules use it to decide which batch a teacher may write to. */
+    var teacherIds: List<String> = emptyList()
 ) : HasId {
     fun plans(): List<SubjectPlan> = when {
         subjects.isNotEmpty() -> subjects
@@ -206,6 +208,7 @@ data class Fee(
     var mode: String = "Cash",
     var note: String = "",
     var receivedBy: String = "",
+    var createdBy: String = "", // uid of who recorded it (checked by the rules)
     var createdAt: Long = 0
 ) : HasId
 
@@ -387,3 +390,18 @@ data class Institute(
     fun limit(role: String): Long = limits[role] ?: 0L
     fun used(role: String): Long = usage[role] ?: 0L
 }
+
+/** One line of the activity log: a money record was created, changed or deleted. Written only by Cloud Functions. */
+data class ActivityEntry(
+    override var id: String = "",
+    var kind: String = "", // fees / ledger / salaryPaid
+    var action: String = "", // created / updated / deleted
+    var docId: String = "",
+    var by: String = "", // uid
+    var byType: String = "",
+    var at: com.google.firebase.Timestamp? = null,
+    var who: String = "",
+    var amount: Double = 0.0,
+    var before: Map<String, Any?>? = null,
+    var after: Map<String, Any?>? = null
+) : HasId

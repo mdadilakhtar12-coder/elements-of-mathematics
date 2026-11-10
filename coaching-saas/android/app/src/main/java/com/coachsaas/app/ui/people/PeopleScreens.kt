@@ -220,7 +220,7 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
                 keyboard = if (role == Role.SUBADMIN) KeyboardType.Text else KeyboardType.Phone
             )
             if (isNew) {
-                Field("Password * (min 8 characters)", password, { password = it }, password = true)
+                Field("Password * (min 8, letters + numbers)", password, { password = it }, password = true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { password = com.coachsaas.app.util.Passwords.random(); showGenerated = true }) {
                         Text("Generate a password")
@@ -267,8 +267,8 @@ fun UserEditScreen(vm: AppViewModel, s: Screen.UserEdit) {
             PrimaryButton("Save", onClick = {
                 if (name.isBlank() || loginId.isBlank()) {
                     vm.toast("Enter name and " + idLabel.substringBefore(" (").lowercase())
-                } else if (isNew && password.length < 8) {
-                    vm.toast("Password must be at least 8 characters")
+                } else if (isNew && com.coachsaas.app.util.Passwords.problem(password, loginId, loginId) != null) {
+                    vm.toast(com.coachsaas.app.util.Passwords.problem(password, loginId, loginId).orEmpty())
                 } else {
                     val draft = (existing ?: UserProfile()).copy(
                         role = role, name = name.trim(), loginId = loginId.trim(),
@@ -441,8 +441,9 @@ fun UserDetailScreen(vm: AppViewModel, userId: String) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    if (pw.length < 8) {
-                        vm.toast("At least 8 characters")
+                    val problem = com.coachsaas.app.util.Passwords.problem(pw, u.loginId, u.mobile)
+                    if (problem != null) {
+                        vm.toast(problem)
                     } else {
                         resetDialog = false
                         vm.resetPassword(u, pw)

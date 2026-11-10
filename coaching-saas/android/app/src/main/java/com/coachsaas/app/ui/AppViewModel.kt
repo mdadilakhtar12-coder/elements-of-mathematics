@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ sealed class Screen {
     data object Accounts : Screen()
     data object LedgerAdd : Screen()
     data object ChangePassword : Screen()
+    data object Activity : Screen()
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -182,10 +184,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
-        scope.launch { Repo.batches().collect { batches = it.sortedBy { b -> b.name.lowercase() } } }
-        scope.launch { Repo.classes(D.daysAgo(75)).collect { classes = it } }
-        scope.launch { Repo.notices().collect { notices = it } }
-        scope.launch { Repo.homework().collect { homework = it } }
+        if (p.role == Role.STUDENT) {
+            // A student may read only what belongs to their own batches (the rules enforce it): one query per batch,
+            // restarted when the admin moves the student to another batch.
+            scope.launch {
+                snapshotFlow { me?.batchIds.orEmpty() }.distinctUntilChanged().collectLatest { ids ->
+                    coroutineScope {
+                        launch { Repo.batchesByIds(ids).collect { batches = it.sortedBy { b -> b.name.lowercase() } } }
+                        launch { Repo.classesOfBatches(ids, D.daysAgo(75)).collect { classes = it } }
+                        launch { Repo.noticesFor(ids).collect { notices = it } }
+                        launch { Repo.homeworkOfBatches(ids).collect { homework = it } }
+                    }
+                }
+            }
+        } else {
+            scope.launch { Repo.batches().collect { batches = it.sortedBy { b -> b.name.lowercase() } } }
+            scope.launch { Repo.classes(D.daysAgo(75)).collect { classes = it } }
+            scope.launch { Repo.notices().collect { notices = it } }
+            scope.launch { Repo.homework().collect { homework = it } }
+        }
         scope.launch { Repo.subjectSettings().collect { if (it.isNotEmpty()) subjects = it } }
         scope.launch { Repo.messageTemplates().collect { com.coachsaas.app.util.Messages.overrides = it } }
         // Register this phone for push while the plan includes it.
@@ -197,9 +214,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Collections of plan features are only listened to while the plan includes them
         // (the rules would refuse them otherwise). Restarted whenever the feature set changes.
         scope.launch {
-            snapshotFlow { institute?.features }.distinctUntilChanged().collectLatest { startGated(p) }
+            snapshotFlow { institute?.features to me?.batchIds }.distinctUntilChanged().collectLatest { startGated(p) }
         }
-        if (p.role != Role.STUDENT) {
+        if (p.role == Role.TEACHER) {
+            // Teachers see student profiles only (not other staff).
+            scope.launch { Repo.students().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
+        } else if (p.role != Role.STUDENT) {
             scope.launch { Repo.users().collect { users = it.sortedBy { u -> u.name.lowercase() } } }
         }
     }
@@ -211,9 +231,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         exams = emptyList(); leaderboards = emptyList(); leaves = emptyList(); materials = emptyList(); doubts = emptyList()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         gatedScope = scope
+        val student = p.role == Role.STUDENT
+        val myIds = me?.batchIds.orEmpty()
         if (has(Feature.EXAMS)) {
-            scope.launch { Repo.exams().collect { exams = it } }
-            scope.launch { Repo.leaderboards().collect { leaderboards = it } }
+            scope.launch { (if (student) Repo.examsOfBatches(myIds) else Repo.exams()).collect { exams = it } }
+            scope.launch { (if (student) Repo.leaderboardsByIds(myIds) else Repo.leaderboards()).collect { leaderboards = it } }
         }
         if (has(Feature.LEAVES)) {
             if (p.role == Role.TEACHER) {
@@ -222,7 +244,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 scope.launch { Repo.leavesAll().collect { leaves = it } }
             }
         }
-        if (has(Feature.STUDY)) scope.launch { Repo.materials().collect { materials = it } }
+        if (has(Feature.STUDY)) scope.launch { (if (student) Repo.materialsOfBatches(myIds) else Repo.materials()).collect { materials = it } }
         if (has(Feature.DOUBTS)) {
             scope.launch {
                 val flow = if (p.role == Role.STUDENT) Repo.doubtsOfStudent(p.id) else Repo.doubtsAll()
@@ -499,8 +521,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 continue
             }
             var pw = cell(cPass)
-            if (pw.isNotEmpty() && pw.length < 8) {
-                failed.add("Row $n ($name): password needs at least 8 characters")
+            val pwProblem = if (pw.isEmpty()) null else com.coachsaas.app.util.Passwords.problem(pw, mobile, mobile)
+            if (pwProblem != null) {
+                failed.add("Row $n ($name): $pwProblem")
                 continue
             }
             if (pw.isEmpty()) {
