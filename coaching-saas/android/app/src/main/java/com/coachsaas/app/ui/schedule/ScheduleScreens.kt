@@ -197,6 +197,14 @@ fun ScheduleTab(vm: AppViewModel) {
                     }
                 }
             }
+            if (vm.can(Perm.SCHEDULE)) {
+                item {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { vm.go(Screen.DailyTimetable) }, modifier = Modifier.weight(1f)) { Text("Daily timetable / upload") }
+                        OutlinedButton(onClick = { vm.go(Screen.ShareTimetable) }, modifier = Modifier.weight(1f)) { Text("Send timetable") }
+                    }
+                }
+            }
             item { WeekStrip(selected, marked) { selected = it } }
             if (vm.isStaff) {
                 item {

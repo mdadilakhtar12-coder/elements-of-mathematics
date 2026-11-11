@@ -231,7 +231,8 @@ object TT {
 
     // ------------------------------------------------------------------ finishing an entry
 
-    private fun finish(e: TTEntry, ctx: TTContext): TTEntry {
+    /** Re-checks one entry (after the admin edits it): fills what can be filled and lists what is still wrong. */
+    fun revalidate(e: TTEntry, ctx: TTContext): TTEntry {
         val issues = ArrayList<String>()
         if (e.date.isBlank()) issues.add(TTEntry.NO_DATE)
         if (e.start.isBlank() || e.end.isBlank() || e.start >= e.end) issues.add(TTEntry.NO_TIME)
@@ -291,7 +292,7 @@ object TT {
             e.rawTeacher = cell(cTeacher)
             matchTeacher(ctx, e.rawTeacher)?.let { e.teacherId = it.id; e.teacherName = it.name }
             e.room = cell(cRoom)
-            out.add(finish(e, ctx))
+            out.add(revalidate(e, ctx))
         }
         return out
     }
@@ -352,7 +353,7 @@ object TT {
             e.subject = matchSubject(ctx, rest)
             e.room = findRoom(rest)
             e.rawTeacher = ""
-            out.add(finish(e, ctx))
+            out.add(revalidate(e, ctx))
         }
         return out
     }

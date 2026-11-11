@@ -69,6 +69,9 @@ sealed class Screen {
     data object FeeSettings : Screen()
     data object Structure : Screen()
     data object Credentials : Screen()
+    data object DailyTimetable : Screen()
+    data object TimetableReview : Screen()
+    data object ShareTimetable : Screen()
     data object Collection : Screen()
 }
 
@@ -401,6 +404,88 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- classes / groups / sections (admin edits them; everybody picks from them) ----------
     var structure by mutableStateOf(com.coachsaas.app.data.Structure())
+
+    // ---------- timetable upload (Excel, photo, PDF) ----------
+    var ttEntries by mutableStateOf<List<com.coachsaas.app.util.TTEntry>>(emptyList())
+    var ttWarnings by mutableStateOf<List<String>>(emptyList())
+
+    fun ttContext(defaultDate: String): com.coachsaas.app.util.TTContext {
+        val subjects = (subjectList + batches.flatMap { b -> b.plans().map { it.subject } }).filter { it.isNotBlank() }.distinct()
+        return com.coachsaas.app.util.TTContext(
+            batches = batches.map { com.coachsaas.app.util.Ref(it.id, it.name) },
+            teachers = teachers.filter { it.active }.map { com.coachsaas.app.util.Ref(it.id, it.name) },
+            subjects = subjects,
+            plans = batches.associate { b -> b.id to b.plans().filter { it.subject.isNotBlank() && it.teacherId.isNotBlank() }.associate { it.subject to it.teacherId } },
+            defaultDate = defaultDate
+        )
+    }
+
+    /** Re-checks every entry (after an edit) against the saved timetable and refreshes the clash warnings. */
+    fun recheckTimetable(defaultDate: String = "") {
+        val ctx = ttContext(defaultDate)
+        val fresh = ttEntries.map { com.coachsaas.app.util.TT.revalidate(it.copy(), ctx) }
+        ttWarnings = com.coachsaas.app.util.TT.check(fresh, classes)
+        ttEntries = fresh
+    }
+
+    private fun showTimetable(entries: List<com.coachsaas.app.util.TTEntry>, defaultDate: String) {
+        if (entries.isEmpty()) error("No classes could be read. Check the file or picture, or use the Excel format.")
+        ttEntries = entries
+        recheckTimetable(defaultDate)
+        go(Screen.TimetableReview)
+    }
+
+    /** Excel / CSV rows -> classes to review. */
+    fun timetableFromTable(rows: List<List<String>>, defaultDate: String) {
+        showTimetable(com.coachsaas.app.util.TT.fromTable(rows, ttContext(defaultDate)), defaultDate)
+    }
+
+    /** Photos or PDF pages (already turned into pictures) -> text rows -> classes to review. Runs on the phone, free. */
+    suspend fun timetableFromPictures(pictures: List<android.graphics.Bitmap>, defaultDate: String) {
+        if (pictures.isEmpty()) error("Could not open the picture or PDF")
+        progress = "Reading the timetable..."
+        val rows = try { com.coachsaas.app.util.Ocr.rows(pictures) } finally { progress = null }
+        if (rows.isEmpty()) error("No text found. Take a clearer photo: straight, well lit, large clear writing.")
+        showTimetable(com.coachsaas.app.util.TT.fromLines(rows, ttContext(defaultDate)), defaultDate)
+    }
+
+    /** Saves the reviewed classes. Entries that still have a problem, and classes that already exist, are skipped. */
+    fun saveTimetable(onDone: () -> Unit) {
+        var made = 0
+        op(null, { toast("$made classes added"); onDone() }) {
+            val have = classes.map { it.id }.toSet()
+            val list = ArrayList<ClassSession>()
+            for (e in ttEntries) {
+                if (e.blocking.isNotEmpty()) continue
+                val id = com.coachsaas.app.util.TT.classId(e.batchId, e.subject, e.date, e.start)
+                if (id in have || list.any { it.id == id }) continue
+                list.add(
+                    ClassSession(
+                        id = id, batchId = e.batchId, batchName = e.batchName, subject = e.subject,
+                        teacherId = e.teacherId, teacherName = e.teacherName, date = e.date, start = e.start, end = e.end, room = e.room
+                    )
+                )
+            }
+            if (list.isNotEmpty()) Repo.putAll("classes", list)
+            made = list.size
+        }
+    }
+
+    /** Copies the classes of one day to another day (new classes, same batch / subject / teacher / time / room). */
+    fun copyDay(from: String, to: String, onDone: (Int) -> Unit) {
+        var made = 0
+        op(null, { toast("$made classes copied"); onDone(made) }) {
+            val have = classes.map { it.id }.toSet()
+            val list = classes.filter { it.date == from && it.status != CS.CANCELLED }.map { c ->
+                c.copy(
+                    id = com.coachsaas.app.util.TT.classId(c.batchId, c.subject, to, c.start), date = to, status = CS.SCHEDULED,
+                    topic = "", note = "", takenBy = "", takenAt = 0, approvedBy = ""
+                )
+            }.filter { it.id !in have }
+            if (list.isNotEmpty()) Repo.putAll("classes", list)
+            made = list.size
+        }
+    }
 
     /** Logins just made (new account, Excel upload): kept in memory only, shown on the "Login details" screen. */
     var credentials by mutableStateOf<List<com.coachsaas.app.data.Cred>>(emptyList())
