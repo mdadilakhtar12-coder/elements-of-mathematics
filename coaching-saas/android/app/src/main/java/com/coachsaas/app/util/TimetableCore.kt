@@ -55,12 +55,17 @@ object TT {
 
     // ------------------------------------------------------------------ dates and times
 
-    private val MONTHS = listOf("jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec")
+    private val MONTH_NAMES = listOf(
+        "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"
+    )
 
+    /** Month number for a full month name or its 3-letter / "sept" short form. Other words ("Marketing") are not months. */
     private fun monthOf(word: String): Int? {
-        val w = word.lowercase().take(3)
-        val i = MONTHS.indexOf(w)
-        return if (i >= 0 && word.length >= 3) i + 1 else null
+        val w = word.lowercase().trimEnd('.')
+        for ((i, full) in MONTH_NAMES.withIndex()) {
+            if (w == full || w == full.take(3) || (w == "sept" && i == 8)) return i + 1
+        }
+        return null
     }
 
     private fun mk(y: Int, m: Int, d: Int): String? = try {
@@ -93,14 +98,23 @@ object TT {
         return null
     }
 
+    private val DATE_PATTERNS = listOf(
+        Regex("\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}"),
+        Regex("\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}"),
+        Regex("\\d{1,2}(?:st|nd|rd|th)?[ -][A-Za-z]{3,9}\\.?(?:[ -]\\d{4})?"),
+        Regex("[A-Za-z]{3,9}\\.? \\d{1,2}(?:st|nd|rd|th)?(?:,? \\d{4})?")
+    )
+
+    /** The line with every real date cut out (so "12-11-2026" is not mistaken for a time range). */
+    fun stripDates(line: String, today: LocalDate = LocalDate.now()): String {
+        var out = line
+        for (p in DATE_PATTERNS) out = p.replace(out) { m -> if (parseDate(m.value, today) != null) "  " else m.value }
+        return out
+    }
+
     /** Finds a date written anywhere in a line of text. */
     fun findDate(line: String, today: LocalDate = LocalDate.now()): String? {
-        val patterns = listOf(
-            Regex("\\d{4}[-/.]\\d{1,2}[-/.]\\d{1,2}"),
-            Regex("\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}"),
-            Regex("\\d{1,2}(?:st|nd|rd|th)?[ -][A-Za-z]{3,9}\\.?(?:[ -]\\d{4})?"),
-            Regex("[A-Za-z]{3,9}\\.? \\d{1,2}(?:st|nd|rd|th)?(?:,? \\d{4})?")
-        )
+        val patterns = DATE_PATTERNS
         for (p in patterns) {
             for (m in p.findAll(line)) parseDate(m.value, today)?.let { return it }
         }
@@ -135,7 +149,7 @@ object TT {
     }
 
     private val RANGE = Regex(
-        "(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)\\s*(?:-|–|—|to|till|until)\\s*(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)",
+        "(?<![\\d/.:-])(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)\\s*(?:-|–|—|to|till|until)\\s*(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?)(?![\\d/:])(?!\\.\\d)(?!-\\d)",
         RegexOption.IGNORE_CASE
     )
 
@@ -151,10 +165,8 @@ object TT {
             // a lone 24-hour clash such as "12-2" is read as 12:00 - 14:00
             val s = parseTime(a) ?: continue
             val e = parseTime(b) ?: continue
-            // ignore things that are really dates / marks such as 12-11
-            if (!a.contains(":") && !a.contains(".") && !sa && !sb && (a.toIntOrNull() ?: 0) > 12 && (b.toIntOrNull() ?: 0) > 31) continue
-            val (ss, ee) = if (s > e && !(sb && !sa)) s to e else s to e
-            return Triple(ss, ee, m.range)
+            if (s >= e) continue // "12-11" is a date or a score, not a class time
+            return Triple(s, e, m.range)
         }
         return null
     }
@@ -209,9 +221,13 @@ object TT {
         return hits.maxByOrNull { it.length } ?: ""
     }
 
-    private val ROOM = Regex("(?i)\\b(?:room|rm|r)[ .:-]*(?:no\\.?)?[ .:-]*([A-Za-z]?\\d{1,3}[A-Za-z]?|[A-Za-z]{1,2}-?\\d{0,3})\\b")
+    private val ROOM = Regex("(?i)\\b(?:room|rm)\\.?[ :.-]*(?:no\\.?)?[ :.-]*([A-Za-z0-9-]{1,8})\\b|\\bR[ .-]?(\\d{1,3}[A-Za-z]?)\\b")
 
-    fun findRoom(line: String): String = ROOM.find(line)?.let { "Room".let { _ -> it.groupValues[1] } }.orEmpty()
+    /** "Room 3", "Rm 12", "Room Lab A" (first word only) or "R-12" -> the room part. Empty when none is written. */
+    fun findRoom(line: String): String {
+        val m = ROOM.find(line) ?: return ""
+        return m.groupValues[1].ifEmpty { m.groupValues[2] }
+    }
 
     // ------------------------------------------------------------------ finishing an entry
 
@@ -310,8 +326,9 @@ object TT {
         for (raw in lines) {
             val line = raw.replace('|', ' ').trim()
             if (line.isEmpty()) continue
-            val range = findRange(line)
             val date = findDate(line, ctx.today)
+            val noDate = stripDates(line, ctx.today)
+            val range = findRange(noDate)
             val batch = matchBatch(ctx, line)
             if (range == null) {
                 // a heading line
@@ -323,7 +340,7 @@ object TT {
             e.start = range.first
             e.end = range.second
             // do not let the time or date digits confuse the name matching
-            val rest = line.removeRange(range.third)
+            val rest = noDate.removeRange(range.third)
             e.date = date ?: curDate
             if (date != null) curDate = date
             val b = batch ?: curBatch
