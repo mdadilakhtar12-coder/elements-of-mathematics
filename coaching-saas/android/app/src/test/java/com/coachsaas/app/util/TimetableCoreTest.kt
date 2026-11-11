@@ -60,11 +60,9 @@ class TimetableCoreTest {
         assertEquals("b2", TT.matchBatch(ctx, "Class 11 Science B Physics")?.id)
         assertEquals("b3", TT.matchBatch(ctx, "12th commerce")?.id)
         assertEquals("b4", TT.matchBatch(ctx, "computer")?.id)
-        assertNull(TT.matchBatch(ctx, "11th Science"), "two batches equally good -> admin must choose")
+        assertNull("two batches equally good -> admin must choose", TT.matchBatch(ctx, "11th Science"))
         assertNull(TT.matchBatch(ctx, "Biology"))
     }
-
-    private fun assertNull(msg: String, v: Any?) = assertEquals(msg, null, v)
 
     @Test fun teacherMatching() {
         assertEquals("t1", TT.matchTeacher(ctx, "Rahul Sir")?.id)
@@ -172,11 +170,10 @@ class TimetableCoreTest {
         assertTrue(t.contains("5:00 PM - 6:00 PM - 11th Science B - Chemistry"))
         assertTrue(!t.contains("Room ") || t.indexOf("Room 3") >= 0)
         assertTrue(t.contains("9:30 AM - 10:30 AM"))
-        assertTrue(!t.contains("11:00 AM"), "cancelled classes are not sent")
+        assertTrue("cancelled classes are not sent", !t.contains("11:00 AM"))
         val b = TT.batchMessage("11th Science A", list.filter { it.batchId == "b1" }, "Aspire")
         assertTrue(b.contains("4:00 PM - 5:00 PM - Physics - Rahul Verma - Room 3"))
         assertTrue(!b.contains("11th Science A -"))
     }
 
-    private fun assertTrue(msg: String, v: Boolean) = org.junit.Assert.assertTrue(msg, v)
 }
