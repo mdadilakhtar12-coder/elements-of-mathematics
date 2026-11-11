@@ -69,3 +69,12 @@ Free ke numbers aapke diye hue hain; Basic/Pro ke numbers aur price **mere andaa
 * **Promote:** batch ke saare students doosre batch mein.
 * **Push:** class approve hone par absent students ko alert.
 * Naye feature/rules ke baad ek baar chalana: `deploy-rules`, `deploy-functions`, `backfill-teacher-ids`, `sync-plan-features`.
+
+## Aur features (classes, imports, timetable)
+* **Classes / Groups / Sections:** Admin Home > "Classes & groups". Apni classes, groups (Science/Arts/...), sections (A/B/C) add, rename, hataye. Hatane par agar students/batches use kar rahe hain to do baar warning.
+* **Excel upload (Free mein bhi):** Students aur Teachers dono. Format app se download hota hai. Upload ke baad "Login details" screen: Excel download, share, har ek ko WhatsApp. (Password kahin save nahi hota, isliye ye list sirf abhi milti hai.)
+* **Call / WhatsApp / Email buttons:** student, teacher ki list aur profile mein (student ko nahi dikhte). Student ke parent ke liye alag.
+* **Timetable:** Schedule tab > "Daily timetable / upload": roz ka timetable, doosre din se copy, Excel / photo / PDF upload. Photo/PDF Google ML Kit (free, phone ke andar, bina AI/kharche) se padhe jaate hain; save se pehle check screen. Excel format: `Date, Start, End, Batch, Subject, Teacher, Room`.
+* **Timetable WhatsApp par:** "Send timetable": har teacher ko (chat ya timetable), har batch ke liye (group link jodo to group khulta hai aur message copy ho jaata hai). Sirf dabane par, koi API nahi.
+* **Room:** har class ke saath optional room (Excel, batch timetable, class edit, WhatsApp message).
+* Is update ke baad: `deploy-rules`, `deploy-functions` chalao, nayi APK install karo.

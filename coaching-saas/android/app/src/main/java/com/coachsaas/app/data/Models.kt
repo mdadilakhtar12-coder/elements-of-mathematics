@@ -370,7 +370,7 @@ object Feature {
         STUDY -> "Study material"
         DOUBTS -> "Doubts"
         LEAVES -> "Leaves"
-        IMPORT_EXCEL -> "Excel import"
+        IMPORT_EXCEL -> "Exam marks Excel upload"
         MESSAGING -> "WhatsApp messages"
         BACKUP -> "Backup"
         PUSH -> "Push notifications"
