@@ -87,4 +87,9 @@ dependencies {
 
     // QR code for UPI payments (pure Java, no camera)
     implementation("com.google.zxing:core:3.5.3")
+
+    // Free on-device text reader (Google ML Kit) for timetable photos / PDFs: no server, no key, no cost
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+
+    testImplementation("junit:junit:4.13.2")
 }

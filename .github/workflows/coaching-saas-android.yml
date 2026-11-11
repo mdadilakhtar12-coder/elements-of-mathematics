@@ -38,6 +38,14 @@ jobs:
           python3 -c "import json; d=json.load(open('app/google-services.json')); print('google-services.json OK for project', d['project_info']['project_id'], '- package(s):', [c['client_info']['android_client_info']['package_name'] for c in d['client']])" \
             || { echo "::error::GOOGLE_SERVICES_JSON secret is not valid JSON (plain or base64)"; exit 1; }
 
+      - name: Unit tests
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest --console=plain 2>&1 | tee test.log || {
+            echo "::group::Test failures"; grep -E "FAILED|AssertionError|expected|e: " test.log | head -60 || true; echo "::endgroup::"
+            exit 1
+          }
+
       - name: Build debug APK
         run: |
           set -o pipefail
