@@ -78,6 +78,10 @@ data class UserProfile(
     var salary: Long = 0, // permanent teacher: fixed monthly salary (Rs)
     var teacherType: String = "", // "permanent" or "guest"; empty = permanent when a salary is set, else guest
     var demo: Boolean = false, // created by "Demo data"
+    var group: String = "", // stream, e.g. Science / Arts / Commerce (optional, from the institute's own list)
+    var section: String = "", // A / B / C ... (optional)
+    var email: String = "",
+    var address: String = "",
     var alsoSubadmin: Boolean = false, // a teacher the admin has also given sub-admin rights (perms)
     var owner: Boolean = false, // the institute owner (cannot be deactivated or deleted)
     var createdBy: String = "",
@@ -91,6 +95,7 @@ data class UserProfile(
 }
 
 data class WeeklySlot(
+    var room: String = "", // optional: room number or name
     var day: Int = 1, // 1 = Monday ... 7 = Sunday
     var start: String = "16:00",
     var end: String = "17:00"
@@ -114,6 +119,9 @@ data class Batch(
     var teacherId: String = "",
     var teacherName: String = "",
     var weekly: List<WeeklySlot> = emptyList(),
+    var group: String = "",
+    var section: String = "",
+    var whatsappLink: String = "", // invite link of the batch's WhatsApp group (opens the group on tap)
     var monthlyFee: Long = 0, // default monthly fee for students added to this batch (0 = none)
     /** Ids of all teachers of this batch. The rules use it to decide which batch a teacher may write to. */
     var teacherIds: List<String> = emptyList()
@@ -142,7 +150,8 @@ data class ClassSession(
     var note: String = "",
     var takenBy: String = "",
     var takenAt: Long = 0,
-    var approvedBy: String = ""
+    var approvedBy: String = "",
+    var room: String = "" // optional: room number or name
 ) : HasId
 
 data class Attendance(
@@ -416,3 +425,17 @@ data class FeeSettings(
     var upiId: String = "",
     var payeeName: String = ""
 )
+
+/**
+ * The classes, groups and sections an institute works with (settings/structure). Written by the admin only.
+ * Until the admin edits it ([customized] false) the built-in list of classes is used and groups / sections are empty.
+ */
+data class Structure(
+    var classes: List<String> = emptyList(),
+    var groups: List<String> = emptyList(),
+    var sections: List<String> = emptyList(),
+    var customized: Boolean = false
+)
+
+/** A login the admin has just created or reset: shown once, to hand over to the person. Never stored. */
+data class Cred(val name: String, val mobile: String, val username: String, val password: String, val role: String)

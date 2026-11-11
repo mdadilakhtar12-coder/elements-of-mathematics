@@ -161,7 +161,7 @@ async function absentAlerts(deps, inst, classId, cls) {
 
 async function onClassChanged(deps, inst, before, after, classId) {
   if (before.status === after.status) return 0;
-  const label = (after.batchName || '') + (after.subject ? ' ' + after.subject : '') + ' ' + (after.date || '');
+  const label = (after.batchName || '') + (after.subject ? ' ' + after.subject : '') + ' ' + (after.date || '') + (after.room ? ' (Room ' + after.room + ')' : '');
   switch (after.status) {
     case 'taken':
       return notify(deps, inst, null, async () => new Set(await staffUids(deps, inst, 'attendance')),

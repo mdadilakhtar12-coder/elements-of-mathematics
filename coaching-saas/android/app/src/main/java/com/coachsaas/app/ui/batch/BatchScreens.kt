@@ -68,6 +68,10 @@ import com.coachsaas.app.ui.theme.Indigo
 import com.coachsaas.app.util.D
 import java.time.LocalDate
 
+/** "Class 11 Science A" from the pieces the admin picked. */
+fun batchLabel(standard: String, group: String, section: String): String =
+    listOf(standard, group, section).filter { it.isNotBlank() }.joinToString(" ")
+
 @Composable
 fun BatchesTab(vm: AppViewModel) {
     Box(Modifier.fillMaxSize()) {
@@ -98,6 +102,9 @@ fun BatchesTab(vm: AppViewModel) {
 fun BatchEditScreen(vm: AppViewModel, batchId: String) {
     val existing = vm.batch(batchId)
     var standard by remember { mutableStateOf(existing?.standard.orEmpty()) }
+    var group by remember { mutableStateOf(existing?.group.orEmpty()) }
+    var section by remember { mutableStateOf(existing?.section.orEmpty()) }
+    var waLink by remember { mutableStateOf(existing?.whatsappLink.orEmpty()) }
     var name by remember { mutableStateOf(existing?.name.orEmpty()) }
     var nameTouched by remember { mutableStateOf(existing != null) }
     var plans by remember { mutableStateOf(existing?.plans() ?: emptyList()) }
@@ -109,11 +116,30 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
 
     Page(if (existing == null) "Create Batch" else "Edit Batch", vm::back) {
         FormColumn {
-            DropdownField("Standard", standard, AppConfig.STANDARDS, {
-                standard = AppConfig.STANDARDS[it]
-                if (!nameTouched) name = standard
+            val classes = vm.classOptions(standard)
+            DropdownField("Class", standard, classes, {
+                standard = classes[it]
+                if (!nameTouched) name = batchLabel(standard, group, section)
             })
-            Field("Batch name (e.g. 11th Science - Group A)", name, { name = it; nameTouched = true }, placeholder = "Leave empty to use the standard")
+            Text("Add or remove classes, groups and sections in Home > Classes & groups.", color = Grey, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val groups = vm.groupOptions(group)
+                DropdownField("Group (optional)", group.ifEmpty { "None" }, listOf("None") + groups, {
+                    group = if (it == 0) "" else groups[it - 1]
+                    if (!nameTouched) name = batchLabel(standard, group, section)
+                }, Modifier.weight(1f))
+                val sections = vm.sectionOptions(section)
+                DropdownField("Section (optional)", section.ifEmpty { "None" }, listOf("None") + sections, {
+                    section = if (it == 0) "" else sections[it - 1]
+                    if (!nameTouched) name = batchLabel(standard, group, section)
+                }, Modifier.weight(1f))
+            }
+            Field("Batch name (e.g. 11th Science - Group A)", name, { name = it; nameTouched = true }, placeholder = "Leave empty to use class + group + section")
+            Field(
+                "WhatsApp group link (optional)", waLink, { waLink = it.trim() },
+                placeholder = "https://chat.whatsapp.com/..."
+            )
+            Text("Paste the group's invite link to open that group from the timetable buttons.", color = Grey, fontSize = 12.sp)
             SectionTitle("Subjects and teachers (optional)")
             Text(
                 "You can skip this and save with just the standard. Add subjects only if you want a timetable; the subject and teacher of every entry are optional.",
@@ -163,8 +189,15 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                             )
                         }
                     }
+                    plan.weekly.firstOrNull()?.let {
+                        Field(
+                            "Room (optional, for all days of this subject)", it.room,
+                            { r -> update(i) { p -> p.copy(weekly = p.weekly.map { x -> x.copy(room = r) }) } },
+                            placeholder = "e.g. 12 or Lab A"
+                        )
+                    }
                     OutlinedButton(
-                        onClick = { update(i) { p -> p.copy(weekly = p.weekly + WeeklySlot()) } },
+                        onClick = { update(i) { p -> p.copy(weekly = p.weekly + WeeklySlot(room = p.weekly.firstOrNull()?.room.orEmpty())) } },
                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
                     ) {
                         Icon(Icons.Filled.Add, null)
@@ -182,13 +215,16 @@ fun BatchEditScreen(vm: AppViewModel, batchId: String) {
                 Text(if (plans.isEmpty()) " Add a subject with teacher and timetable" else " Add another subject")
             }
             PrimaryButton("Save", onClick = {
-                if (standard.isBlank()) {
-                    vm.toast("Select the standard")
+                if (waLink.isNotBlank() && !waLink.startsWith("https://chat.whatsapp.com/")) {
+                    vm.toast("The group link should start with https://chat.whatsapp.com/")
+                } else if (standard.isBlank()) {
+                    vm.toast("Select the class")
                 } else if (plans.any { p -> p.weekly.any { it.start >= it.end } }) {
                     vm.toast("End time must be after start time")
                 } else {
                     val b = (existing ?: Batch()).copy(
-                        name = name.trim().ifBlank { standard }, standard = standard,
+                        name = name.trim().ifBlank { batchLabel(standard, group, section) }, standard = standard,
+                        group = group, section = section, whatsappLink = waLink,
                         subjects = plans
                             .filter { it.subject.isNotBlank() || it.teacherId.isNotBlank() || it.weekly.isNotEmpty() }
                             .map { p -> p.copy(teacherName = vm.user(p.teacherId)?.name.orEmpty()) },
@@ -241,7 +277,9 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
         ) {
             item {
                 AppCard {
-                    InfoRow("Standard", b.standard)
+                    InfoRow("Class", b.standard)
+                    if (b.group.isNotBlank()) InfoRow("Group", b.group)
+                    if (b.section.isNotBlank()) InfoRow("Section", b.section)
                     if (b.plans().isEmpty()) Text("No subjects added yet. Tap the pencil to add.", color = Grey, fontSize = 13.sp)
                 }
             }
@@ -290,7 +328,7 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
                         OutlinedButton(
                             onClick = { vm.go(Screen.UserEdit(Role.STUDENT, batchId = b.id)) }, modifier = Modifier.weight(1f)
                         ) { Text("New student") }
-                        if (vm.has(com.coachsaas.app.data.Feature.IMPORT_EXCEL)) OutlinedButton(onClick = { importDialog = true }, modifier = Modifier.weight(1f)) { Text("Import Excel / CSV") }
+                        OutlinedButton(onClick = { importDialog = true }, modifier = Modifier.weight(1f)) { Text("Import Excel / CSV") }
                     }
                 }
             }
@@ -307,6 +345,7 @@ fun BatchDetailScreen(vm: AppViewModel, batchId: String) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(s.name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                         if (s.rollNo.isNotBlank()) Text("Roll " + s.rollNo, color = Grey, fontSize = 13.sp)
+                        if (vm.role != Role.STUDENT) com.coachsaas.app.ui.common.ContactButtons(s.mobile.ifBlank { s.loginId }, s.email)
                     }
                 }
             }

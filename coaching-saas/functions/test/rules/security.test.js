@@ -231,3 +231,12 @@ test('fee settings (UPI id) belong to fees staff, other settings to notices staf
   await assertFails(setDoc(doc(as('t1'), `${I}/settings/fees`), { upiId: 'evil@upi' }));
   await assertSucceeds(getDoc(doc(as('s1'), `${I}/settings/fees`)));
 });
+
+test('classes/groups/sections list (settings/structure) is the admin\'s alone; profiles accept the new fields', async () => {
+  await assertSucceeds(setDoc(doc(as('admin'), `${I}/settings/structure`), { classes: ['Class 11'], groups: ['Science'], sections: ['A'] }));
+  await assertFails(setDoc(doc(as('sub'), `${I}/settings/structure`), { classes: [] }));
+  await assertFails(setDoc(doc(as('t1'), `${I}/settings/structure`), { classes: [] }));
+  await assertSucceeds(getDoc(doc(as('s1'), `${I}/settings/structure`)));
+  await assertSucceeds(updateDoc(doc(as('admin'), `${I}/users/s1`), { group: 'Science', section: 'A', email: 'a@x.com', address: 'x' }));
+  await assertSucceeds(updateDoc(doc(as('sub'), `${I}/users/s1`), { standard: 'Class 12', group: 'Arts' }));
+});

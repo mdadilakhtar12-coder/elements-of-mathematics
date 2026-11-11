@@ -11,7 +11,7 @@
     study: 'Study material links',
     doubts: 'Student doubts and teacher answers',
     leaves: 'Teacher leave requests',
-    import_excel: 'Excel / CSV import of students and marks',
+    import_excel: 'Excel / CSV import of exam marks (students, teachers and timetable import are in every plan)',
     messaging: 'WhatsApp / SMS message templates',
     backup: 'Data backup export',
     push: 'Push notifications',

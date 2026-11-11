@@ -109,8 +109,8 @@ service cloud.firestore {
                   && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['batchIds']))
             )
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-              'name', 'mobile', 'perms', 'batchIds', 'rollNo', 'standard', 'parentMobile',
-              'monthlyFee', 'subjects', 'classRate', 'salary', 'teacherType'
+              'name', 'mobile', 'perms', 'batchIds', 'rollNo', 'standard', 'group', 'section', 'parentMobile',
+              'email', 'address', 'monthlyFee', 'subjects', 'classRate', 'salary', 'teacherType'
             ])
             // only the admin hands out permissions
             && (isAdmin(inst) || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['perms']));
@@ -166,7 +166,8 @@ service cloud.firestore {
       match /settings/{id} {
         allow read: if member(inst);
         // settings/fees (UPI id for payments) belongs to whoever handles fees; the rest to notices.
-        allow write: if id == 'fees' ? can(inst, 'fees') : can(inst, 'notices');
+        // settings/structure (classes, groups, sections the institute uses) is the admin's alone.
+        allow write: if id == 'structure' ? isAdmin(inst) : (id == 'fees' ? can(inst, 'fees') : can(inst, 'notices'));
       }
 
       // ---- exams (feature: exams) ----

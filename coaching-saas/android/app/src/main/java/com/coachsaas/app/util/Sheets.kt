@@ -76,11 +76,11 @@ object Sheets {
     }
 
     /** Saves the table as an Excel file and opens the share sheet, so it can be saved or sent. */
-    fun share(ctx: Context, fileName: String, rows: List<List<String>>) {
+    fun share(ctx: Context, fileName: String, rows: List<List<String>>, title: String = "Share file") {
         val dir = File(ctx.cacheDir, "reports")
         dir.mkdirs()
         val f = File(dir, fileName)
         f.writeBytes(xlsx(rows))
-        Share.file(ctx, f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Upload format")
+        Share.file(ctx, f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", title)
     }
 }

@@ -81,7 +81,7 @@ const SUBADMIN_PERMS = ['users', 'batches', 'schedule', 'attendance', 'exams', '
 function pickProfile(input, role) {
   const s = (v, max = 200) => String(v ?? '').trim().slice(0, max);
   const n = (v) => (Number.isFinite(Number(v)) && Number(v) >= 0 ? Math.round(Number(v)) : 0);
-  const base = { name: s(input.name, 100), mobile: s(input.mobile, 20) };
+  const base = { name: s(input.name, 100), mobile: s(input.mobile, 20), email: s(input.email, 120), address: s(input.address, 300) };
   if (role === 'subadmin') {
     const perms = Array.isArray(input.perms) ? input.perms.filter((p) => SUBADMIN_PERMS.includes(p)) : [];
     return { ...base, perms };
@@ -101,6 +101,8 @@ function pickProfile(input, role) {
       batchIds: Array.isArray(input.batchIds) ? input.batchIds.map((b) => s(b, 60)).slice(0, 50) : [],
       rollNo: s(input.rollNo, 20),
       standard: s(input.standard, 40),
+      group: s(input.group, 40),
+      section: s(input.section, 20),
       parentMobile: s(input.parentMobile, 20),
       monthlyFee: n(input.monthlyFee),
     };

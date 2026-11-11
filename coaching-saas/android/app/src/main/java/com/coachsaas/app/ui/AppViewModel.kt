@@ -67,6 +67,8 @@ sealed class Screen {
     data object ChangePassword : Screen()
     data object Activity : Screen()
     data object FeeSettings : Screen()
+    data object Structure : Screen()
+    data object Credentials : Screen()
     data object Collection : Screen()
 }
 
@@ -207,6 +209,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             scope.launch { Repo.homework().collect { homework = it } }
         }
         scope.launch { Repo.feeSettings().collect { feeSettings = it } }
+        scope.launch { Repo.structure().collect { structure = it } }
         scope.launch { Repo.subjectSettings().collect { if (it.isNotEmpty()) subjects = it } }
         scope.launch { Repo.messageTemplates().collect { com.coachsaas.app.util.Messages.overrides = it } }
         // Register this phone for push while the plan includes it.
@@ -395,6 +398,36 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     var feeSettings by mutableStateOf(com.coachsaas.app.data.FeeSettings())
+
+    // ---------- classes / groups / sections (admin edits them; everybody picks from them) ----------
+    var structure by mutableStateOf(com.coachsaas.app.data.Structure())
+
+    /** Logins just made (new account, Excel upload): kept in memory only, shown on the "Login details" screen. */
+    var credentials by mutableStateOf<List<com.coachsaas.app.data.Cred>>(emptyList())
+
+    /** Classes to pick from. The old built-in list until the admin makes their own. */
+    val classList: List<String>
+        get() = if (structure.customized) structure.classes else com.coachsaas.app.AppConfig.STANDARDS
+
+    /** [classList] plus [current] when it is no longer in the list, so old records still show their own value. */
+    fun classOptions(current: String = ""): List<String> = (classList + current).filter { it.isNotBlank() }.distinct()
+    fun groupOptions(current: String = ""): List<String> = (structure.groups + current).filter { it.isNotBlank() }.distinct()
+    fun sectionOptions(current: String = ""): List<String> = (structure.sections + current).filter { it.isNotBlank() }.distinct()
+
+    /** How many students and batches use this class / group / section (for the warning before removing it). */
+    fun usage(field: String, value: String): Pair<Int, Int> {
+        fun of(u: UserProfile) = when (field) { "group" -> u.group; "section" -> u.section; else -> u.standard }
+        fun ofB(b: Batch) = when (field) { "group" -> b.group; "section" -> b.section; else -> b.standard }
+        return students.count { of(it) == value } to batches.count { ofB(it) == value }
+    }
+
+    fun saveStructure(st: com.coachsaas.app.data.Structure, onDone: () -> Unit = {}) = op(null, onDone) { Repo.saveStructure(st) }
+
+    fun renameStructureValue(kind: String, old: String, new: String, st: com.coachsaas.app.data.Structure) =
+        op("Renamed") {
+            Repo.saveStructure(st)
+            Repo.renameValue(if (kind == "classes") "standard" else if (kind == "groups") "group" else "section", old, new)
+        }
     val isStaff: Boolean get() = role == Role.ADMIN || role == Role.SUBADMIN
 
     /** Is this feature part of the institute's plan? (The server enforces it too; this only hides/locks the UI.) */
@@ -452,7 +485,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun saveUser(draft: UserProfile, password: String, isNew: Boolean, onDone: () -> Unit) =
         op(if (isNew) "Created" else "Saved", onDone) {
             if (isNew) {
-                Repo.createUser(newAccountFields(draft, password))
+                draft.id = Repo.createUser(newAccountFields(draft, password))
+                credentials = listOf(com.coachsaas.app.data.Cred(draft.name, draft.mobile, draft.loginId, password, draft.role))
             } else {
                 // Only the fields the rules let the app change (never role / login / active).
                 Repo.update(
@@ -461,7 +495,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     (if (me?.role == Role.ADMIN && draft.role == Role.SUBADMIN) mapOf("perms" to draft.perms) else emptyMap()) +
                     mapOf(
                         "name" to draft.name, "mobile" to draft.mobile, "batchIds" to draft.batchIds,
-                        "rollNo" to draft.rollNo, "standard" to draft.standard, "parentMobile" to draft.parentMobile,
+                        "rollNo" to draft.rollNo, "standard" to draft.standard, "group" to draft.group, "section" to draft.section,
+                        "email" to draft.email, "address" to draft.address, "parentMobile" to draft.parentMobile,
                         "monthlyFee" to draft.monthlyFee, "subjects" to draft.subjects, "classRate" to draft.classRate,
                         "salary" to draft.salary, "teacherType" to draft.teacherType
                     )
@@ -497,6 +532,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun newAccountFields(d: UserProfile, password: String): Map<String, Any?> = mapOf(
         "role" to d.role, "name" to d.name, "username" to d.loginId, "password" to password, "mobile" to d.mobile,
         "perms" to d.perms, "batchIds" to d.batchIds, "rollNo" to d.rollNo, "standard" to d.standard,
+        "group" to d.group, "section" to d.section, "email" to d.email, "address" to d.address,
         "parentMobile" to d.parentMobile, "monthlyFee" to d.monthlyFee, "subjects" to d.subjects,
         "classRate" to d.classRate, "salary" to d.salary, "teacherType" to d.teacherType
     )
@@ -526,7 +562,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---------- bulk student import ----------
 
-    /** Creates students from spreadsheet rows (Name, Mobile, Password, Roll No, Parent Mobile, Fee, Standard). */
+    /** Creates students from spreadsheet rows (Name, Mobile, Password, Roll No, Parent Mobile, Fee, Class, Group, Section, Email, Address). */
     suspend fun importStudents(rows: List<List<String>>, batchId: String) {
         if (rows.isEmpty()) error("The file is empty")
         val header = rows[0].map { it.lowercase() }
@@ -538,6 +574,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val cParent = idx("parent")
         val cFee = idx("fee")
         val cStd = idx("standard", "class")
+        val cGroup = idx("group", "stream")
+        val cSection = idx("section")
+        val cEmail = idx("email", "e-mail")
+        val cAddress = idx("address")
         val hasHeader = cName >= 0 || cMobile >= 0
         val data: List<List<String>>
         if (hasHeader) {
@@ -553,7 +593,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val failed = ArrayList<String>()
         val seen = HashSet<String>()
         val toCreate = ArrayList<Map<String, Any?>>()
-        val generated = LinkedHashMap<String, String>() // username -> password we made up (shown once to the admin)
         var n = if (hasHeader) 1 else 0
         for (r in data) {
             n++
@@ -592,41 +631,124 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 failed.add("Row $n ($name): $pwProblem")
                 continue
             }
-            if (pw.isEmpty()) {
-                pw = com.coachsaas.app.util.Passwords.random()
-                generated[mobile] = pw
-            }
+            if (pw.isEmpty()) pw = com.coachsaas.app.util.Passwords.random()
             toCreate.add(
                 mapOf(
                     "role" to Role.STUDENT, "name" to name, "username" to mobile, "password" to pw, "mobile" to mobile,
                     "rollNo" to cell(cRoll).removeSuffix(".0"),
                     "standard" to cell(cStd).ifBlank { batch?.standard.orEmpty() },
+                    "group" to cell(cGroup).ifBlank { batch?.group.orEmpty() },
+                    "section" to cell(cSection).ifBlank { batch?.section.orEmpty() },
+                    "email" to cell(cEmail), "address" to cell(cAddress),
                     "parentMobile" to cell(cParent).removeSuffix(".0").filter { it.isDigit() },
-                    "monthlyFee" to (cell(cFee).removeSuffix(".0").filter { it.isDigit() }.toLongOrNull() ?: 0L),
+                    "monthlyFee" to (cell(cFee).removeSuffix(".0").filter { it.isDigit() }.toLongOrNull() ?: batch?.monthlyFee ?: 0L),
                     "batchIds" to (if (batchId.isBlank()) emptyList() else listOf(batchId))
                 )
             )
         }
-        var added = 0
-        if (toCreate.isNotEmpty()) {
-            try {
-                for (row in Repo.createUsers(toCreate)) {
-                    if (row.ok) added++ else {
-                        failed.add(row.username + ": " + row.error)
-                        generated.remove(row.username)
-                    }
-                }
-            } catch (e: Exception) {
-                failed.add(Repo.friendly(e))
-                generated.clear()
-            }
-        }
-        notice = "New students added: $added\n" +
+        val made = createInBulk(toCreate, failed)
+        credentials = made
+        notice = "New students added: " + made.size + "\n" +
             (if (linked > 0) "Existing students added to this batch: $linked\n" else "") +
             (if (skipped > 0) "Already present, skipped: $skipped\n" else "") +
-            (if (failed.isNotEmpty()) "Failed: " + failed.size + "\n" + failed.take(6).joinToString("\n") + "\n" else "") +
-            (if (generated.isNotEmpty()) "\nPasswords made for you (note them down, they are not shown again):\n" +
-                generated.entries.joinToString("\n") { it.key + "  ->  " + it.value } else "")
+            (if (failed.isNotEmpty()) "Failed: " + failed.size + "\n" + failed.take(8).joinToString("\n") + "\n" else "") +
+            (if (made.isNotEmpty()) "\nThe login list opens next. Download or share it now: passwords are not saved anywhere and cannot be shown again." else "")
+        if (made.isNotEmpty()) go(Screen.Credentials)
+    }
+
+    /** Creates teachers from spreadsheet rows (Name, Mobile, Email, Address, Password, Subjects, Type, Salary / Pay per class). */
+    suspend fun importTeachers(rows: List<List<String>>) {
+        if (rows.isEmpty()) error("The file is empty")
+        val header = rows[0].map { it.lowercase() }
+        fun idx(vararg keys: String) = header.indexOfFirst { h -> keys.any { h.contains(it) } }
+        var cName = idx("name")
+        var cMobile = idx("mobile", "phone", "contact", "login")
+        val cPass = idx("pass")
+        val cEmail = idx("email", "e-mail")
+        val cAddress = idx("address")
+        val cSubjects = idx("subject")
+        val cType = idx("type")
+        val cSalary = idx("salary")
+        val cRate = idx("rate", "per class")
+        val hasHeader = cName >= 0 || cMobile >= 0
+        val data = if (hasHeader) rows.drop(1) else rows
+        if (!hasHeader) { cName = 0; cMobile = 1 }
+        val failed = ArrayList<String>()
+        val seen = HashSet<String>()
+        var skipped = 0
+        val toCreate = ArrayList<Map<String, Any?>>()
+        var n = if (hasHeader) 1 else 0
+        for (r in data) {
+            n++
+            fun cell(i: Int) = if (i >= 0) r.getOrNull(i).orEmpty().trim() else ""
+            fun num(i: Int) = cell(i).removeSuffix(".0").filter { it.isDigit() }.toLongOrNull() ?: 0L
+            val name = cell(cName)
+            var mobile = cell(cMobile).removeSuffix(".0").filter { it.isDigit() }
+            if (mobile.length > 10) mobile = mobile.takeLast(10)
+            if (name.isEmpty() && mobile.isEmpty()) continue
+            if (name.isEmpty() || mobile.length < 5) {
+                failed.add("Row $n: name or mobile missing")
+                continue
+            }
+            if (!seen.add(mobile)) { skipped++; continue }
+            if (users.any { it.loginId.equals(mobile, ignoreCase = true) }) { skipped++; continue }
+            var pw = cell(cPass)
+            val pwProblem = if (pw.isEmpty()) null else com.coachsaas.app.util.Passwords.problem(pw, mobile, mobile)
+            if (pwProblem != null) {
+                failed.add("Row $n ($name): $pwProblem")
+                continue
+            }
+            if (pw.isEmpty()) pw = com.coachsaas.app.util.Passwords.random()
+            val type = cell(cType).lowercase()
+            val salary = num(cSalary)
+            val rate = num(cRate)
+            val teacherType = when {
+                type.startsWith("p") -> "permanent"
+                type.startsWith("g") -> "guest"
+                salary > 0 -> "permanent"
+                else -> "guest"
+            }
+            toCreate.add(
+                mapOf(
+                    "role" to Role.TEACHER, "name" to name, "username" to mobile, "password" to pw, "mobile" to mobile,
+                    "email" to cell(cEmail), "address" to cell(cAddress), "subjects" to cell(cSubjects),
+                    "teacherType" to teacherType,
+                    "salary" to (if (teacherType == "permanent") salary else 0L),
+                    "classRate" to (if (teacherType == "guest") rate else 0L)
+                )
+            )
+        }
+        val made = createInBulk(toCreate, failed)
+        credentials = made
+        notice = "New teachers added: " + made.size + "\n" +
+            (if (skipped > 0) "Already present, skipped: $skipped\n" else "") +
+            (if (failed.isNotEmpty()) "Failed: " + failed.size + "\n" + failed.take(8).joinToString("\n") + "\n" else "") +
+            (if (made.isNotEmpty()) "\nThe login list opens next. Download or share it now: passwords are not saved anywhere and cannot be shown again." else "")
+        if (made.isNotEmpty()) go(Screen.Credentials)
+    }
+
+    /** Sends the rows to the server (plan limits and password rules are checked there) and returns the logins that were created. */
+    private suspend fun createInBulk(rows: List<Map<String, Any?>>, failed: MutableList<String>): List<com.coachsaas.app.data.Cred> {
+        if (rows.isEmpty()) return emptyList()
+        val byUser = rows.associateBy { it["username"] as String }
+        val made = ArrayList<com.coachsaas.app.data.Cred>()
+        try {
+            for (res in Repo.createUsers(rows)) {
+                val src = byUser[res.username]
+                if (res.ok && src != null) {
+                    made.add(
+                        com.coachsaas.app.data.Cred(
+                            src["name"] as String, src["mobile"] as String, res.username, src["password"] as String, src["role"] as String
+                        )
+                    )
+                } else {
+                    failed.add(res.username + ": " + res.error)
+                }
+            }
+        } catch (e: Exception) {
+            failed.add(Repo.friendly(e))
+        }
+        return made
     }
 
     fun deleteClasses(ids: List<String>) = op(ids.size.toString() + " classes deleted") {
@@ -674,7 +796,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                             ClassSession(
                                 id = id, batchId = b.id, batchName = b.name, subject = plan.subject,
                                 teacherId = plan.teacherId, teacherName = plan.teacherName,
-                                date = d.toString(), start = s.start, end = s.end
+                                date = d.toString(), start = s.start, end = s.end, room = s.room
                             )
                         )
                     }

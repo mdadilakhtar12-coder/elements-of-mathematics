@@ -488,6 +488,32 @@ object Repo {
         call("setTeacherAdmin", mapOf("uid" to uid, "enable" to enable, "perms" to perms))
     }
 
+    // ---------- classes / groups / sections ----------
+
+    fun structure(): Flow<Structure> = callbackFlow {
+        val reg = coll("settings").document("structure").addSnapshotListener { s, e ->
+            if (e != null) return@addSnapshotListener
+            if (s != null) trySend(if (s.exists()) s.toObject(Structure::class.java) ?: Structure() else Structure())
+        }
+        awaitClose { reg.remove() }
+    }
+
+    suspend fun saveStructure(st: Structure) {
+        coll("settings").document("structure").set(st.copy(customized = true)).await()
+    }
+
+    /** Renames a class / group / section everywhere it is used (students and batches). field = standard | group | section. */
+    suspend fun renameValue(field: String, old: String, new: String) {
+        for (col in listOf("users", "batches")) {
+            val ids = coll(col).whereEqualTo(field, old).get().await().documents.map { it.id }
+            for (chunk in ids.chunked(400)) {
+                val wb = db.batch()
+                for (id in chunk) wb.update(coll(col).document(id), field, new)
+                wb.commit().await()
+            }
+        }
+    }
+
     // ---------- fee settings ----------
 
     fun feeSettings(): Flow<FeeSettings> = callbackFlow {

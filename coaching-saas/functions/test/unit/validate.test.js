@@ -51,8 +51,15 @@ test('who can manage which role', () => {
 
 test('pickProfile keeps only allowed fields and cleans values', () => {
   const p = v.pickProfile({ name: ' A ', role: 'admin', active: false, perms: ['users', 'hack'], monthlyFee: '500', rollNo: 7 }, 'student');
-  assert.deepEqual(Object.keys(p).sort(), ['batchIds', 'monthlyFee', 'mobile', 'name', 'parentMobile', 'rollNo', 'standard'].sort());
+  assert.deepEqual(Object.keys(p).sort(), ['address', 'batchIds', 'email', 'group', 'mobile', 'monthlyFee', 'name', 'parentMobile', 'rollNo', 'section', 'standard'].sort());
   assert.equal(p.name, 'A');
   assert.equal(p.monthlyFee, 500);
   assert.deepEqual(v.pickProfile({ perms: ['users', 'hack'] }, 'subadmin').perms, ['users']);
+});
+
+test('pickProfile keeps email, address, group and section', () => {
+  const s = require('../../src/validate').pickProfile({ name: 'A', email: ' a@x.com ', address: 'Street 1', group: 'Science', section: 'B', standard: 'Class 11', role: 'admin' }, 'student');
+  assert.equal(s.email, 'a@x.com'); assert.equal(s.address, 'Street 1'); assert.equal(s.group, 'Science'); assert.equal(s.section, 'B');
+  const t = require('../../src/validate').pickProfile({ name: 'T', email: 't@x.com', subjects: 'Phy' }, 'teacher');
+  assert.equal(t.email, 't@x.com'); assert.equal(t.group, undefined);
 });

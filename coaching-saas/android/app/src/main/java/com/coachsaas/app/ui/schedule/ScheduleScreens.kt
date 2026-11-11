@@ -113,7 +113,7 @@ fun ClassCard(vm: AppViewModel, c: ClassSession, showDate: Boolean = false) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(classTitle(c), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                val whenText = (if (showDate) D.shortDate(c.date) + ", " else "") + D.range(c.start, c.end)
+                val whenText = (if (showDate) D.shortDate(c.date) + ", " else "") + D.range(c.start, c.end) + (if (c.room.isNotBlank()) "  ·  Room " + c.room else "")
                 Text(whenText, color = Grey, fontSize = 13.sp)
                 if (vm.role != Role.TEACHER && c.teacherName.isNotBlank()) {
                     Text(c.teacherName, color = Grey, fontSize = 13.sp)
@@ -269,6 +269,7 @@ fun ClassDetailScreen(vm: AppViewModel, classId: String) {
                     InfoRow("Subject", c.subject)
                     InfoRow("Date", D.pretty(c.date))
                     InfoRow("Time", D.range(c.start, c.end))
+                    if (c.room.isNotBlank()) InfoRow("Room", c.room)
                     InfoRow("Teacher", c.teacherName)
                     InfoRow("Status", statusLabel(vm, c.status))
                     InfoRow("Topic", c.topic)
@@ -450,6 +451,7 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
     var subject by remember { mutableStateOf(existing?.subject ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.subject.orEmpty()) }
     var teacherId by remember { mutableStateOf(existing?.teacherId ?: vm.batch(s.batchId)?.plans()?.firstOrNull()?.teacherId.orEmpty()) }
     val subjectOptions = vm.batch(batchId)?.plans()?.map { it.subject }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: vm.subjectList
+    var room by remember { mutableStateOf(existing?.room.orEmpty()) }
     var topic by remember { mutableStateOf(existing?.topic.orEmpty()) }
     var note by remember { mutableStateOf(existing?.note.orEmpty()) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -485,6 +487,7 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
                 "Teacher", vm.user(teacherId)?.name.orEmpty(),
                 vm.teachers.filter { it.active }.map { it.id to it.name }, { teacherId = it }
             )
+            Field("Room (optional)", room, { room = it }, placeholder = "e.g. 12, Lab A or Hall 2")
             Field("Topic (optional)", topic, { topic = it })
             Field("Note for students (optional)", note, { note = it }, singleLine = false)
             PrimaryButton("Save", onClick = {
@@ -497,7 +500,7 @@ fun ClassEditScreen(vm: AppViewModel, s: Screen.ClassEdit) {
                     val c = (existing ?: ClassSession()).copy(
                         batchId = b.id, batchName = b.name, subject = subject, teacherId = teacherId,
                         teacherName = vm.user(teacherId)?.name.orEmpty(), date = date, start = start, end = end,
-                        topic = topic.trim(), note = note.trim()
+                        topic = topic.trim(), note = note.trim(), room = room.trim()
                     )
                     vm.op("Saved", { vm.back() }) { Repo.put("classes", c) }
                 }

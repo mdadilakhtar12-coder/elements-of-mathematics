@@ -139,6 +139,7 @@ fun AdminHome(vm: AppViewModel) {
     if (vm.has(Feature.STUDY)) acts.add(Act("Study material", Icons.Filled.Description) { vm.go(Screen.Materials) })
     if (vm.has(Feature.DOUBTS)) acts.add(Act("Doubts", Icons.Filled.Campaign, vm.doubts.count { it.status != "answered" }) { vm.go(Screen.Doubts) })
     if (vm.can(Perm.ATTENDANCE) && vm.has(Feature.LEAVES)) acts.add(Act("Leaves", Icons.Filled.Description, vm.leaves.count { it.status == "pending" }) { vm.go(Screen.LeaveRequests) })
+    if (me.role == Role.ADMIN) acts.add(Act("Classes & groups", Icons.Filled.School) { vm.go(Screen.Structure) })
     if (me.role == Role.ADMIN) acts.add(Act("Subjects", Icons.Filled.Edit) { vm.go(Screen.SubjectsEdit) })
     if (vm.can(Perm.FEES) && vm.has(Feature.ACCOUNTS)) acts.add(Act("Accounts", Icons.Filled.AccountBalanceWallet) { vm.go(Screen.Accounts) })
     if (vm.can(Perm.NOTICES)) {
