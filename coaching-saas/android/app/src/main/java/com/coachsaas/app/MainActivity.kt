@@ -150,6 +150,7 @@ private fun AppHost(vm: AppViewModel) {
         is Screen.DailyTimetable -> com.coachsaas.app.ui.schedule.DailyTimetableScreen(vm)
         is Screen.TimetableReview -> com.coachsaas.app.ui.schedule.TimetableReviewScreen(vm)
         is Screen.ShareTimetable -> com.coachsaas.app.ui.schedule.ShareTimetableScreen(vm)
+        is Screen.Plans -> com.coachsaas.app.ui.main.PlansScreen(vm)
         is Screen.Credentials -> com.coachsaas.app.ui.people.CredentialsScreen(vm)
         is Screen.Structure -> com.coachsaas.app.ui.main.StructureScreen(vm)
         is Screen.FeeSettings -> com.coachsaas.app.ui.fees.FeeSettingsScreen(vm)

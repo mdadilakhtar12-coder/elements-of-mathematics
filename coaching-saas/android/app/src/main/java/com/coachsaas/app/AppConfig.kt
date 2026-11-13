@@ -3,7 +3,7 @@ package com.coachsaas.app
 object AppConfig {
     /** Shown in reports and WhatsApp texts. Replaced by the institute's own name once a session opens. */
     @Volatile
-    var APP_NAME = "Coach Hub"
+    var APP_NAME = "BatchPilot"
 
     /** Region of the Cloud Functions (see functions/src/index.js). */
     const val FUNCTIONS_REGION = "asia-south1"

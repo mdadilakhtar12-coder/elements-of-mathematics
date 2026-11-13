@@ -488,6 +488,24 @@ object Repo {
         call("setTeacherAdmin", mapOf("uid" to uid, "enable" to enable, "perms" to perms))
     }
 
+    // ---------- plans ----------
+
+    /** The price list (public collection, kept up to date by the server). */
+    fun plans(): Flow<List<PlanInfo>> = callbackFlow {
+        val reg = db.collection("plans").addSnapshotListener { s, e ->
+            if (e != null || s == null) return@addSnapshotListener
+            trySend(s.documents.mapNotNull { d -> d.toObject(PlanInfo::class.java)?.also { it.id = d.id } }.sortedBy { it.order })
+        }
+        awaitClose { reg.remove() }
+    }
+
+    /** Deletes the signed-in account (Play Store rule). The owner must type the institute code: the whole institute goes. */
+    suspend fun deleteMyAccount(confirmCode: String) {
+        call("deleteMyAccount", mapOf("confirmCode" to confirmCode))
+        auth.signOut()
+        instituteId = ""
+    }
+
     // ---------- classes / groups / sections ----------
 
     fun structure(): Flow<Structure> = callbackFlow {

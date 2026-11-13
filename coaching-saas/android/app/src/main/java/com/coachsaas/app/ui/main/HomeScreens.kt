@@ -350,7 +350,7 @@ private fun PlanCard(vm: AppViewModel) {
     val inst = vm.institute ?: return
     val locked = com.coachsaas.app.data.Feature.let { listOf(it.EXAMS, it.FEES, it.ACCOUNTS, it.STUDY, it.DOUBTS, it.LEAVES, it.IMPORT_EXCEL, it.MESSAGING, it.BACKUP) }
         .filter { !inst.has(it) }
-    AppCard {
+    AppCard(onClick = { vm.go(Screen.Plans) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(inst.name, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Pill(com.coachsaas.app.data.Plan.label(inst.plan) + " plan", Indigo)
@@ -368,7 +368,7 @@ private fun PlanCard(vm: AppViewModel) {
         if (locked.isNotEmpty()) {
             Spacer(Modifier.size(4.dp))
             Text(
-                "Not in your plan: " + locked.joinToString(", ") { com.coachsaas.app.data.Feature.label(it) } + ". Contact support to upgrade.",
+                "Not in your plan: " + locked.joinToString(", ") { com.coachsaas.app.data.Feature.label(it) } + ". Tap to see all plans.",
                 fontSize = 12.sp, color = Grey
             )
         }

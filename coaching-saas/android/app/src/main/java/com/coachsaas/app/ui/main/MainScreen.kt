@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import com.coachsaas.app.ui.common.Segmented
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Star
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -100,6 +102,7 @@ fun MainScreen(vm: AppViewModel) {
     val tabs = tabsFor(vm)
     val cur = tabs[vm.tab.coerceIn(0, tabs.size - 1)]
     var menu by remember { mutableStateOf(false) }
+    var deleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -118,6 +121,18 @@ fun MainScreen(vm: AppViewModel) {
                         text = { Text("Version " + BuildConfig.VERSION_NAME) },
                         leadingIcon = { Icon(Icons.Filled.Download, null) },
                         onClick = { menu = false }
+                    )
+                    if (vm.role == Role.ADMIN) {
+                        DropdownMenuItem(
+                            text = { Text("Plans") },
+                            leadingIcon = { Icon(Icons.Filled.Star, null) },
+                            onClick = { menu = false; vm.go(Screen.Plans) }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Delete my account") },
+                        leadingIcon = { Icon(Icons.Filled.DeleteForever, null) },
+                        onClick = { menu = false; deleteDialog = true }
                     )
                     DropdownMenuItem(
                         text = { Text("Log out") },
@@ -150,6 +165,7 @@ fun MainScreen(vm: AppViewModel) {
                   Segmented(listOf("Teacher view", "Admin view"), if (vm.adminMode) 1 else 0, { vm.switchMode(it == 1) })
               }
           }
+          if (deleteDialog) DeleteAccountDialog(vm) { deleteDialog = false }
           Box(Modifier.weight(1f).fillMaxWidth()) {
             when (cur.key) {
                 "home" -> when (vm.role) {
@@ -169,6 +185,37 @@ fun MainScreen(vm: AppViewModel) {
           }
         }
     }
+}
+
+/** Delete my account (Play Store rule). The owner types the institute code because the whole institute is deleted. */
+@Composable
+private fun DeleteAccountDialog(vm: AppViewModel, onDismiss: () -> Unit) {
+    var code by remember { mutableStateOf("") }
+    val owner = vm.isOwner
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete my account?") },
+        text = {
+            Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                if (owner) {
+                    Text(
+                        "You are the owner. This deletes the WHOLE institute: every teacher and student login and all data. It cannot be undone.",
+                        color = com.coachsaas.app.ui.theme.Red
+                    )
+                    Field("Type your institute code (" + (vm.institute?.id ?: "") + ")", code, { code = it.trim() })
+                } else {
+                    Text("Your login and profile are deleted. Records your institute keeps (for example past attendance or fees) may stay with the institute. This cannot be undone.")
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                if (owner && !code.equals(vm.institute?.id, ignoreCase = true)) vm.toast("Type the institute code to confirm")
+                else { onDismiss(); vm.deleteMyAccount(code) }
+            }) { Text("Delete", color = com.coachsaas.app.ui.theme.Red) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

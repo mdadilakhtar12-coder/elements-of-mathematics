@@ -12,12 +12,13 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.coachsaas.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.coachsaas.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
+        // CI passes the build number, so every Play upload has a higher version code.
         versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
         versionName = "1." + (System.getenv("VERSION_CODE") ?: "1")
 
@@ -31,6 +32,16 @@ android {
     // One fixed DEBUG key (committed on purpose, password "android" like Android's own debug key), so every CI build has
     // the same SHA-1 and Google sign-in keeps working. NEVER use it for a Play Store release: make a separate upload key then.
     signingConfigs {
+        // Play Store upload key: never in the repo. CI writes it from the UPLOAD_KEYSTORE_B64 / UPLOAD_KEYSTORE_PASSWORD secrets.
+        val uploadStore = System.getenv("UPLOAD_KEYSTORE_FILE")
+        if (uploadStore != null && file(uploadStore).exists()) {
+            create("upload") {
+                storeFile = file(uploadStore)
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("UPLOAD_KEY_ALIAS") ?: "upload"
+                keyPassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+            }
+        }
         getByName("debug") {
             storeFile = file("debug.keystore")
             storePassword = "android"
@@ -41,6 +52,9 @@ android {
 
     buildTypes {
         release {
+            signingConfigs.findByName("upload")?.let { signingConfig = it }
+            // Kept off for the first Play release: Firestore maps documents to Kotlin classes by reflection,
+            // and shrinking would need keep rules tested on a real phone first.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

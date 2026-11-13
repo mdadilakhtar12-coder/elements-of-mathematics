@@ -1,15 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BatchPilot: attendance register with a tick (logo option B). Drawn inside the 66dp safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Letter A -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,28 L72,80 L63,80 L59.5,69 L48.5,69 L45,80 L36,80 Z M54,42 L51,60 L57,60 Z"
-        android:fillType="evenOdd" />
-    <!-- Star / spark -->
+        android:pathData="M36.6,32.8 L71.4,32.8 A6.6,6.6 0 0 1 78,39.4 L78,74.2 A6.6,6.6 0 0 1 71.4,80.8 L36.6,80.8 A6.6,6.6 0 0 1 30,74.2 L30,39.4 A6.6,6.6 0 0 1 36.6,32.8 Z" />
     <path
-        android:fillColor="#FFC107"
-        android:pathData="M76,26 L78,32 L84,34 L78,36 L76,42 L74,36 L68,34 L74,32 Z" />
+        android:fillColor="#F59E0B"
+        android:pathData="M30,45.7 L30,39.4 A6.6,6.6 0 0 1 36.6,32.8 L71.4,32.8 A6.6,6.6 0 0 1 78,39.4 L78,45.7 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38.5,30.6 a3.3,3.3 0 1 0 6.6,0 a3.3,3.3 0 1 0 -6.6,0 Z M62.9,30.6 a3.3,3.3 0 1 0 6.6,0 a3.3,3.3 0 1 0 -6.6,0 Z" />
+    <path
+        android:strokeColor="#4338CA"
+        android:strokeWidth="6.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M41.4,63.4 L50.7,72.3 L67.7,54.6" />
 </vector>

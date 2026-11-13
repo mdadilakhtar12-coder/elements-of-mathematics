@@ -339,15 +339,30 @@ data class LeaveRequest(
 /** Plan names, in order. */
 object Plan {
     const val FREE = "free"
+    const val STARTER = "starter"
     const val BASIC = "basic"
+    const val GROWTH = "growth"
     const val PRO = "pro"
 
     fun label(p: String) = when (p) {
+        STARTER -> "Starter"
         BASIC -> "Basic"
+        GROWTH -> "Growth"
         PRO -> "Pro"
         else -> "Free"
     }
 }
+
+/** One plan of the price list (plans/{id}, public, written by the server). */
+data class PlanInfo(
+    override var id: String = "",
+    var name: String = "",
+    var order: Long = 0,
+    var pricePerMonth: Long = 0,
+    var pricePerYear: Long = 0,
+    var limits: Map<String, Long> = emptyMap(),
+    var features: Map<String, Boolean> = emptyMap()
+) : HasId
 
 /** Switchable features (keys match functions/src/plans.js and firestore.rules). */
 object Feature {

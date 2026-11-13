@@ -69,6 +69,7 @@ sealed class Screen {
     data object FeeSettings : Screen()
     data object Structure : Screen()
     data object Credentials : Screen()
+    data object Plans : Screen()
     data object DailyTimetable : Screen()
     data object TimetableReview : Screen()
     data object ShareTimetable : Screen()
@@ -330,6 +331,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** The signed-in person deletes their own account; for the owner this deletes the whole institute. */
+    fun deleteMyAccount(confirmCode: String) = op("Account deleted") {
+        Repo.deleteMyAccount(confirmCode)
+        stopListening()
+        me = null
+        institute = null
+        users = emptyList()
+        stack.clear()
+    }
+
+    val isOwner: Boolean get() = me?.let { it.owner || it.id == institute?.ownerUid } == true
 
     fun logout() {
         stopListening()

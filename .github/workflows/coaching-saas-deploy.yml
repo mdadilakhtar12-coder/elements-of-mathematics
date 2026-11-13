@@ -9,9 +9,13 @@ on:
         description: What to do
         type: choice
         required: true
-        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin, backfill-teacher-ids, sync-plan-features]
+        options: [check-access, deploy-rules, deploy-functions, deploy-hosting, deploy-all, seed-plans, make-superadmin, backfill-teacher-ids, sync-plan-features, add-sha]
       email:
         description: "Only for make-superadmin: the Google e-mail (must have signed in once)"
+        required: false
+        default: ''
+      sha:
+        description: "Only for add-sha: a SHA-1 or SHA-256 fingerprint (AA:BB:...) to add to the Android app in Firebase"
         required: false
         default: ''
 
@@ -79,3 +83,15 @@ jobs:
         run: node scripts/sync-plan-features.js
         env:
           GOOGLE_CLOUD_PROJECT: ${{ env.PROJECT }}
+
+      # Google sign-in needs the fingerprint of every key that signs the app (upload key, Play App Signing key).
+      - name: Add SHA fingerprint to the Android app in Firebase
+        if: inputs.action == 'add-sha'
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          set -e
+          echo "$SHA" | grep -Eq '^([0-9A-Fa-f]{2}:){19}[0-9A-Fa-f]{2}$|^([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$' || { echo "::error::That does not look like a SHA-1 / SHA-256 fingerprint"; exit 1; }
+          APP_ID=$(npx --yes firebase-tools@13 apps:list ANDROID --project "$PROJECT" --json | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const a=JSON.parse(s).result.find(x=>x.packageName==='com.coachsaas.app');if(!a)process.exit(1);console.log(a.appId)})")
+          npx --yes firebase-tools@13 apps:android:sha:create "$APP_ID" "$SHA" --project "$PROJECT"
+          npx --yes firebase-tools@13 apps:android:sha:list "$APP_ID" --project "$PROJECT"

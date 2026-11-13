@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AUTH_LINK_DOMAIN: attendance-app-1cdf6.firebaseapp.com
+      # Play needs a higher version code for every upload: this workflow's run number.
+      VERSION_CODE: ${{ github.run_number }}
     defaults:
       run:
         working-directory: coaching-saas/android
@@ -73,3 +75,23 @@ jobs:
             --title "Coach Hub (latest debug APK)" --prerelease \
             --notes "Latest debug build of the Coach Hub Android app. Replaced on every build. Debug key - not for the Play Store."
           gh release upload coachhub-latest "$RUNNER_TEMP/CoachHub.apk" --clobber
+
+      # ---- Play Store: signed release bundle (.aab), only when the upload key secrets exist ----
+      - name: Release bundle for Play Store
+        env:
+          UPLOAD_KEYSTORE_B64: ${{ secrets.UPLOAD_KEYSTORE_B64 }}
+          UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+        if: env.UPLOAD_KEYSTORE_B64 != '' && github.ref == 'refs/heads/claude/android-education-app-f4iwdp'
+        run: |
+          set -o pipefail
+          printf '%s' "$UPLOAD_KEYSTORE_B64" | tr -d '[:space:]' | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          export UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          ./gradlew bundleRelease --console=plain 2>&1 | tee bundle.log || { grep -E "^e: |error:|What went wrong" -A3 bundle.log | head -40; exit 1; }
+          keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -storepass "$UPLOAD_KEYSTORE_PASSWORD" | grep -E "SHA1|SHA256" || true
+          rm -f "$RUNNER_TEMP/upload.jks"
+
+      - uses: actions/upload-artifact@v4
+        if: hashFiles('coaching-saas/android/app/build/outputs/bundle/release/app-release.aab') != ''
+        with:
+          name: batchpilot-release-aab
+          path: coaching-saas/android/app/build/outputs/bundle/release/app-release.aab
