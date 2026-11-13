@@ -1,0 +1,57 @@
+name: Phone Control Android
+
+on:
+  push:
+    paths: ['phone-control/android/**', '.github/workflows/phone-control-android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to publish the APK to the "phonecontrol-latest" release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: phone-control/android
+    env:
+      VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests (safety rules)
+        run: |
+          set -o pipefail
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest --console=plain 2>&1 | tee test.log || {
+            echo "::group::Test failures"; grep -E "FAILED|AssertionError|expected|e: " test.log | head -60 || true; echo "::endgroup::"
+            exit 1
+          }
+
+      - name: Build APK
+        run: |
+          set -o pipefail
+          ./gradlew assembleDebug --console=plain 2>&1 | tee build.log || {
+            echo "::group::Compile errors"; grep -E "^e: |error:" build.log || true; echo "::endgroup::"
+            exit 1
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phone-control-apk
+          path: phone-control/android/app/build/outputs/apk/debug/app-debug.apk
+
+      # Fixed download link (no login needed if the repo is public):
+      #   https://github.com/<owner>/<repo>/releases/download/phonecontrol-latest/PhoneControl.apk
+      - name: Publish APK to the phonecontrol-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/PhoneControl.apk"
+          gh release view phonecontrol-latest >/dev/null 2>&1 || gh release create phonecontrol-latest \
+            --title "Phone Control (latest APK)" --prerelease \
+            --notes "Latest build of the Phone Control Android app (personal use, not for the Play Store). Replaced on every build."
+          gh release upload phonecontrol-latest "$RUNNER_TEMP/PhoneControl.apk" --clobber

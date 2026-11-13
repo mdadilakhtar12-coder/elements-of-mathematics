@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    paths-ignore: ['coaching-saas/**', '.github/workflows/coaching-saas-*.yml']
+    paths-ignore: ['coaching-saas/**', '.github/workflows/coaching-saas-*.yml', 'phone-control/**', '.github/workflows/phone-control-*.yml']
   workflow_dispatch:
 
 jobs:

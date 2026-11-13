@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Phone Control</string>
+    <string name="accessibility_label">Phone Control (Claude)</string>
+    <string name="accessibility_description">Lets Claude read the screen and tap/type in apps you allow, through your own relay server. Banking, UPI, payment and password apps are always blocked. Risky buttons (Pay, Place order, Buy now, Send) need your tap on the phone. Use the Pause switch in the app to stop everything.</string>
+</resources>
