@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const L = require('../../../admin-web/logic.js');
+const L = require('../../../web/admin/logic.js');
 const { FEATURES } = require('../../src/plans');
 
 const NOW = Date.UTC(2026, 10, 9);
@@ -38,4 +38,11 @@ test('percent, dates, expiry, limits', () => {
   assert.deepEqual(L.limitsFromForm({ admin: '1', subadmin: 2, teacher: '5', student: '30' }), { admin: 1, subadmin: 2, teacher: 5, student: 30 });
   assert.throws(() => L.limitsFromForm({ admin: '1', subadmin: '-2', teacher: '5', student: '30' }));
   assert.throws(() => L.limitsFromForm({ admin: '1.5', subadmin: '2', teacher: '5', student: '30' }));
+});
+
+test('website price list matches the plan catalogue', () => {
+  const site = require('../../../web/plans-data.js');
+  const { PLANS } = require('../../src/plans');
+  assert.deepEqual(site.map((p) => [p.id, p.month, p.year, p.students, p.teachers, p.subadmins]),
+    Object.values(PLANS).map((p) => [p.id, p.pricePerMonth, p.pricePerYear, p.limits.student, p.limits.teacher, p.limits.subadmin]));
 });

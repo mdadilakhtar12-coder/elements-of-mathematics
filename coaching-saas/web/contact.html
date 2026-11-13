@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contact - BatchPilot</title>
+<meta name="description" content="Contact BatchPilot support.">
+<link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script>
+</head>
+<body>
+<header id="site-head"></header>
+<main>
+<div class="doc">
+<h1>Contact us</h1>
+<p>For help with the app, plans or payments, write to us. We reply within 2 working days.</p>
+<div class="card">
+  <p><b>Business:</b> <span data-site="owner"></span></p>
+  <p><b>E-mail:</b> <a data-mail></a></p>
+  <p id="ph"><b>Phone:</b> <span data-site="phone"></span></p>
+  <p><b>Address:</b> <span data-site="address"></span></p>
+</div>
+<p class="muted small">Teachers and students: for your login or password, please contact your own institute first; they manage your account.</p>
+<script>if (!SITE.phone) document.getElementById('ph').style.display = 'none';</script>
+</div>
+</main>
+<footer id="site-foot"></footer>
+</body>
+</html>

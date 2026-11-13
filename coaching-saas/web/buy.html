@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buy or renew a plan - BatchPilot</title>
+<meta name="description" content="Institute owners buy or renew a BatchPilot plan.">
+<link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script><script src="/config.js"></script>
+</head>
+<body>
+<header id="site-head"></header>
+<main>
+<div class="doc" style="max-width:980px">
+<h1>Buy or renew a plan</h1>
+<section id="out">
+  <p>Sign in with the <b>same Google account</b> you use as the institute owner in the BatchPilot app.</p>
+  <button class="btn" id="google">Continue with Google</button>
+</section>
+<section id="in" hidden>
+  <div class="card">
+    <div><b id="iname"></b> <span class="muted">(code <span id="icode"></span>)</span></div>
+    <div class="muted small" id="istate"></div>
+    <div class="muted small">Signed in as <span id="who"></span> - <a href="#" id="signout">sign out</a></div>
+  </div>
+  <div id="result" class="card" hidden style="margin-top:14px"></div>
+  <div class="toggle"><button id="m" class="on">Monthly</button><button id="y">Yearly (2 months free)</button></div>
+  <div class="grid" id="plans"></div>
+  <div class="card" style="margin-top:14px">
+    <div id="sum" class="muted">Choose a plan above.</div>
+    <label for="phone">Mobile number (for the payment receipt)</label>
+    <input id="phone" inputmode="tel" maxlength="14" placeholder="10-digit mobile number">
+    <p><button class="btn" id="pay" disabled>Pay</button></p>
+    <p class="muted small">Payments are handled securely by Cashfree Payments. By paying you agree to our <a href="/terms">terms</a> and <a href="/refund">refund policy</a>. No automatic renewal.</p>
+  </div>
+</section>
+<p class="msg" id="msg" role="status"></p>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
+
+const $ = (id) => document.getElementById(id);
+const app = initializeApp(window.FIREBASE_CONFIG);
+const auth = getAuth(app);
+const call = async (name, data) => (await httpsCallable(getFunctions(app, window.FUNCTIONS_REGION), name)(data)).data;
+const say = (t, k = '') => { $('msg').textContent = t; $('msg').className = 'msg ' + k; };
+const money = (n) => 'Rs ' + (Math.round(n * 100) / 100).toLocaleString('en-IN', { minimumFractionDigits: n % 1 ? 2 : 0 });
+let billing = null, yearly = false, chosen = null;
+
+$('google').onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => say(e.message, 'err'));
+$('signout').onclick = (e) => { e.preventDefault(); signOut(auth); };
+$('m').onclick = () => { yearly = false; $('m').className = 'on'; $('y').className = ''; draw(); };
+$('y').onclick = () => { yearly = true; $('y').className = 'on'; $('m').className = ''; draw(); };
+
+onAuthStateChanged(auth, async (user) => {
+  $('out').hidden = !!user; $('in').hidden = !user;
+  if (!user) return;
+  $('who').textContent = user.email || '';
+  try {
+    say('Loading...');
+    billing = await call('myBilling', {});
+    say('');
+    $('iname').textContent = billing.name; $('icode').textContent = billing.inst;
+    const plan = billing.plans.find((p) => p.id === billing.plan);
+    $('istate').textContent = 'Current plan: ' + (plan ? plan.name : billing.plan) +
+      (billing.expiresAt ? ' - valid until ' + new Date(billing.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
+    if (!billing.paymentsOn) say('Online payment is not switched on yet. Please contact us.', 'err');
+    if (billing.env === 'sandbox' && billing.paymentsOn) say('Test mode: no real money is charged.', '');
+    draw();
+    const orderId = new URLSearchParams(location.search).get('order_id');
+    if (orderId) checkOrder(orderId);
+  } catch (e) {
+    say(e.message, 'err');
+  }
+});
+
+function draw() {
+  if (!billing) return;
+  const box = $('plans'); box.innerHTML = '';
+  billing.plans.filter((p) => p.pricePerMonth > 0).forEach((p) => {
+    const c = document.createElement('div');
+    c.className = 'card plan' + (chosen === p.id ? ' sel' : '');
+    c.style.cursor = 'pointer';
+    const base = yearly ? p.pricePerYear : p.pricePerMonth;
+    c.innerHTML = '<h3></h3><div class="price"></div><div class="muted small"></div>';
+    c.querySelector('h3').textContent = p.name + (billing.plan === p.id ? ' (current)' : '');
+    c.querySelector('.price').innerHTML = money(base) + '<small>' + (yearly ? ' / year' : ' / month') + '</small>';
+    c.querySelector('.small').textContent = p.limits.student + ' students, ' + p.limits.teacher + ' teachers, ' + p.limits.subadmin + ' sub-admins';
+    c.onclick = () => { chosen = p.id; draw(); };
+    box.appendChild(c);
+  });
+  const p = billing.plans.find((x) => x.id === chosen);
+  if (!p) { $('sum').textContent = 'Choose a plan above.'; $('pay').disabled = true; return; }
+  const base = yearly ? p.pricePerYear : p.pricePerMonth;
+  const fee = Math.round(base * p.feePercent) / 100;
+  $('sum').innerHTML = '';
+  $('sum').append(p.name + ' (' + (yearly ? '1 year' : '1 month') + '): ' + money(base) + ' + payment charge ' + money(fee) + ' = ');
+  const b = document.createElement('b'); b.textContent = money(base + fee); $('sum').append(b);
+  $('pay').disabled = !billing.paymentsOn;
+  $('pay').textContent = 'Pay ' + money(base + fee);
+}
+
+function loadCashfree() {
+  return new Promise((ok, bad) => {
+    if (window.Cashfree) return ok();
+    const s = document.createElement('script');
+    s.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    s.onload = ok; s.onerror = () => bad(new Error('Could not load the payment page. Check your internet.'));
+    document.head.appendChild(s);
+  });
+}
+
+$('pay').onclick = async () => {
+  $('pay').disabled = true;
+  try {
+    say('Starting payment...');
+    const o = await call('createPlanOrder', { plan: chosen, period: yearly ? 'year' : 'month', phone: $('phone').value });
+    await loadCashfree();
+    const cf = window.Cashfree({ mode: o.env === 'production' ? 'production' : 'sandbox' });
+    await cf.checkout({ paymentSessionId: o.paymentSessionId, redirectTarget: '_self' });
+  } catch (e) {
+    say(e.message, 'err');
+    $('pay').disabled = false;
+  }
+};
+
+async function checkOrder(orderId) {
+  const r = $('result'); r.hidden = false; r.textContent = 'Checking your payment...';
+  try {
+    const v = await call('verifyPlanOrder', { orderId });
+    if (v.status === 'PAID') {
+      r.innerHTML = '<b style="color:var(--ok)">Payment received. Your plan is active.</b><div class="muted small"></div>';
+      r.querySelector('div').textContent = 'Valid until ' + new Date(v.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) + '. Open the app to use the new features. Order: ' + orderId;
+      billing = await call('myBilling', {}); draw();
+    } else {
+      r.innerHTML = '<b>Payment not completed (' + String(v.status).replace(/[<>]/g, '') + ').</b> <span class="muted small">If money was taken, it will be confirmed in a few minutes; otherwise try again.</span>';
+    }
+    history.replaceState(null, '', '/buy');
+  } catch (e) {
+    r.textContent = e.message;
+  }
+}
+</script>
+</main>
+<footer id="site-foot"></footer>
+</body>
+</html>

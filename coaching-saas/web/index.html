@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BatchPilot - Coaching institute manager</title>
+<meta name="description" content="Attendance, fees, timetable, homework and exams for offline coaching institutes. Free plan available.">
+<link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script>
+</head>
+<body>
+<header id="site-head"></header>
+<main>
+<section class="hero">
+  <img src="/logo.svg" alt="BatchPilot" width="88" height="88">
+  <h1>Run your coaching institute from one app</h1>
+  <p>Attendance, fees with receipts, timetable, homework, exams and parents' messages for offline coaching institutes. Start free with up to 30 students.</p>
+  <a class="btn" href="#pricing">See plans</a>
+</section>
+<section class="grid">
+  <div class="card"><h3>Attendance</h3><p class="muted">Teachers mark attendance class by class; the admin approves. Students and parents see it.</p></div>
+  <div class="card"><h3>Fees</h3><p class="muted">Month-wise dues, PDF receipts, UPI QR to the institute's own account, daily collection.</p></div>
+  <div class="card"><h3>Timetable</h3><p class="muted">Weekly or daily. Upload Excel, a photo or PDF; send it to teachers and batches on WhatsApp.</p></div>
+  <div class="card"><h3>Homework & exams</h3><p class="muted">Homework, notices, results, ranking and study material per batch.</p></div>
+</section>
+<section id="pricing">
+  <h2 style="margin-top:40px">Plans</h2>
+  <div class="toggle"><button id="m" class="on">Monthly</button><button id="y">Yearly (2 months free)</button></div>
+  <div class="grid" id="plans"></div>
+  <p class="muted small">Prices in Indian rupees. A small payment-gateway charge is added at checkout. Plans are bought on this website by the institute owner.</p>
+  <p><a class="btn" href="/buy">Buy or renew a plan</a></p>
+</section>
+<script src="/plans-data.js"></script>
+<script>
+  var yearly = false;
+  function draw() {
+    var box = document.getElementById('plans'); box.innerHTML = '';
+    BP_PLANS.forEach(function (p) {
+      var c = document.createElement('div'); c.className = 'card plan';
+      var price = p.month === 0 ? 'Free' : 'Rs ' + (yearly ? p.year : p.month);
+      c.innerHTML = '<h3></h3><div class="price"></div><div class="muted small"></div><ul></ul>';
+      c.querySelector('h3').textContent = p.name;
+      c.querySelector('.price').innerHTML = price + (p.month === 0 ? '' : '<small>' + (yearly ? ' / year' : ' / month') + '</small>');
+      c.querySelector('.small').textContent = p.students + ' students, ' + p.teachers + ' teachers, ' + p.subadmins + ' sub-admin' + (p.subadmins > 1 ? 's' : '');
+      p.features.forEach(function (f) { var li = document.createElement('li'); li.textContent = f; c.querySelector('ul').appendChild(li); });
+      box.appendChild(c);
+    });
+  }
+  document.getElementById('m').onclick = function () { yearly = false; this.className = 'on'; document.getElementById('y').className = ''; draw(); };
+  document.getElementById('y').onclick = function () { yearly = true; this.className = 'on'; document.getElementById('m').className = ''; draw(); };
+  draw();
+</script>
+</main>
+<footer id="site-foot"></footer>
+</body>
+</html>

@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Coach Hub Super Admin</title>
+  <title>BatchPilot Super Admin</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>Coach Hub <span>Super Admin</span></h1>
+    <h1>BatchPilot <span>Super Admin</span></h1>
     <div id="who" hidden><span id="email"></span> <button id="signout" class="ghost">Sign out</button></div>
   </header>
 
@@ -42,6 +42,27 @@
         </table>
       </div>
       <p id="empty" class="muted center" hidden>No institutes match.</p>
+
+      <h2 style="margin-top:28px">Online payments (Cashfree)</h2>
+      <div class="card" id="paybox">
+        <p id="paystatus" class="muted">Loading...</p>
+        <div class="limits">
+          <div><label>App ID (leave empty to keep)</label><input id="cfapp" autocomplete="off"></div>
+          <div><label>Secret key (leave empty to keep)</label><input id="cfsecret" type="password" autocomplete="new-password"></div>
+          <div><label>Mode</label><select id="cfenv"><option value="sandbox">Sandbox (test)</option><option value="production">Production (real money)</option></select></div>
+          <div><label>Payment charge % (paid by buyer)</label><input id="cffee" type="number" step="0.1" min="0" max="10"></div>
+          <div><label>Website address</label><input id="cfsite" placeholder="https://attendance-app-1cdf6.web.app"></div>
+        </div>
+        <p><button id="cfsave" class="primary">Save payment settings</button></p>
+        <p class="muted">Cashfree webhook URL: <code id="cfhook"></code></p>
+      </div>
+      <h3>Recent orders</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Order</th><th>Institute</th><th>Plan</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+          <tbody id="orders"></tbody>
+        </table>
+      </div>
     </section>
     <p id="msg" role="status"></p>
   </main>
@@ -52,7 +73,7 @@
   </dialog>
 
   <script src="logic.js"></script>
-  <script src="config.js"></script>
+  <script src="../config.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>

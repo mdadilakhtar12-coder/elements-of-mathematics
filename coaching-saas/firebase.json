@@ -30,10 +30,27 @@
     }
   },
   "hosting": {
-    "public": "admin-web",
+    "public": "web",
     "ignore": [
       "firebase.json",
       "**/.*"
+    ],
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/api/cashfree-webhook",
+        "function": {
+          "functionId": "cashfreeWebhook",
+          "region": "asia-south1"
+        }
+      },
+      {
+        "source": "/api/plans",
+        "function": {
+          "functionId": "planCatalogue",
+          "region": "asia-south1"
+        }
+      }
     ],
     "headers": [
       {
@@ -45,7 +62,11 @@
           },
           {
             "key": "Referrer-Policy",
-            "value": "no-referrer"
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
           }
         ]
       }

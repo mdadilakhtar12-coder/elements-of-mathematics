@@ -18,7 +18,7 @@
     student_login: 'Students can log in to the app'
   };
   var ROLES = [['admin', 'Admins'], ['subadmin', 'Sub-admins'], ['teacher', 'Teachers'], ['student', 'Students']];
-  var PLANS = ['free', 'basic', 'pro'];
+  var PLANS = ['free', 'starter', 'basic', 'growth', 'pro'];
   var DAY = 86400000;
 
   /** active | suspended | expired */

@@ -52,6 +52,7 @@ onAuthStateChanged(auth, async (user) => {
   if (token.claims.sa !== true) return show('denied');
   show('app');
   load();
+  loadPayments();
 });
 
 // ---------------------------------------------------------------- list
@@ -166,3 +167,39 @@ function manage(id) {
   const dlg = $('dlg');
   if (!dlg.open) dlg.showModal();
 }
+
+// ---------------------------------------------------------------- payments
+async function loadPayments() {
+  try {
+    const st = await call('saPaymentStatus', {});
+    $('paystatus').textContent = st.configured
+      ? 'Switched on (' + st.env + '). App ID ' + st.appIdHint + ', secret ' + st.secretHint + '. Charge ' + st.feePercent + ' %.'
+      : 'Not switched on yet: enter the Cashfree App ID and Secret key.';
+    $('cfenv').value = st.env;
+    $('cffee').value = st.feePercent;
+    $('cfsite').value = st.siteUrl;
+    $('cfhook').textContent = st.siteUrl + '/api/cashfree-webhook';
+    const o = (await call('saListOrders', { limit: 100 })).orders;
+    $('orders').replaceChildren(...o.map((x) => h('tr', {},
+      h('td', {}, h('small', {}, x.id)), h('td', {}, x.institute || x.inst), h('td', {}, x.plan + ' / ' + x.period),
+      h('td', {}, 'Rs ' + x.amount), h('td', {}, h('span', { class: 'badge ' + (x.status === 'paid' ? 'active' : x.status === 'mismatch' ? 'suspended' : 'expired') }, x.status + (x.env === 'sandbox' ? ' (test)' : ''))),
+      h('td', {}, L.fmtDate(x.paidAt || x.createdAt)))));
+  } catch (e) {
+    $('paystatus').textContent = e.message;
+  }
+}
+$('cfsave').onclick = async () => {
+  if ($('cfenv').value === 'production' && !confirm('Switch to PRODUCTION? Real money will be charged.')) return;
+  say('Saving...');
+  try {
+    await call('saSetPaymentConfig', {
+      appId: $('cfapp').value, secretKey: $('cfsecret').value, env: $('cfenv').value,
+      feePercent: Number($('cffee').value), siteUrl: $('cfsite').value,
+    });
+    $('cfapp').value = ''; $('cfsecret').value = '';
+    say('Payment settings saved', 'ok');
+    loadPayments();
+  } catch (e) {
+    say(e.message, 'err');
+  }
+};

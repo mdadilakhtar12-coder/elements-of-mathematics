@@ -39,3 +39,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .feat { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; } .feat input { margin-top: 3px; }
 .limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; } .limits label { font-size: 12px; color: var(--muted); display: block; } .limits input { width: 100%; }
+
+code { word-break: break-all; }
+h2, h3 { margin: 18px 0 10px; }

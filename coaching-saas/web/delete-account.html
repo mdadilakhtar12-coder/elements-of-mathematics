@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delete your account - BatchPilot</title>
+<meta name="description" content="Delete your BatchPilot account and data.">
+<link rel="icon" href="/logo.svg"><link rel="stylesheet" href="/site.css">
+<script src="/site.js"></script><script src="/config.js"></script>
+</head>
+<body>
+<header id="site-head"></header>
+<main>
+<div class="doc">
+<h1>Delete your account</h1>
+<p>You can delete your BatchPilot account here or in the app (menu &gt; <b>Delete my account</b>).</p>
+<ul>
+  <li><b>Teacher, student or sub-admin:</b> your login and profile are deleted. Records the institute keeps about classes and fees (for example past attendance) may stay with your institute.</li>
+  <li><b>Institute owner:</b> the <b>whole institute</b> is deleted: all staff and student logins and all its data. This cannot be undone.</li>
+  <li>Records of plan payments are kept only as long as tax law requires.</li>
+</ul>
+<div class="card" id="signin">
+  <h3>Sign in to confirm it is you</h3>
+  <button class="btn" id="google">Owner: continue with Google</button>
+  <p class="muted small" style="margin-top:14px">Staff and students:</p>
+  <label for="code">Institute code</label><input id="code" autocomplete="off">
+  <label for="user">Username / mobile number</label><input id="user" autocomplete="username">
+  <label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password">
+  <p><button class="btn ghost" id="login">Sign in</button></p>
+</div>
+<div class="card" id="confirm" hidden>
+  <p>Signed in as <b id="who"></b>.</p>
+  <div id="ownerbox" hidden>
+    <p style="color:var(--bad)"><b>You are the owner.</b> Type your institute code to delete the whole institute.</p>
+    <input id="confirmcode" autocomplete="off" placeholder="Institute code">
+  </div>
+  <p><button class="btn" id="del" style="background:var(--bad)">Delete my account</button> <a href="#" id="cancel">Cancel</a></p>
+</div>
+<p class="msg" id="msg" role="status"></p>
+<p class="muted small">Problems? Write to <a data-mail></a>.</p>
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js';
+
+const $ = (id) => document.getElementById(id);
+const app = initializeApp(window.FIREBASE_CONFIG);
+const auth = getAuth(app);
+const say = (t, k = '') => { $('msg').textContent = t; $('msg').className = 'msg ' + k; };
+// same hidden login e-mail as the app: username@<institute code>.login.coachsaas.app
+const loginEmail = (code, user) => user.trim().toLowerCase().replace(/\s+/g, '') + '@' + code.trim().toLowerCase() + '.login.coachsaas.app';
+
+$('google').onclick = () => signInWithPopup(auth, new GoogleAuthProvider()).catch((e) => say(e.message, 'err'));
+$('login').onclick = () => signInWithEmailAndPassword(auth, loginEmail($('code').value, $('user').value), $('pw').value)
+  .catch(() => say('Wrong institute code, username or password', 'err'));
+$('cancel').onclick = (e) => { e.preventDefault(); signOut(auth); say(''); };
+
+onAuthStateChanged(auth, async (user) => {
+  $('signin').hidden = !!user; $('confirm').hidden = !user;
+  if (!user) return;
+  $('who').textContent = user.email && user.email.endsWith('.login.coachsaas.app') ? user.email.split('@')[0] : (user.email || '');
+  const t = await user.getIdTokenResult();
+  // owners sign in with Google; staff and students with a password
+  $('ownerbox').hidden = !(t.claims.role === 'admin' && t.signInProvider !== 'password');
+});
+
+$('del').onclick = async () => {
+  if (!confirm('Delete your account now? This cannot be undone.')) return;
+  $('del').disabled = true;
+  try {
+    const r = await httpsCallable(getFunctions(app, window.FUNCTIONS_REGION), 'deleteMyAccount')({ confirmCode: $('confirmcode').value });
+    await signOut(auth);
+    say(r.data.deleted === 'institute' ? 'Your institute and all its data have been deleted.' : 'Your account has been deleted.', 'ok');
+  } catch (e) {
+    say(e.message, 'err');
+  } finally {
+    $('del').disabled = false;
+  }
+};
+</script>
+</main>
+<footer id="site-foot"></footer>
+</body>
+</html>
