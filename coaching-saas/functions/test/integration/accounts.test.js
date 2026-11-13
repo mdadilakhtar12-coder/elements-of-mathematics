@@ -224,7 +224,7 @@ test('super admin: plan change, feature toggle, limits, suspend, expiry, recount
   await rejects(SA.setPlan(deps, admin, { inst: 'alpha', plan: 'pro' }), 'permission-denied');
   await SA.setPlan(deps, root, { inst: 'alpha', plan: 'basic' });
   let i = (await db.doc('institutes/alpha').get()).data();
-  assert.equal(i.plan, 'basic'); assert.equal(i.features.fees, true); assert.equal(i.limits.student, 200);
+  assert.equal(i.plan, 'basic'); assert.equal(i.features.fees, true); assert.equal(i.limits.student, 150);
   await SA.setFeatures(deps, root, { inst: 'alpha', features: { fees: false, accounts: true, core: false } });
   i = (await db.doc('institutes/alpha').get()).data();
   assert.equal(i.features.fees, false); assert.equal(i.features.accounts, true); assert.equal(i.features.core, true);

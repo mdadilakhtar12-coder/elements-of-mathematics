@@ -13,6 +13,8 @@ const accounts = require('./accounts');
 const sa = require('./sa');
 const notify = require('./notify');
 const integrity = require('./integrity');
+const payments = require('./payments');
+const { onRequest } = require('firebase-functions/v2/https');
 
 initializeApp();
 // Mumbai. The Android app must use FirebaseFunctions.getInstance("asia-south1").
@@ -42,6 +44,7 @@ exports.resetPassword = callable(accounts.resetPassword);
 exports.setUserActive = callable(accounts.setUserActive);
 exports.deleteUser = callable(accounts.deleteUser);
 exports.setTeacherAdmin = callable(accounts.setTeacherAdmin);
+exports.deleteMyAccount = callable(accounts.deleteMyAccount);
 
 // ---- super admin (phase 5) ----
 exports.saListInstitutes = callable(sa.listInstitutes);
@@ -103,3 +106,33 @@ exports.numberReceipt = onDocumentCreated('institutes/{inst}/fees/{id}', (e) =>
 exports.logFees = logged('fees');
 exports.logLedger = logged('ledger');
 exports.logSalaryPaid = logged('salaryPaid');
+
+// ---- plan purchases (Cashfree, on the website) ----
+exports.myBilling = callable(payments.myBilling);
+exports.createPlanOrder = callable(payments.createPlanOrder);
+exports.verifyPlanOrder = callable(payments.verifyPlanOrder);
+exports.saSetPaymentConfig = callable(payments.setPaymentConfig);
+exports.saPaymentStatus = callable(payments.getPaymentStatus);
+exports.saListOrders = callable(payments.listOrders);
+// Public price list for the website (no sign-in).
+exports.planCatalogue = onRequest({ cors: true }, async (req, res) => {
+  try {
+    const cfg = await payments.getConfig(getFirestore());
+    res.set('Cache-Control', 'public, max-age=300').json({ plans: payments.catalogue(cfg.feePercent) });
+  } catch (e) {
+    res.status(500).json({ error: 'unavailable' });
+  }
+});
+// Cashfree payment notifications (reached through the website: /api/cashfree-webhook).
+exports.cashfreeWebhook = onRequest(async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).send('POST only');
+  try {
+    const status = await payments.handleWebhook({ db: getFirestore(), Timestamp }, { rawBody: req.rawBody, headers: req.headers });
+    res.status(status).send(status === 200 ? 'ok' : 'bad signature');
+  } catch (e) {
+    logger.error('webhook failed', { message: e?.message });
+    res.status(500).send('error'); // Cashfree retries later
+  }
+});
+exports.downgradeExpiredPlans = onSchedule({ schedule: 'every 60 minutes', timeZone: 'Asia/Kolkata' },
+  () => safely('downgradeExpired', () => payments.downgradeExpired({ db: getFirestore(), Timestamp })));

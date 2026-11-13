@@ -297,4 +297,56 @@ async function setTeacherAdmin(deps, caller, data) {
   return { uid, alsoSubadmin: enable, perms: enable ? perms : [] };
 }
 
-module.exports = { setTeacherAdmin, MAX_REGISTRATIONS_PER_DAY, registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };
+/**
+ * The signed-in person deletes their own account (Play Store rule: in the app and on the website).
+ * Staff / students: the login, profile and devices go; the plan slot is freed.
+ * Owner: the whole institute and every login in it is deleted; data.confirmCode must equal the institute code.
+ * Works even when the institute is suspended or expired.
+ */
+async function deleteMyAccount(deps, caller, data) {
+  if (!caller?.uid) throw new AppError('unauthenticated', 'Please sign in.');
+  const { db, auth } = deps;
+  const uid = caller.uid;
+  const inst = caller.token?.inst;
+  if (!inst) {
+    await auth.deleteUser(uid).catch(() => {});
+    return { deleted: 'login' };
+  }
+  const iSnap = await instRef(db, inst).get();
+  const institute = iSnap.exists ? iSnap.data() : null;
+  if (institute && institute.ownerUid === uid) {
+    if (V.normCode(data?.confirmCode) !== inst) {
+      throw new AppError('failed-precondition', 'Type your institute code to confirm. This deletes the whole institute and all its data.');
+    }
+    // every staff / student login of this institute
+    const suffix = '@' + inst + '.' + V.LOGIN_DOMAIN;
+    let token;
+    do {
+      const page = await auth.listUsers(1000, token);
+      const ids = page.users.filter((u) => (u.email || '').endsWith(suffix)).map((u) => u.uid);
+      if (ids.length) await auth.deleteUsers(ids);
+      token = page.pageToken;
+    } while (token);
+    await db.recursiveDelete(instRef(db, inst));
+    await db.collection('audit').add({ by: uid, action: 'deleteInstitute', inst, detail: null, at: deps.Timestamp.now() });
+    await auth.deleteUser(uid).catch(() => {});
+    return { deleted: 'institute' };
+  }
+  const uRef = userRef(db, inst, uid);
+  await db.runTransaction(async (tx) => {
+    const [i, u] = await Promise.all([tx.get(instRef(db, inst)), tx.get(uRef)]);
+    if (!u.exists) return;
+    const role = u.data().role;
+    const usage = (i.exists && i.data().usage) || {};
+    const upd = { [`usage.${role}`]: Math.max(0, (usage[role] || 0) - 1) };
+    if (role === 'teacher' && u.data().alsoSubadmin === true) upd['usage.subadmin'] = Math.max(0, (usage.subadmin || 0) - 1);
+    if (i.exists) tx.update(instRef(db, inst), upd);
+    tx.delete(uRef);
+  });
+  const devices = await instRef(db, inst).collection('devices').where('uid', '==', uid).get();
+  await Promise.all(devices.docs.map((d) => d.ref.delete()));
+  await auth.deleteUser(uid).catch(() => {});
+  return { deleted: 'account' };
+}
+
+module.exports = { deleteMyAccount, setTeacherAdmin, MAX_REGISTRATIONS_PER_DAY, registerInstitute, lookupInstitute, createUser, createUsers, resetPassword, setUserActive, deleteUser, isLive, loadCaller, MAX_BULK };

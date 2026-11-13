@@ -82,8 +82,9 @@ service cloud.firestore {
     // Everything not matched below is denied.
 
     // ---------- global, read-only data ----------
+    // Price list: public (the website shows it before sign-in).
     match /plans/{id} {
-      allow read: if signedIn();
+      allow read: if true;
       allow write: if false;
     }
 

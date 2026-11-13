@@ -72,7 +72,9 @@ test('signed-out users get nothing', async () => {
   const db = env.unauthenticatedContext().firestore();
   await assertFails(getDoc(doc(db, 'institutes/a/batches/b1')));
   await assertFails(getDoc(doc(db, 'institutes/a')));
-  await assertFails(getDoc(doc(db, 'plans/free')));
+  await assertSucceeds(getDoc(doc(db, 'plans/free'))); // the price list is public
+  await assertFails(getDoc(doc(db, 'private/payments')));
+  await assertFails(getDoc(doc(db, 'orders/x')));
 });
 
 test('institute document and plan data cannot be changed from the app', async () => {
