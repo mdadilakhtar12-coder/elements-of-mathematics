@@ -81,17 +81,24 @@ jobs:
         env:
           UPLOAD_KEYSTORE_B64: ${{ secrets.UPLOAD_KEYSTORE_B64 }}
           UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
-        if: env.UPLOAD_KEYSTORE_B64 != '' && github.ref == 'refs/heads/claude/android-education-app-f4iwdp'
+        # Without the key the bundle is still built (unsigned) to catch release-only build errors early.
         run: |
           set -o pipefail
-          printf '%s' "$UPLOAD_KEYSTORE_B64" | tr -d '[:space:]' | base64 --decode > "$RUNNER_TEMP/upload.jks"
-          export UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          if [ -n "$UPLOAD_KEYSTORE_B64" ]; then
+            printf '%s' "$UPLOAD_KEYSTORE_B64" | tr -d '[:space:]' | base64 --decode > "$RUNNER_TEMP/upload.jks"
+            export UPLOAD_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks"
+          else
+            echo "No upload key secrets yet: building an unsigned bundle only as a check."
+          fi
           ./gradlew bundleRelease --console=plain 2>&1 | tee bundle.log || { grep -E "^e: |error:|What went wrong" -A3 bundle.log | head -40; exit 1; }
-          keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -storepass "$UPLOAD_KEYSTORE_PASSWORD" | grep -E "SHA1|SHA256" || true
-          rm -f "$RUNNER_TEMP/upload.jks"
+          if [ -f "$RUNNER_TEMP/upload.jks" ]; then
+            keytool -list -v -keystore "$RUNNER_TEMP/upload.jks" -storepass "$UPLOAD_KEYSTORE_PASSWORD" | grep -E "SHA1|SHA256" || true
+            rm -f "$RUNNER_TEMP/upload.jks"
+            echo "SIGNED=yes" >> "$GITHUB_ENV"
+          fi
 
       - uses: actions/upload-artifact@v4
-        if: hashFiles('coaching-saas/android/app/build/outputs/bundle/release/app-release.aab') != ''
+        if: env.SIGNED == 'yes'
         with:
           name: batchpilot-release-aab
           path: coaching-saas/android/app/build/outputs/bundle/release/app-release.aab
