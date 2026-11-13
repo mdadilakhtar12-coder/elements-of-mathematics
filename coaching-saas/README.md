@@ -78,3 +78,12 @@ Free ke numbers aapke diye hue hain; Basic/Pro ke numbers aur price **mere andaa
 * **Timetable WhatsApp par:** "Send timetable": har teacher ko (chat ya timetable), har batch ke liye (group link jodo to group khulta hai aur message copy ho jaata hai). Sirf dabane par, koi API nahi.
 * **Room:** har class ke saath optional room (Excel, batch timetable, class edit, WhatsApp message).
 * Is update ke baad: `deploy-rules`, `deploy-functions` chalao, nayi APK install karo.
+
+## BatchPilot release (Play Store + website + Cashfree)
+* App name **BatchPilot** (package stays `com.coachsaas.app`), icon "register + tick". Store files and listing text: `store/`.
+* Plans: Free · Starter Rs 99 · Basic Rs 199 · Growth Rs 299 · Pro Rs 499 per month; a year = 10 months. Gateway charge paid by the buyer. Expired paid plans move back to Free automatically (hourly job), data kept.
+* Website (Firebase Hosting, `web/`): home + pricing, `/buy` (owner buys / renews with Cashfree), `/delete-account`, `/terms`, `/privacy`, `/refund`, `/contact`; super-admin panel at `/admin`. Contact details: `web/site.js`.
+* Cashfree: keys entered in the admin panel (stored in Firestore `private/payments`, unreadable by any app). Webhook: `<site>/api/cashfree-webhook`.
+* Android: targetSdk 36, in-app "Delete my account" and "Plans" (information only; nothing is sold in the app).
+* Play signing: secrets `UPLOAD_KEYSTORE_B64` + `UPLOAD_KEYSTORE_PASSWORD` → CI builds the signed `app-release.aab` (artifact `batchpilot-release-aab`).
+* Fingerprints for Google sign-in: deploy workflow action `add-sha`.
